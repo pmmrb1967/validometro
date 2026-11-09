@@ -26,6 +26,7 @@ export default defineConfig(async () => {
           },
         },
         {
+          define: { __APP_VERSION__: '"0.0.0"', __APP_COMMIT__: '"test"' },
           test: {
             name: 'app',
             environment: 'node',

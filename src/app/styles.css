@@ -133,7 +133,7 @@ a {
   width: 100%;
   max-width: 40rem;
   margin: 0 auto;
-  padding: 16px 16px calc(env(safe-area-inset-bottom) + 96px);
+  padding: 16px 16px 32px;
 }
 
 .page-title {
@@ -152,6 +152,55 @@ a {
 
 .note {
   margin: 8px 0;
+  color: var(--muted);
+}
+
+/* New version */
+.update-banner {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px 16px;
+  padding: 10px 16px;
+  background: #dbe8f5;
+  color: #14212e;
+  border-bottom: 1px solid #b9cfe6;
+}
+
+.update-banner strong {
+  font-weight: 650;
+}
+
+.primary.compact {
+  min-height: 38px;
+  padding: 0 16px;
+}
+
+/* Footer: room at the bottom for the "Adicionar" button. */
+.footer {
+  display: grid;
+  justify-items: center;
+  gap: 4px;
+  padding: 16px 16px calc(env(safe-area-inset-bottom) + 92px);
+  border-top: 1px solid var(--border);
+  color: var(--muted);
+  font-size: 0.8rem;
+  text-align: center;
+}
+
+.footer p {
+  margin: 0;
+}
+
+.footer-links {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: center;
+  gap: 4px 16px;
+}
+
+.footer a {
   color: var(--muted);
 }
 

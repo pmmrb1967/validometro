@@ -1,4 +1,5 @@
 // SPDX-License-Identifier: AGPL-3.0-or-later
+import { execSync } from 'node:child_process';
 import { readFileSync } from 'node:fs';
 import react from '@vitejs/plugin-react';
 import { defineConfig } from 'vite';
@@ -8,14 +9,25 @@ const pkg = JSON.parse(readFileSync(new URL('./package.json', import.meta.url), 
   version: string;
 };
 
+/** Short commit of the build, shown in the footer so it is clear which version is running. */
+function buildCommit(): string {
+  try {
+    return execSync('git rev-parse --short HEAD').toString().trim();
+  } catch {
+    return 'dev';
+  }
+}
+
 export default defineConfig({
   define: {
     __APP_VERSION__: JSON.stringify(pkg.version),
+    __APP_COMMIT__: JSON.stringify(buildCommit()),
   },
   plugins: [
     react(),
     VitePWA({
-      registerType: 'autoUpdate',
+      // A new version is offered, never applied mid-task (src/app/pwa.ts).
+      registerType: 'prompt',
       includeAssets: ['favicon.ico', 'apple-touch-icon-180x180.png', 'icon.svg'],
       manifest: {
         name: 'Validómetro',

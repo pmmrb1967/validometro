@@ -1,6 +1,25 @@
 // SPDX-License-Identifier: AGPL-3.0-or-later
 /** Texts (pt-PT) that are long or shared; short labels live next to their component. */
 export const t = {
+  update: {
+    available: 'Há uma nova versão da app.',
+    hint: 'A página vai recarregar: guarda primeiro o que estiveres a escrever.',
+    apply: 'Atualizar',
+  },
+  feedback: {
+    footer: 'Sugestões e problemas',
+    subject: 'Sugestão ou problema',
+    bodyStart: 'Escreve aqui a tua mensagem.',
+    technical: '— Informação técnica (podes apagar) —',
+    version: (version: string) => `Versão: ${version}`,
+    page: (page: string) => `Página: ${page}`,
+  },
+  legal: {
+    copyright: '© 2026 Paulo Barbosa',
+    license: 'Código aberto, licença AGPL-3.0',
+    source: 'Código no GitHub',
+    version: (version: string, commit: string) => `Versão ${version} (${commit})`,
+  },
   install: {
     title: 'Aplicação',
     intro:

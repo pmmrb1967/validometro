@@ -21,14 +21,11 @@ export function Settings() {
       <section className="card">
         <h2>Sobre</h2>
         <p className="hint">
-          Validómetro v{__APP_VERSION__}. © 2026 Paulo Barbosa. Código aberto, licença AGPL-3.0.
+          Validómetro: controla as validades dos alimentos lá de casa e desperdiça menos.
         </p>
         <p className="hint" role="status">
           Servidor: {health}
         </p>
-        <a href="https://github.com/pmmrb1967/validometro" target="_blank" rel="noreferrer">
-          Código no GitHub
-        </a>
       </section>
     </div>
   );
