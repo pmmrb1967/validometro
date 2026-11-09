@@ -67,10 +67,11 @@ Plano de implementação por fases. Cada fase termina com a app **a funcionar, t
 
 ## Fase 4 — Anti-desperdício
 
-- [ ] **"O que jantar hoje?"**: botão que envia os itens vermelhos/amarelos à IA e devolve 2–3 receitas simples (JSON: título, ingredientes usados, passos curtos, tempo)
-- [ ] **Lista de compras automática**: itens resolvidos como `consumido` sugerem reposição; `deitado_fora` mostra um aviso ("compraste demais?") em vez de repor automaticamente
-- [ ] Lista de compras partilhada no agregado, com itens manuais
-- [ ] Estatísticas simples: itens deitados fora por mês e categorias mais desperdiçadas
+- [x] **"O que jantar hoje?"** (`/jantar`): envia os itens vermelhos/amarelos à IA (`/api/ai/recipes`, prompt `recipes.v2`) e devolve 2–3 receitas simples (título, alimentos usados, o que falta, passos curtos, tempo). Nada fica guardado; a sessão guarda a última resposta para não gastar outra vez
+- [x] **Lista de compras automática** (`/compras`): `consumido` sugere reposição (na app e no botão da notificação; um toque para aceitar); `deitado_fora` não repõe e mostra "Compraste demais?" na lista e no aviso de anular
+- [x] Lista de compras partilhada no agregado, com itens manuais: sincroniza com os alimentos (mesmo cursor); apagar é marcar `removido`, para chegar a todos os telemóveis
+- [x] Estatísticas simples (`/desperdicio`): percentagem deitada fora nos últimos 6 meses, deitados fora por mês e tipos mais desperdiçados
+- [ ] Verificar no telemóvel, com a família: receitas com a IA gratuita, lista partilhada entre dois telemóveis
 
 ## Fase 5 — Admin, robustez e lançamento
 

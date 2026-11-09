@@ -17,11 +17,17 @@ import {
   toDraft,
   type DraftItem,
 } from '../domain/drafts';
-import { DATE_PROMPT, RECEIPT_PROMPT, TEST_PROMPT, VOICE_PROMPT } from '../ai/prompts';
+import {
+  DATE_PROMPT,
+  RECEIPT_PROMPT,
+  RECIPES_PROMPT,
+  TEST_PROMPT,
+  VOICE_PROMPT,
+} from '../ai/prompts';
 import { anthropic, CLAUDE_MODELS, type ClaudeModel } from '../ai/providers/anthropic';
 import { gemini } from '../ai/providers/gemini';
 import { workersAi } from '../ai/providers/workers-ai';
-import { dateSchema, receiptSchema, testSchema, voiceSchema } from '../ai/schemas';
+import { dateSchema, receiptSchema, recipesSchema, testSchema, voiceSchema } from '../ai/schemas';
 import { structured } from '../ai/structured';
 import { AiError, PROVIDERS, type AiErrorCode, type AiProvider, type Operation } from '../ai/types';
 import { lookupAliases, saveAliases } from './aliases';
@@ -46,11 +52,25 @@ const MESSAGES: Record<AiErrorCode, [number, string]> = {
   too_large: [413, 'A foto é demasiado grande. Tenta de novo.'],
 };
 
+/** The recipes have no photo to retake nor anything to write by hand. */
+const RECIPE_MESSAGES: Partial<Record<AiErrorCode, [number, string]>> = {
+  quota: [
+    429,
+    'A IA gratuita de hoje esgotou. Usa a tua própria chave (Definições) ou volta amanhã.',
+  ],
+  unavailable: [503, 'O serviço de IA não respondeu. Tenta outra vez daqui a pouco.'],
+  invalid_output: [502, 'Não consegui pensar em receitas desta vez. Tenta outra vez.'],
+  refused: [422, 'O serviço de IA não quis sugerir receitas. Tenta outra vez.'],
+};
+
 function aiFailure(c: Context<AppEnv>, operation: Operation, err: unknown) {
   if (!(err instanceof AiError)) throw err;
   // The code and the provider's status only: never the key, the image or the model's text.
   console.warn('AI call failed', operation, err.code, err.message);
-  const [status, error] = MESSAGES[err.code];
+  const [status, error] =
+    operation === 'recipes'
+      ? (RECIPE_MESSAGES[err.code] ?? MESSAGES[err.code])
+      : MESSAGES[err.code];
   return c.json({ error, code: err.code }, status as 400);
 }
 
@@ -194,6 +214,42 @@ ingest.post('/ingest/date', async (c) => {
     return c.json({ date, kind: reading.kind });
   } catch (err) {
     return aiFailure(c, 'date', err);
+  }
+});
+
+const recipesBody = z.object({
+  items: z
+    .array(
+      z.object({
+        name: z.string().trim().min(1).max(120),
+        days: z.number().int().min(-60).max(60),
+      }),
+    )
+    .min(1)
+    .max(20),
+});
+
+/** "O que jantar hoje?": 2–3 simple recipes with what is about to go off. Nothing is stored. */
+ingest.post('/ai/recipes', async (c) => {
+  const body = recipesBody.safeParse(await c.req.json().catch(() => null));
+  if (!body.success) return c.json({ error: 'Não há alimentos a aproveitar.' }, 400);
+  try {
+    const provider = await providerFor(c);
+    const reading = await structured(
+      provider,
+      {
+        operation: 'recipes',
+        system: RECIPES_PROMPT.system,
+        prompt: RECIPES_PROMPT.prompt(body.data.items),
+        schema: recipesSchema,
+        schemaName: 'recipes',
+        maxTokens: 2500,
+      },
+      recorder(c, provider, 'recipes'),
+    );
+    return c.json(reading);
+  } catch (err) {
+    return aiFailure(c, 'recipes', err);
   }
 });
 

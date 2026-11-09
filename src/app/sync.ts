@@ -10,6 +10,7 @@
  * - Another household (joined or left): the copy starts again from the server.
  * - Sign-out: the copy is cleared, so the next person on this phone does not see it.
  */
+import type { ShoppingEntry } from '../domain/shopping';
 import type { Item } from '../domain/types';
 import { accountListeners, currentUser, type Me } from './account';
 import { db, localChangeListeners, type InventoryDb } from './store/items';
@@ -20,6 +21,7 @@ const EVERY_MS = 2 * 60_000;
 
 interface SyncResponse {
   items: Item[];
+  shopping: ShoppingEntry[];
   cursor: number;
   more: boolean;
 }
@@ -37,17 +39,26 @@ async function setMeta(store: InventoryDb, key: string, value: string | number):
 
 /** Everything here, queued for the server (first sign-in on this phone). */
 async function queueEverything(store: InventoryDb): Promise<void> {
-  await store.transaction('rw', store.items, store.outbox, async () => {
+  await store.transaction('rw', store.items, store.shopping, store.outbox, async () => {
     const items = await store.items.toArray();
     await store.outbox.bulkPut(
       items.map((item) => ({ id: item.id, updated_at: item.updated_at ?? item.created_at })),
+    );
+    const shopping = await store.shopping.toArray();
+    await store.outbox.bulkPut(
+      shopping.map((entry) => ({
+        id: entry.id,
+        updated_at: entry.updated_at,
+        kind: 'shopping' as const,
+      })),
     );
   });
 }
 
 async function clearCopy(store: InventoryDb): Promise<void> {
-  await store.transaction('rw', store.items, store.outbox, store.meta, async () => {
+  await store.transaction('rw', store.items, store.shopping, store.outbox, store.meta, async () => {
     await store.items.clear();
+    await store.shopping.clear();
     await store.outbox.clear();
     await store.meta.clear();
   });
@@ -58,6 +69,12 @@ function toChange(item: Item) {
   const change: Partial<Item> = { ...item, updated_at: item.updated_at ?? item.created_at };
   delete change.household_id;
   delete change.created_by;
+  return change;
+}
+
+function toShoppingChange(entry: ShoppingEntry) {
+  const change: Partial<ShoppingEntry> = { ...entry };
+  delete change.household_id;
   return change;
 }
 
@@ -78,18 +95,30 @@ async function round(store: InventoryDb, me: Me): Promise<void> {
 
   for (;;) {
     const pending = await store.outbox.limit(MAX_CHANGES).toArray();
-    const items = (await store.items.bulkGet(pending.map((entry) => entry.id))).filter(
+    const itemIds = pending.filter((entry) => entry.kind !== 'shopping').map((entry) => entry.id);
+    const shoppingIds = pending
+      .filter((entry) => entry.kind === 'shopping')
+      .map((entry) => entry.id);
+    const items = (await store.items.bulkGet(itemIds)).filter(
       (item): item is Item => item !== undefined,
+    );
+    const shopping = (await store.shopping.bulkGet(shoppingIds)).filter(
+      (entry): entry is ShoppingEntry => entry !== undefined,
     );
     const cursor = (await meta<number>(store, 'cursor')) ?? 0;
     const res = await fetch('/api/sync', {
       method: 'POST',
       headers: { 'content-type': 'application/json' },
-      body: JSON.stringify({ changes: items.map(toChange), cursor }),
+      body: JSON.stringify({
+        changes: items.map(toChange),
+        shopping: shopping.map(toShoppingChange),
+        cursor,
+      }),
     });
     if (!res.ok) throw new Error(`sync ${res.status}`);
     const answer = (await res.json()) as SyncResponse;
-    await store.transaction('rw', store.items, store.outbox, store.meta, async () => {
+    const tables = [store.items, store.shopping, store.outbox, store.meta];
+    await store.transaction('rw', tables, async () => {
       // Sent and not changed again meanwhile: no longer pending.
       for (const entry of pending) {
         const now = await store.outbox.get(entry.id);
@@ -100,6 +129,11 @@ async function round(store: InventoryDb, me: Me): Promise<void> {
         // A newer change still waiting here wins over what came back.
         if (queued && queued.updated_at > item.updated_at!) continue;
         await store.items.put(item);
+      }
+      for (const entry of answer.shopping ?? []) {
+        const queued = await store.outbox.get(entry.id);
+        if (queued && queued.updated_at > entry.updated_at) continue;
+        await store.shopping.put(entry);
       }
       await setMeta(store, 'cursor', answer.cursor);
     });

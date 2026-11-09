@@ -4,8 +4,11 @@ import { AppShell } from './AppShell';
 import { Account } from './screens/Account';
 import { AddItem } from './screens/AddItem';
 import { Home } from './screens/Home';
+import { Recipes } from './screens/Recipes';
 import { Review } from './screens/Review';
 import { Settings } from './screens/Settings';
+import { Shopping } from './screens/Shopping';
+import { Stats } from './screens/Stats';
 
 export const router = createBrowserRouter([
   {
@@ -16,6 +19,9 @@ export const router = createBrowserRouter([
       { path: 'rever', element: <Review /> },
       { path: 'definicoes', element: <Settings /> },
       { path: 'conta', element: <Account /> },
+      { path: 'compras', element: <Shopping /> },
+      { path: 'jantar', element: <Recipes /> },
+      { path: 'desperdicio', element: <Stats /> },
       { path: '*', element: <Navigate to="/" replace /> },
     ],
   },

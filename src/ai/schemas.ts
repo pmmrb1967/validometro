@@ -50,3 +50,19 @@ export function jsonSchema(schema: z.ZodType): Record<string, unknown> {
   delete json.$schema;
   return json;
 }
+
+export const recipesSchema = z.object({
+  recipes: z
+    .array(
+      z.object({
+        title: z.string().min(1).max(120),
+        minutes: z.number().int().min(1).max(240),
+        usa: z.array(z.string().max(120)).max(20),
+        falta: z.array(z.string().max(120)).max(20),
+        steps: z.array(z.string().max(400)).min(1).max(10),
+      }),
+    )
+    .min(1)
+    .max(3),
+});
+export type RecipesReading = z.infer<typeof recipesSchema>;

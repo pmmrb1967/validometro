@@ -961,3 +961,158 @@ textarea {
 .account-mode {
   margin: 0;
 }
+
+/* Home: the other screens */
+.home-links {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  margin: 4px 0 16px;
+}
+
+.dinner-call {
+  width: 100%;
+  margin-bottom: 16px;
+}
+
+/* Shopping list */
+.add-to-list {
+  margin-bottom: 20px;
+}
+
+.shopping-group + .shopping-group {
+  margin-top: 20px;
+}
+
+.shopping-list {
+  display: grid;
+  gap: 8px;
+  margin: 8px 0;
+  padding: 0;
+  list-style: none;
+}
+
+.shopping-row {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  min-height: 52px;
+  padding: 4px 4px 4px 14px;
+  border-radius: 14px;
+  background: var(--surface);
+  border: 1px solid var(--border);
+}
+
+.shopping-row.suggested {
+  border-style: dashed;
+}
+
+.shopping-check {
+  display: flex;
+  flex: 1;
+  align-items: center;
+  gap: 12px;
+  min-height: 44px;
+  cursor: pointer;
+}
+
+.shopping-check input {
+  width: 22px;
+  height: 22px;
+  accent-color: var(--brand-strong);
+}
+
+.shopping-name {
+  display: grid;
+  flex: 1;
+  overflow-wrap: anywhere;
+}
+
+.shopping-row.done .shopping-name {
+  color: var(--muted);
+  text-decoration: line-through;
+}
+
+.waste-note {
+  color: var(--muted);
+  font-size: 0.82rem;
+}
+
+/* Recipes */
+.recipes {
+  display: grid;
+  gap: 14px;
+}
+
+.recipe h2 {
+  margin-bottom: 4px;
+}
+
+.recipe ol {
+  display: grid;
+  gap: 6px;
+  margin: 10px 0 0;
+  padding-left: 1.3em;
+}
+
+/* Waste statistics: one series in the brand colour, numbers written beside each bar */
+.stats {
+  display: grid;
+  gap: 16px;
+}
+
+.stat-number {
+  margin: 0;
+  font-family: 'Bricolage Grotesque Variable', system-ui, sans-serif;
+  font-size: 3rem;
+  font-weight: 700;
+  line-height: 1;
+}
+
+.bars {
+  display: grid;
+  gap: 6px;
+  margin: 12px 0 0;
+  padding: 0;
+  list-style: none;
+}
+
+.bar-row {
+  display: grid;
+  grid-template-columns: 3.2rem 1fr 3.6rem;
+  align-items: center;
+  gap: 10px;
+  min-height: 28px;
+}
+
+.bar-row.wide-label {
+  grid-template-columns: minmax(6rem, 40%) 1fr 2rem;
+}
+
+.bar-label {
+  color: var(--muted);
+  font-size: 0.88rem;
+  overflow-wrap: anywhere;
+}
+
+.bar-track {
+  display: flex;
+  height: 14px;
+  border-bottom: 1px solid var(--border);
+}
+
+.bar {
+  height: 100%;
+  min-width: 4px;
+  border-radius: 0 4px 4px 0;
+  background: var(--brand-strong);
+}
+
+.bar-value {
+  font-variant-numeric: tabular-nums;
+  text-align: right;
+}
+
+.bar-value small {
+  color: var(--muted);
+}

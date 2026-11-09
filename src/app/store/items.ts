@@ -7,6 +7,7 @@
 import Dexie, { type Table } from 'dexie';
 import { lisbonDate } from '../../domain/dates';
 import { openItem } from '../../domain/shelf-life';
+import { restockSuggestion, type ShoppingEntry } from '../../domain/shopping';
 import type { ExpirySource, IsoDate, Item, Location } from '../../domain/types';
 
 /** Household id of the account-less inventory. */
@@ -15,6 +16,8 @@ export const LOCAL_HOUSEHOLD = 'local';
 /** An item changed here and not yet confirmed by the server (sync.ts). */
 export interface PendingChange {
   id: string;
+  /** Which table: items (absent, as before) or the shopping list. */
+  kind?: 'shopping';
   /** The item's updated_at when queued: a later change re-queues it. */
   updated_at: string;
 }
@@ -26,6 +29,7 @@ export interface Meta {
 
 export class InventoryDb extends Dexie {
   items!: Table<Item, string>;
+  shopping!: Table<ShoppingEntry, string>;
   outbox!: Table<PendingChange, string>;
   meta!: Table<Meta, string>;
 
@@ -37,6 +41,8 @@ export class InventoryDb extends Dexie {
     });
     // Accounts (Phase 3): changes waiting to go to the server, and the sync cursor.
     this.version(2).stores({ outbox: 'id', meta: 'key' });
+    // The shopping list (Phase 4).
+    this.version(3).stores({ shopping: 'id, state' });
   }
 }
 
@@ -53,6 +59,15 @@ async function write(store: InventoryDb, item: Item): Promise<void> {
   await store.transaction('rw', store.items, store.outbox, async () => {
     await store.items.put({ ...item, updated_at });
     await store.outbox.put({ id: item.id, updated_at });
+  });
+  changed();
+}
+
+/** The same for a shopping-list entry. */
+export async function writeShopping(store: InventoryDb, entry: ShoppingEntry): Promise<void> {
+  await store.transaction('rw', store.shopping, store.outbox, async () => {
+    await store.shopping.put(entry);
+    await store.outbox.put({ id: entry.id, updated_at: entry.updated_at, kind: 'shopping' });
   });
   changed();
 }
@@ -118,12 +133,26 @@ export async function resolveItem(
   now = new Date(),
   store = db,
 ): Promise<void> {
-  await update(store, id, { status, resolved_at: now.toISOString() }, now);
+  const item = await update(store, id, { status, resolved_at: now.toISOString() }, now);
+  // Eaten: suggest buying it again (thrown away: no, the list warns instead).
+  if (item && status === 'consumido') {
+    const suggestion = restockSuggestion(item, await store.shopping.toArray(), now);
+    if (suggestion) await writeShopping(store, suggestion);
+  }
 }
 
 /** Undo of a resolve, from the snackbar. */
 export async function reactivateItem(id: string, now = new Date(), store = db): Promise<void> {
   await update(store, id, { status: 'ativo', resolved_at: null }, now);
+  // Undo of "Comido": the suggestion it made goes too, if nobody acted on it yet.
+  const suggested = await store.shopping
+    .where('state')
+    .equals('sugerido')
+    .filter((entry) => entry.item_id === id)
+    .toArray();
+  for (const entry of suggested) {
+    await writeShopping(store, { ...entry, state: 'removido', updated_at: now.toISOString() });
+  }
 }
 
 /** "Abri isto": records the opening and brings the expiry forward by the opened rule. */

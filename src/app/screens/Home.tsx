@@ -58,7 +58,10 @@ export function Home() {
     void resolveItem(item.id, status);
     setUndo({
       id: item.id,
-      text: `${item.name}: ${status === 'consumido' ? 'comido' : 'deitado fora'}.`,
+      text:
+        status === 'consumido'
+          ? `${item.name}: comido. Fica sugerido na lista de compras.`
+          : `${item.name}: deitado fora. Da próxima vez, comprar menos?`,
     });
   };
 
@@ -75,8 +78,27 @@ export function Home() {
     />
   );
 
+  const dueSoon = lit.some(
+    (entry) => !entry.longLife && (entry.light === 'red' || entry.light === 'amber'),
+  );
+
   return (
     <div className="home">
+      <nav className="home-links" aria-label="Mais">
+        <Link className="button secondary" to="/compras">
+          Lista de compras
+        </Link>
+        <Link className="button secondary" to="/desperdicio">
+          Desperdício
+        </Link>
+      </nav>
+
+      {dueSoon && (
+        <Link className="button primary dinner-call" to="/jantar">
+          O que jantar hoje?
+        </Link>
+      )}
+
       <div className="filters" role="group" aria-label="Onde">
         {(['tudo', ...LOCATIONS] as const).map((place) => (
           <button

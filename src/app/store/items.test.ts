@@ -141,9 +141,19 @@ describe('changes waiting for the server', () => {
       { id: milk.id, updated_at: '2026-11-09T10:00:00.000Z' },
     ]);
     await resolveItem(milk.id, 'consumido', new Date('2026-11-09T11:00:00Z'), store);
-    expect(await store.outbox.toArray()).toEqual([
+    const queued = await store.outbox.toArray();
+    expect(queued.filter((entry) => !entry.kind)).toEqual([
       { id: milk.id, updated_at: '2026-11-09T11:00:00.000Z' },
     ]);
     expect((await store.items.get(milk.id))?.updated_at).toBe('2026-11-09T11:00:00.000Z');
+    // Eaten: suggested on the shopping list, and queued too.
+    const [suggestion] = await store.shopping.toArray();
+    expect(suggestion).toMatchObject({ name: 'Leite', state: 'sugerido', item_id: milk.id });
+    expect(queued).toContainEqual(
+      expect.objectContaining({ id: suggestion!.id, kind: 'shopping' }),
+    );
+    // Undo of "Comido": the suggestion goes away.
+    await reactivateItem(milk.id, new Date('2026-11-09T11:01:00Z'), store);
+    expect((await store.shopping.get(suggestion!.id))?.state).toBe('removido');
   });
 });

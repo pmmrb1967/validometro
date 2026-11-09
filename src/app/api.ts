@@ -88,3 +88,20 @@ export async function teachAliases(
     // Offline: the items are saved anyway; the dictionary learns next time.
   }
 }
+
+export interface Recipe {
+  title: string;
+  minutes: number;
+  /** Items from the fridge it uses. */
+  usa: string[];
+  /** What is missing (beyond the basics every kitchen has). */
+  falta: string[];
+  steps: string[];
+}
+
+/** "O que jantar hoje?": what is about to go off, never stored. */
+export function suggestRecipes(
+  items: { name: string; days: number }[],
+): Promise<{ recipes: Recipe[] }> {
+  return postJson('/api/ai/recipes', { items }, 'Não foi possível pensar em receitas.');
+}
