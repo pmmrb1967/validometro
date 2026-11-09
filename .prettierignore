@@ -1,0 +1,6 @@
+dist
+dev-dist
+coverage
+pnpm-lock.yaml
+*.md
+src/worker/worker-configuration.d.ts

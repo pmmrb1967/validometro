@@ -1,0 +1,47 @@
+{
+  "name": "validometro",
+  "private": true,
+  "version": "0.0.1",
+  "type": "module",
+  "description": "PWA gratuita para controlar as validades dos alimentos lá de casa e reduzir o desperdício",
+  "scripts": {
+    "dev": "vite",
+    "dev:worker": "pnpm build && wrangler dev",
+    "build": "tsc -b && vite build",
+    "typecheck": "tsc -b --noEmit",
+    "lint": "eslint .",
+    "format": "prettier --write .",
+    "test": "vitest run",
+    "test:watch": "vitest",
+    "icons": "pwa-assets-generator",
+    "cf-typegen": "wrangler types src/worker/worker-configuration.d.ts",
+    "db:migrate:local": "wrangler d1 migrations apply validometro --local",
+    "db:migrate:remote": "wrangler d1 migrations apply validometro --remote",
+    "deploy": "pnpm build && wrangler deploy"
+  },
+  "packageManager": "pnpm@12.11.2",
+  "license": "AGPL-3.0-or-later",
+  "author": "Paulo Barbosa",
+  "repository": "github:pmmrb1967/validometro",
+  "dependencies": {
+    "hono": "^4.13.17",
+    "zod": "^4.6.7"
+  },
+  "devDependencies": {
+    "@cloudflare/vitest-plugin": "^1.6.0",
+    "@eslint/js": "^10.0.1",
+    "@types/node": "^26.6.6",
+    "@vite-pwa/assets-generator": "^2.0.0",
+    "eslint": "^10.14.0",
+    "eslint-config-prettier": "^10.1.8",
+    "globals": "^17.14.0",
+    "prettier": "^3.9.10",
+    "typescript": "~6.0.3",
+    "typescript-eslint": "^8.72.1",
+    "vite": "^8.3.6",
+    "vite-plugin-pwa": "^2.0.0",
+    "vitest": "^5.1.0",
+    "workbox-window": "^7.4.1",
+    "wrangler": "^4.158.0"
+  }
+}

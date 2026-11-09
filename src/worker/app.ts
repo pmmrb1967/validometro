@@ -1,0 +1,51 @@
+// SPDX-License-Identifier: AGPL-3.0-or-later
+// Copyright (C) 2026 Paulo Barbosa
+import { Hono } from 'hono';
+import { z } from 'zod';
+
+export type AppEnv = { Bindings: Env };
+
+const locationSchema = z.enum(['frigorifico', 'congelador', 'despensa']);
+
+export const shelfLifeRuleSchema = z.object({
+  category: z.string(),
+  location: locationSchema,
+  state: z.enum(['fechado', 'aberto']),
+  days_default: z.number().int().nullable(),
+  label: z.string(),
+  notes: z.string().nullable(),
+});
+export type ShelfLifeRule = z.infer<typeof shelfLifeRuleSchema>;
+
+export const app = new Hono<AppEnv>().basePath('/api');
+
+/** Liveness plus a round trip to D1, so a deploy shows the database is bound and migrated. */
+app.get('/health', async (c) => {
+  const row = await c.env.DB.prepare('SELECT COUNT(*) AS rules FROM shelf_life_rules').first<{
+    rules: number;
+  }>();
+  return c.json({ ok: true, db: { shelfLifeRules: row?.rules ?? 0 } });
+});
+
+const rulesQuery = z.object({ location: locationSchema.optional() });
+
+/** Fallback shelf-life table, used to suggest an expiry date when none is printed. */
+app.get('/shelf-life-rules', async (c) => {
+  const parsed = rulesQuery.safeParse(c.req.query());
+  if (!parsed.success) return c.json({ error: 'Localização inválida.' }, 400);
+  const { location } = parsed.data;
+  const stmt = location
+    ? c.env.DB.prepare(
+        'SELECT * FROM shelf_life_rules WHERE location = ? ORDER BY label, state',
+      ).bind(location)
+    : c.env.DB.prepare('SELECT * FROM shelf_life_rules ORDER BY label, location, state');
+  const { results } = await stmt.all<ShelfLifeRule>();
+  return c.json({ rules: results });
+});
+
+app.notFound((c) => c.json({ error: 'Não encontrado.' }, 404));
+
+app.onError((err, c) => {
+  console.error('Unhandled error', err.message);
+  return c.json({ error: 'Ocorreu um erro inesperado. Tenta novamente.' }, 500);
+});
