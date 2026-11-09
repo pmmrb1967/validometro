@@ -1,7 +1,7 @@
 {
   "name": "validometro",
   "private": true,
-  "version": "0.0.1",
+  "version": "0.1.0",
   "type": "module",
   "description": "PWA gratuita para controlar as validades dos alimentos lá de casa e reduzir o desperdício",
   "scripts": {
@@ -25,6 +25,10 @@
   "repository": "github:pmmrb1967/validometro",
   "dependencies": {
     "@fontsource-variable/bricolage-grotesque": "^5.3.0",
+    "@zxing/browser": "^0.2.1",
+    "@zxing/library": "^0.23.0",
+    "dexie": "^4.4.7",
+    "dexie-react-hooks": "^4.4.0",
     "hono": "^4.13.17",
     "react": "^18.3.1",
     "react-dom": "^18.3.1",
@@ -43,6 +47,7 @@
     "eslint-config-prettier": "^10.1.8",
     "eslint-plugin-react-hooks": "^7.1.1",
     "eslint-plugin-react-refresh": "^0.5.7",
+    "fake-indexeddb": "^6.2.8",
     "globals": "^17.14.0",
     "prettier": "^3.9.10",
     "typescript": "~6.0.3",

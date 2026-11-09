@@ -106,7 +106,8 @@ Prompts versionados em `src/ai/prompts/`. Fornecedores atrás de uma interface c
 
 - Código, identificadores e commits em **inglês**; UI, mensagens ao utilizador e documentação em **português europeu** (pt-PT: "ecrã", "telemóvel", "registar", "utilizador").
 - TypeScript estrito. Validação de input com Zod em todas as rotas.
-- Datas em ISO 8601 (UTC) na BD; apresentação no fuso `Europe/Lisbon`.
+- Datas em ISO 8601 (UTC) na BD; apresentação no fuso `Europe/Lisbon`. A validade (`expires_at`) é um dia, não um instante: guarda-se como `YYYY-MM-DD` e conta-se em dias de calendário de Lisboa (`src/domain/dates.ts`).
+- Lógica de domínio (regras de validade, semáforo, categorias) em `src/domain/`, partilhada pela app e pelo Worker. As regras existem em `src/domain/shelf-life.ts` e no seed da D1; `test/shelf-life-sync.test.ts` garante que são iguais (alterar as duas, com migração nova).
 - Chaves de API de utilizadores cifradas em repouso (AES-GCM com segredo do Worker).
 - Testes com Vitest (`@cloudflare/vitest-plugin` para rotas e D1).
 - Commits pequenos e frequentes; cada fase do plano termina com a app a funcionar e deployada.

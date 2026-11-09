@@ -3,7 +3,7 @@ import { useEffect, useState } from 'react';
 
 /** A short line about the server: reachable, with D1 bound, or why not. */
 export function useHealth(): string {
-  const [text, setText] = useState('A verificar a ligação…');
+  const [text, setText] = useState('a verificar…');
 
   useEffect(() => {
     const controller = new AbortController();
@@ -11,12 +11,12 @@ export function useHealth(): string {
       .then(async (res) => {
         if (!res.ok) throw new Error(String(res.status));
         const body = (await res.json()) as { db: { shelfLifeRules: number } };
-        setText(`Ligado · ${body.db.shelfLifeRules} regras de validade`);
+        setText(`ligado, ${body.db.shelfLifeRules} regras de validade`);
       })
       .catch((err: unknown) => {
         if (controller.signal.aborted) return;
         console.warn('Health check failed', err);
-        setText(navigator.onLine ? 'Servidor indisponível' : 'Sem ligação (modo offline)');
+        setText(navigator.onLine ? 'indisponível' : 'sem ligação (modo offline)');
       });
     return () => controller.abort();
   }, []);

@@ -2,6 +2,8 @@
 // Copyright (C) 2026 Paulo Barbosa
 import { Hono } from 'hono';
 import { z } from 'zod';
+import { isValidGtin } from '../domain/barcode';
+import { lookupProduct } from './products';
 
 export type AppEnv = { Bindings: Env };
 
@@ -41,6 +43,21 @@ app.get('/shelf-life-rules', async (c) => {
     : c.env.DB.prepare('SELECT * FROM shelf_life_rules ORDER BY label, location, state');
   const { results } = await stmt.all<ShelfLifeRule>();
   return c.json({ rules: results });
+});
+
+/** Product by barcode (D1 cache, then Open Food Facts): fills the name and category. */
+app.get('/products/:ean', async (c) => {
+  const ean = c.req.param('ean');
+  if (!isValidGtin(ean)) return c.json({ error: 'Código de barras inválido.' }, 400);
+  try {
+    return c.json(await lookupProduct(c.env.DB, ean));
+  } catch (err) {
+    console.warn('Product lookup failed', err instanceof Error ? err.message : err);
+    return c.json(
+      { error: 'Não foi possível consultar o produto agora. Escreve o nome à mão.' },
+      502,
+    );
+  }
 });
 
 app.notFound((c) => c.json({ error: 'Não encontrado.' }, 404));

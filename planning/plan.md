@@ -20,17 +20,17 @@ Plano de implementação por fases. Cada fase termina com a app **a funcionar, t
 
 ## Fase 1 — Inventário local e semáforo (sem conta, sem IA)
 
-- [ ] Camada de dados local em IndexedDB com a mesma forma que `items` (para migrar depois para D1)
-- [ ] Adicionar item manualmente: nome, localização, categoria (sugerida), validade (sugerida pelas regras), **quantidade opcional**
-- [ ] Ecrã **Semáforo** (home):
+- [x] Camada de dados local em IndexedDB com a mesma forma que `items` (para migrar depois para D1)
+- [x] Adicionar item manualmente: nome, localização, categoria (sugerida), validade (sugerida pelas regras), **quantidade opcional**
+- [x] Ecrã **Semáforo** (home):
   - Vermelho: expira em ≤ 2 dias (ou já expirou)
   - Amarelo: expira em ≤ 7 dias
   - Verde: resto
   - Filtros por localização; itens de longa duração escondidos por omissão
-- [ ] Ações rápidas por item (swipe ou botões): **Comido**, **Deitado fora**, **Abri isto** (recalcula a validade com a regra `aberto`), **Editar data**
-- [ ] Leitura de código de barras: `BarcodeDetector` com fallback zxing-js
-- [ ] Rota `/api/products/:ean`: cache em `products`, senão Open Food Facts; preenche nome e categoria
-- [ ] Testes: regras de validade (fechado/aberto/localização), limites do semáforo
+- [x] Ações rápidas por item (swipe ou botões): **Comido**, **Deitado fora**, **Abri isto** (recalcula a validade com a regra `aberto`), **Editar data**
+- [x] Leitura de código de barras: `BarcodeDetector` com fallback zxing-js
+- [x] Rota `/api/products/:ean`: cache em `products`, senão Open Food Facts; preenche nome e categoria
+- [x] Testes: regras de validade (fechado/aberto/localização), limites do semáforo
 
 **Pronto quando:** dá para usar a app a sério, só com o telemóvel, sem conta.
 

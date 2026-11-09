@@ -1,26 +1,31 @@
 // SPDX-License-Identifier: AGPL-3.0-or-later
-import { Link, Outlet } from 'react-router';
+import { Link, Outlet, useLocation } from 'react-router';
 import { LogoMark } from './Logo';
-import { useHealth } from './useHealth';
 
-/** Top bar, the current screen and a status line (connection, version). */
+/** Top bar (brand, back or settings) and the current screen. */
 export function AppShell() {
-  const health = useHealth();
+  const { pathname } = useLocation();
+  const home = pathname === '/';
   return (
     <>
       <header className="topbar">
-        <Link to="/" className="brand">
+        <Link to="/" className="brand" aria-label="Validómetro, início">
           <LogoMark size={46} />
           <span className="wordmark">Validómetro</span>
         </Link>
+        {home ? (
+          <Link to="/definicoes" className="topbar-link">
+            Definições
+          </Link>
+        ) : (
+          <Link to="/" className="topbar-link">
+            Voltar
+          </Link>
+        )}
       </header>
       <main className="screen">
         <Outlet />
       </main>
-      <footer className="status">
-        <span role="status">{health}</span>
-        <span className="version">v{__APP_VERSION__}</span>
-      </footer>
     </>
   );
 }
