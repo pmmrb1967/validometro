@@ -1116,3 +1116,245 @@ textarea {
 .bar-value small {
   color: var(--muted);
 }
+
+/* Top bar with two links (Entrar, Definições) */
+.topbar-links {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+}
+
+/* Landing page: the first visit, before starting */
+.landing {
+  display: grid;
+  gap: 36px;
+}
+
+.landing-hero {
+  display: grid;
+  gap: 28px;
+  align-items: center;
+  padding-top: 8px;
+}
+
+.landing-title {
+  margin: 0 0 14px;
+  font-family: 'Bricolage Grotesque Variable', system-ui, sans-serif;
+  font-size: clamp(2rem, 7vw, 3.1rem);
+  font-weight: 700;
+  line-height: 1.05;
+  letter-spacing: -0.02em;
+  color: var(--link);
+  text-wrap: balance;
+}
+
+.landing-lead {
+  margin: 0 0 20px;
+  max-width: 58ch;
+  font-size: 1.08rem;
+  line-height: 1.55;
+}
+
+.landing-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px;
+  margin-bottom: 14px;
+}
+
+/* The preview: the morning notification above the traffic light */
+.landing-preview {
+  display: grid;
+  gap: 14px;
+  padding: 22px 18px;
+  border-radius: 24px;
+  background: var(--brand);
+}
+
+.preview-notification {
+  padding: 14px 16px 12px;
+  border-radius: 16px;
+  background: var(--surface);
+  color: var(--text);
+  box-shadow: 0 10px 24px rgb(0 0 0 / 0.18);
+}
+
+.preview-notification p {
+  margin: 0;
+}
+
+.preview-app {
+  color: var(--muted);
+  font-size: 0.78rem;
+}
+
+.preview-title {
+  margin-top: 4px !important;
+  font-weight: 650;
+}
+
+.preview-body {
+  color: var(--muted);
+  font-size: 0.9rem;
+}
+
+.preview-actions {
+  display: flex;
+  gap: 4px;
+  margin-top: 10px;
+  padding-top: 8px;
+  border-top: 1px solid var(--border);
+}
+
+.preview-actions span {
+  flex: 1;
+  padding: 6px 0;
+  color: var(--link);
+  font-size: 0.86rem;
+  font-weight: 650;
+  text-align: center;
+}
+
+.preview-list {
+  display: grid;
+  gap: 8px;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.preview-item {
+  display: grid;
+  grid-template-columns: auto 1fr auto;
+  align-items: center;
+  gap: 10px;
+  padding: 11px 14px;
+  border-radius: 14px;
+  background: var(--surface);
+  color: var(--text);
+}
+
+.preview-dot {
+  width: 12px;
+  height: 12px;
+  border-radius: 50%;
+}
+
+.light-red .preview-dot {
+  background: var(--expired);
+}
+
+.light-amber .preview-dot {
+  background: var(--soon);
+}
+
+.light-green .preview-dot {
+  background: var(--fresh);
+}
+
+.preview-name {
+  font-weight: 600;
+}
+
+.preview-when {
+  color: var(--muted);
+  font-size: 0.86rem;
+}
+
+.light-red .preview-when {
+  color: var(--expired-text);
+}
+
+.landing-band h2 {
+  margin: 0 0 14px;
+  font-family: 'Bricolage Grotesque Variable', system-ui, sans-serif;
+  font-size: 1.45rem;
+  line-height: 1.2;
+  text-wrap: balance;
+}
+
+.landing-grid {
+  display: grid;
+  gap: 12px;
+  margin-bottom: 12px;
+}
+
+.landing-feature {
+  padding: 16px 18px;
+  border-radius: 16px;
+  background: var(--surface);
+  border: 1px solid var(--border);
+}
+
+.landing-feature h3 {
+  margin: 0 0 6px;
+  font-size: 1.05rem;
+}
+
+.landing-feature p {
+  margin: 0;
+  color: var(--muted);
+  line-height: 1.5;
+}
+
+.landing-privacy {
+  padding: 20px;
+  border-left: 4px solid var(--brand-strong);
+  background: var(--surface);
+  border-radius: 0 16px 16px 0;
+}
+
+.landing-privacy p {
+  margin: 0;
+  line-height: 1.55;
+}
+
+.landing-privacy a,
+.privacy a {
+  color: var(--link);
+  font-weight: 600;
+}
+
+.landing-final {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: center;
+  gap: 10px;
+  padding: 8px 0 12px;
+}
+
+@media (min-width: 760px) {
+  .landing-hero {
+    grid-template-columns: 1.15fr 1fr;
+    gap: 40px;
+  }
+
+  .landing-grid {
+    grid-template-columns: repeat(3, 1fr);
+  }
+
+  .landing-grid-two {
+    grid-template-columns: repeat(2, 1fr);
+  }
+}
+
+/* Privacy page */
+.privacy {
+  display: grid;
+  gap: 14px;
+}
+
+.privacy .card p,
+.privacy .card li {
+  line-height: 1.55;
+}
+
+.privacy .card ul {
+  margin: 0 0 10px;
+  padding-left: 1.2em;
+}
+
+/* The landing page uses the width of a computer screen; the app stays phone-shaped. */
+.screen:has(> .landing) {
+  max-width: 68rem;
+}

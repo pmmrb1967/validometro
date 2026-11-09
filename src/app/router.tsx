@@ -4,6 +4,7 @@ import { AppShell } from './AppShell';
 import { Account } from './screens/Account';
 import { AddItem } from './screens/AddItem';
 import { Home } from './screens/Home';
+import { Privacy } from './screens/Privacy';
 import { Recipes } from './screens/Recipes';
 import { Review } from './screens/Review';
 import { Settings } from './screens/Settings';
@@ -19,6 +20,9 @@ export const router = createBrowserRouter([
       { path: 'rever', element: <Review /> },
       { path: 'definicoes', element: <Settings /> },
       { path: 'conta', element: <Account /> },
+      { path: 'entrar', element: <Account initialMode="entrar" /> },
+      { path: 'criar-conta', element: <Account initialMode="criar" /> },
+      { path: 'privacidade', element: <Privacy /> },
       { path: 'compras', element: <Shopping /> },
       { path: 'jantar', element: <Recipes /> },
       { path: 'desperdicio', element: <Stats /> },

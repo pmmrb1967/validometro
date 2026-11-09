@@ -11,21 +11,23 @@ import { ApiError } from '../api';
 
 const MIN_PASSWORD = 12;
 
-export function Account() {
+export function Account({ initialMode }: { initialMode?: 'entrar' | 'criar' }) {
   const navigate = useNavigate();
   const [params] = useSearchParams();
   const invite = params.get('convite')?.trim() ?? '';
   const account = useAccount();
   const me = account.status === 'ready' ? account.me : null;
-  const [mode, setMode] = useState<'entrar' | 'criar'>(invite ? 'criar' : 'entrar');
+  const [mode, setMode] = useState<'entrar' | 'criar'>(
+    initialMode ?? (invite ? 'criar' : 'entrar'),
+  );
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string>();
 
-  // Signed in already and nothing to join: the settings have the account.
+  // Signed in already and nothing to join: straight to the app.
   useEffect(() => {
-    if (me && !invite) navigate('/definicoes', { replace: true });
+    if (me && !invite) navigate('/', { replace: true });
   }, [me, invite, navigate]);
 
   const join = async () => {
@@ -33,7 +35,7 @@ export function Account() {
     setError(undefined);
     try {
       await joinHousehold(invite);
-      navigate('/definicoes', { replace: true });
+      navigate('/', { replace: true });
     } catch (err) {
       setError(err instanceof ApiError ? err.message : 'Não foi possível entrar na casa.');
     } finally {
@@ -49,7 +51,7 @@ export function Account() {
       if (mode === 'criar') await register(email, password);
       else await signIn(email, password);
       if (invite) await joinHousehold(invite);
-      navigate('/definicoes', { replace: true });
+      navigate('/', { replace: true });
     } catch (err) {
       setError(err instanceof ApiError ? err.message : 'Algo correu mal. Tenta outra vez.');
     } finally {

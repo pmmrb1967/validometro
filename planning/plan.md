@@ -75,6 +75,7 @@ Plano de implementação por fases. Cada fase termina com a app **a funcionar, t
 
 ## Fase 5 — Admin, robustez e lançamento
 
+- [x] Página inicial para quem chega pela primeira vez (sem conta e sem nada registado), como nos irmãos; "Entrar" na barra de topo; páginas `/entrar`, `/criar-conta` e `/privacidade`. Quem já usa a app vai direto ao semáforo
 - [ ] Painel de admin (emails em `ADMIN_EMAILS`): tamanho da D1, consultas/dia, uso de IA por fornecedor, utilizadores e agregados ativos
 - [ ] Aviso ao admin quando os limites do plano gratuito se aproximam (reutilizar a lógica pensada para o Prazómetro)
 - [ ] Exportar/apagar dados do utilizador (RGPD)

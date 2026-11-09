@@ -42,7 +42,7 @@ export function AccountSections() {
           Sem conta, tudo fica só neste telemóvel. Com conta, a família vê a mesma despensa, cada um
           recebe o alerta diário e nada se perde se mudares de telemóvel.
         </p>
-        <Link className="button primary" to="/conta">
+        <Link className="button primary" to="/entrar">
           Criar conta ou entrar
         </Link>
       </section>
