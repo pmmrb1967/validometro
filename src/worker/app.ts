@@ -3,6 +3,7 @@
 import { Hono } from 'hono';
 import { z } from 'zod';
 import { isValidGtin } from '../domain/barcode';
+import { ingest } from './ingest';
 import { lookupProduct } from './products';
 
 export type AppEnv = { Bindings: Env };
@@ -59,6 +60,8 @@ app.get('/products/:ean', async (c) => {
     );
   }
 });
+
+app.route('/', ingest);
 
 app.notFound((c) => c.json({ error: 'Não encontrado.' }, 404));
 

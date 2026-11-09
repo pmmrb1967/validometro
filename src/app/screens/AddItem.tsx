@@ -11,7 +11,9 @@ import { categoryById, CATEGORIES, suggestCategory } from '../../domain/categori
 import { daysBetween, isIsoDate, lisbonDate } from '../../domain/dates';
 import { findRule, isLongLife, suggestExpiry } from '../../domain/shelf-life';
 import { IN_LOCATION, LOCATION_LABELS, LOCATIONS, type Location } from '../../domain/types';
-import { ApiError, fetchProduct } from '../api';
+import { ApiError, fetchProduct, readPrintedDate } from '../api';
+import { PhotoButton } from '../components/PhotoButton';
+import { QuickEntry } from '../components/QuickEntry';
 import { Scanner } from '../components/Scanner';
 import { addItem } from '../store/items';
 
@@ -31,6 +33,9 @@ export function AddItem() {
   const [opened, setOpened] = useState(false);
   const [expires, setExpires] = useState('');
   const [expiresTouched, setExpiresTouched] = useState(false);
+  /** The date was read from the package (principle 5: printed beats estimated). */
+  const [printed, setPrinted] = useState(false);
+  const [dateNote, setDateNote] = useState<string>();
   const [quantity, setQuantity] = useState('');
   const [unit, setUnit] = useState('');
   const [ean, setEan] = useState<string | null>(null);
@@ -90,6 +95,8 @@ export function AddItem() {
     setOpened(false);
     setExpires('');
     setExpiresTouched(false);
+    setPrinted(false);
+    setDateNote(undefined);
     setQuantity('');
     setUnit('');
     setEan(null);
@@ -108,7 +115,7 @@ export function AddItem() {
       category: category || null,
       location,
       expires_at: date,
-      expiry_source: expiresTouched ? 'manual' : 'estimada',
+      expiry_source: printed ? 'impressa' : expiresTouched ? 'manual' : 'estimada',
       quantity: quantity.trim() && Number.isFinite(amount) && amount > 0 ? amount : null,
       unit: quantity.trim() ? unit : null,
       ean,
@@ -126,7 +133,9 @@ export function AddItem() {
   const rule = findRule(category || null, location, state);
   const label = categoryById(category)?.label;
   let expiryHint: string;
-  if (expiresTouched) {
+  if (printed) {
+    expiryHint = 'Data lida da embalagem. Confirma se está certa.';
+  } else if (expiresTouched) {
     expiryHint = 'Data escrita por ti.';
   } else if (isLongLife(category || null)) {
     expiryHint = 'Longa duração: fica fora do semáforo. Podes escrever a data, se quiseres.';
@@ -139,7 +148,11 @@ export function AddItem() {
 
   return (
     <div className="add">
-      <h1 className="page-title">Adicionar alimento</h1>
+      <h1 className="page-title">Adicionar alimentos</h1>
+
+      <QuickEntry />
+
+      <h2 className="section-title">Um de cada vez</h2>
 
       <button type="button" className="secondary scan-button" onClick={() => setScanning(true)}>
         Ler código de barras
@@ -222,14 +235,35 @@ export function AddItem() {
               onChange={(event) => {
                 setExpires(event.target.value);
                 setExpiresTouched(true);
+                setPrinted(false);
               }}
             />
+            <PhotoButton
+              className="ghost"
+              onError={setDateNote}
+              onPhoto={(image) => {
+                setDateNote('A ler a data…');
+                readPrintedDate(image)
+                  .then(({ date }) => {
+                    setExpires(date);
+                    setExpiresTouched(true);
+                    setPrinted(true);
+                    setDateNote(undefined);
+                  })
+                  .catch((err: unknown) =>
+                    setDateNote(err instanceof ApiError ? err.message : 'Não consegui ler a data.'),
+                  );
+              }}
+            >
+              Ler data
+            </PhotoButton>
             {expiresTouched && suggested && (
               <button
                 type="button"
                 className="ghost"
                 onClick={() => {
                   setExpiresTouched(false);
+                  setPrinted(false);
                   setExpires('');
                 }}
               >
@@ -238,6 +272,11 @@ export function AddItem() {
             )}
           </div>
           <p className="hint">{expiryHint}</p>
+          {dateNote && (
+            <p className="note" role="status">
+              {dateNote}
+            </p>
+          )}
         </div>
 
         <fieldset className="field">

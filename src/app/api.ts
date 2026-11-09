@@ -1,4 +1,6 @@
 // SPDX-License-Identifier: AGPL-3.0-or-later
+import type { DraftItem } from '../domain/drafts';
+import { aiHeaders } from './ai-settings';
 
 export interface Product {
   ean: string;
@@ -29,4 +31,60 @@ export async function fetchProduct(ean: string): Promise<Product> {
   }
   if (!res.ok) throw new ApiError(await errorMessage(res, 'Não foi possível consultar o produto.'));
   return (await res.json()) as Product;
+}
+
+// --- Reading with AI (receipt, voice, printed date) -------------------------------------
+
+export interface ReadingResult {
+  store: string | null;
+  date: string | null;
+  drafts: DraftItem[];
+}
+
+async function postJson<T>(path: string, body: unknown, fallback: string): Promise<T> {
+  let res: Response;
+  try {
+    res = await fetch(path, {
+      method: 'POST',
+      headers: { 'content-type': 'application/json', ...aiHeaders() },
+      body: JSON.stringify(body),
+    });
+  } catch {
+    throw new ApiError('Sem ligação à internet. Tenta mais tarde ou escreve à mão.');
+  }
+  if (!res.ok) throw new ApiError(await errorMessage(res, fallback));
+  return (await res.json()) as T;
+}
+
+export function readReceipt(image: string): Promise<ReadingResult> {
+  return postJson('/api/ingest/receipt', { image }, 'Não foi possível ler o talão.');
+}
+
+export function readSpoken(text: string): Promise<ReadingResult> {
+  return postJson('/api/ingest/voice', { text }, 'Não foi possível perceber a lista.');
+}
+
+export function readPrintedDate(image: string): Promise<{ date: string; kind: string }> {
+  return postJson('/api/ingest/date', { image }, 'Não foi possível ler a data.');
+}
+
+export function testAi(): Promise<{ ok: true; provider: string }> {
+  return postJson('/api/ai/test', {}, 'A ligação falhou.');
+}
+
+/** After the review: teach the shared dictionary. Best effort, never blocks saving. */
+export async function teachAliases(
+  store: string | null,
+  lines: { raw: string; name: string; category: string | null; perishable: boolean }[],
+): Promise<void> {
+  if (!lines.length) return;
+  try {
+    await fetch('/api/aliases', {
+      method: 'POST',
+      headers: { 'content-type': 'application/json' },
+      body: JSON.stringify({ store, lines }),
+    });
+  } catch {
+    // Offline: the items are saved anyway; the dictionary learns next time.
+  }
 }

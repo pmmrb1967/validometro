@@ -721,3 +721,183 @@ select {
   color: #14212e;
   background: #fff;
 }
+
+/* Fast entry: receipt photo and dictation */
+.quick-entry {
+  display: grid;
+  gap: 10px;
+  margin-bottom: 24px;
+}
+
+.quick-buttons {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 8px;
+}
+
+.quick-buttons button {
+  min-height: 56px;
+}
+
+.voice-panel {
+  display: grid;
+  gap: 10px;
+  padding: 14px;
+  border-radius: 16px;
+  background: var(--surface);
+  border: 1px solid var(--border);
+}
+
+textarea {
+  font: inherit;
+  color: var(--text);
+  width: 100%;
+  padding: 10px 12px;
+  border-radius: 12px;
+  border: 1px solid var(--field-border);
+  background: var(--surface);
+  resize: vertical;
+}
+
+.voice-panel .row .primary {
+  flex: 1;
+}
+
+.note.error {
+  color: var(--expired-text);
+}
+
+.section-title {
+  margin: 0 0 4px;
+  font-size: 1.05rem;
+}
+
+.row .ghost {
+  flex: 0 0 auto;
+}
+
+/* Review before saving */
+.review-list {
+  display: grid;
+  gap: 10px;
+  margin: 16px 0;
+  padding: 0;
+  list-style: none;
+}
+
+.review-row {
+  display: grid;
+  grid-template-columns: auto 1fr;
+  gap: 10px;
+  padding: 12px;
+  border-radius: 16px;
+  background: var(--surface);
+  border: 1px solid var(--border);
+}
+
+.review-row.off .review-fields {
+  opacity: 0.55;
+}
+
+.review-include {
+  align-self: start;
+  padding-top: 10px;
+}
+
+.review-fields {
+  display: grid;
+  gap: 8px;
+  min-width: 0;
+}
+
+.review-fields input,
+.review-fields select {
+  min-height: 42px;
+  width: 100%;
+  min-width: 0;
+  padding: 0 10px;
+  border-radius: 10px;
+  border: 1px solid var(--field-border);
+  background: var(--surface);
+}
+
+.review-name {
+  font-weight: 600;
+}
+
+.review-raw {
+  margin: 0;
+  color: var(--muted);
+  font-size: 0.85rem;
+}
+
+.review-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 6px;
+}
+
+.review-actions {
+  position: sticky;
+  bottom: 0;
+  display: grid;
+  gap: 6px;
+  padding: 12px 0 calc(12px + env(safe-area-inset-bottom));
+  background: var(--bg);
+}
+
+.review-actions .primary {
+  min-height: 52px;
+}
+
+/* Settings: AI provider */
+.choices {
+  display: grid;
+  gap: 8px;
+}
+
+.choice {
+  display: grid;
+  grid-template-columns: auto 1fr;
+  gap: 10px;
+  align-items: start;
+  padding: 10px 12px;
+  border-radius: 12px;
+  border: 1px solid var(--border);
+}
+
+.choice:has(input:checked) {
+  border-color: var(--brand-strong);
+}
+
+.choice input {
+  width: 20px;
+  height: 20px;
+  margin-top: 2px;
+  accent-color: var(--brand-strong);
+}
+
+.choice span {
+  display: grid;
+  gap: 2px;
+}
+
+.choice small {
+  color: var(--muted);
+  font-size: 0.85rem;
+}
+
+.card .field + .field,
+.card .field + .row,
+.card fieldset + .row {
+  margin-top: 12px;
+}
+
+.visually-hidden {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  overflow: hidden;
+  clip-path: inset(50%);
+  white-space: nowrap;
+}

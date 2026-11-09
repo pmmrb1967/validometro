@@ -94,6 +94,7 @@ Esquema de referência; as migrações ficam em `migrations/`.
 
 1. O cliente redimensiona a imagem e envia-a para `/api/ingest/receipt`.
 2. O Worker escolhe o fornecedor: chave do utilizador (Gemini/Claude) se configurada, senão Workers AI.
+   Modelos atuais: Workers AI `@cf/google/gemma-4-26b-a4b-it` (raciocínio desligado), Gemini `gemini-3.5-flash-lite` (REST), Claude via `@anthropic-ai/sdk` (Opus 5.5 por omissão; o utilizador pode escolher Sonnet/Haiku). Sem contas, a chave vem no cabeçalho `x-ai-key` de cada pedido e não é guardada no servidor.
 3. O prompt pede **apenas JSON** segundo um esquema fixo: `{ store, date, lines: [{ raw, name, category, quantity?, unit?, perishable }] }`. Validar sempre com Zod. Se a validação falhar, tentar uma vez e depois devolver erro amigável.
 4. Para cada linha, consultar `product_aliases` pelo `raw` normalizado. Uma correspondência conhecida sobrepõe-se à interpretação da IA.
 5. Aplicar `shelf_life_rules` às linhas perecíveis para propor `expires_at` (`expiry_source = 'estimada'`).

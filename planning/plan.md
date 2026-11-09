@@ -36,17 +36,17 @@ Plano de implementação por fases. Cada fase termina com a app **a funcionar, t
 
 ## Fase 2 — Entrada com IA (talão, data impressa, voz)
 
-- [ ] Interface `AiProvider` com implementações Workers AI, Gemini e Claude; escolha por utilizador
-- [ ] Definições: o utilizador cola a sua chave (cifrada em repouso) ou fica com Workers AI
-- [ ] Redimensionamento da imagem no cliente antes do upload
-- [ ] `/api/ingest/receipt`: prompt → JSON validado com Zod → aliases → regras de validade → `DraftItem[]`
-- [ ] Ecrã de **revisão**: lista editável das linhas do talão; desmarcar não-alimentares; corrigir nome, localização e data; quantidade opcional
-- [ ] Ao confirmar: upsert em `product_aliases` (aprendizagem partilhada)
-- [ ] `/api/ingest/date`: foto da data impressa na embalagem → `expires_at` com `expiry_source = 'impressa'`
-- [ ] Voz: Web Speech API → texto → `/api/ingest/voice` → `DraftItem[]` → mesmo ecrã de revisão
-- [ ] Registo em `ai_usage`; mensagem amigável quando a quota de Workers AI se esgota
+- [x] Interface `AiProvider` com implementações Workers AI, Gemini e Claude; escolha por utilizador (`src/ai/providers/`)
+- [x] Definições: o utilizador cola a sua chave ou fica com Workers AI. Sem contas, a chave fica só no dispositivo e vai em cada pedido (o servidor não a guarda); a cifra em repouso (AES-GCM) chega com as contas, na Fase 3
+- [x] Redimensionamento da imagem no cliente antes do upload (1600 px, JPEG 0,7)
+- [x] `/api/ingest/receipt`: prompt → JSON validado com Zod (uma repetição) → aliases → regras de validade → `DraftItem[]`
+- [x] Ecrã de **revisão** (`/rever`): lista editável; longa duração desmarcada por omissão; corrigir nome, tipo, local e data (ou ler a data por foto); quantidade opcional
+- [x] Ao confirmar: upsert em `product_aliases` (aprendizagem partilhada)
+- [x] `/api/ingest/date`: foto da data impressa na embalagem → `expires_at` com `expiry_source = 'impressa'`
+- [x] Voz: Web Speech API (ou escrever a lista) → `/api/ingest/voice` → `DraftItem[]` → mesmo ecrã de revisão
+- [x] Registo em `ai_usage` (Neurons estimados no Workers AI); pára antes de esgotar a quota diária, com mensagem amigável
 - [ ] Conjunto de teste com 10–15 talões reais (Continente, Pingo Doce, Lidl, Auchan, Mercadona) para comparar fornecedores em precisão e custo. Guardar só o texto esperado, nunca as imagens, no repositório
-- [ ] Decidir o fornecedor por omissão com base nesse teste
+- [ ] Decidir o fornecedor por omissão com base nesse teste (provisório: Workers AI com `@cf/google/gemma-4-26b-a4b-it`)
 
 **Pronto quando:** um talão típico de supermercado português resulta num rascunho com ≥ 80% das linhas corretas e o resto corrige-se no ecrã de revisão.
 

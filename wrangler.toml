@@ -29,5 +29,10 @@ database_name = "validometro"
 database_id = "0916b1e9-1569-42f6-b23f-73f22422be6e" # created with --jurisdiction eu
 migrations_dir = "migrations"
 
+# Workers AI: the default reader (free daily Neurons). See src/ai/providers/workers-ai.ts.
+[ai]
+binding = "AI"
+remote = true
+
 [observability]
 enabled = true

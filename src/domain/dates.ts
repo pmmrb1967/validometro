@@ -30,7 +30,10 @@ export function daysBetween(from: IsoDate, to: IsoDate): number {
 }
 
 export function isIsoDate(value: string): value is IsoDate {
-  return /^\d{4}-\d{2}-\d{2}$/.test(value) && !Number.isNaN(toUtcMs(value));
+  if (!/^\d{4}-\d{2}-\d{2}$/.test(value)) return false;
+  // A real day: 2026-02-30 would roll over to March.
+  const ms = toUtcMs(value);
+  return !Number.isNaN(ms) && new Date(ms).toISOString().slice(0, 10) === value;
 }
 
 const MONTHS = ['jan', 'fev', 'mar', 'abr', 'mai', 'jun', 'jul', 'ago', 'set', 'out', 'nov', 'dez'];
