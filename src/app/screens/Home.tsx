@@ -14,9 +14,8 @@ import {
 } from '../../domain/types';
 import { InstallSection } from '../components/InstallSection';
 import { ItemCard } from '../components/ItemCard';
-import { useAccount } from '../account';
+import { useShowLanding } from '../landing-state';
 import { LogoMark } from '../Logo';
-import { useStarted } from '../started';
 import { Landing } from './Landing';
 import { activeItems, markOpened, reactivateItem, resolveItem, setExpiry } from '../store/items';
 
@@ -40,8 +39,7 @@ export function Home() {
   const [showLongLife, setShowLongLife] = useState(false);
   const [undo, setUndo] = useState<Undo>();
   const today = lisbonDate(new Date());
-  const account = useAccount();
-  const started = useStarted();
+  const showLanding = useShowLanding();
 
   useEffect(() => {
     if (!undo) return;
@@ -56,9 +54,9 @@ export function Home() {
   const inPlace = lit.filter((entry) => filter === 'tudo' || entry.item.location === filter);
   const longLife = inPlace.filter((entry) => entry.longLife);
 
-  if (items === undefined || account.status === 'loading') return null;
+  if (items === undefined || showLanding === undefined) return null;
   // Someone new (no account, nothing here, never started): the landing page.
-  if (items.length === 0 && !account.me && !started) return <Landing />;
+  if (showLanding) return <Landing />;
   if (items.length === 0) return <Empty />;
 
   const resolve = (item: Item, status: 'consumido' | 'deitado_fora') => {

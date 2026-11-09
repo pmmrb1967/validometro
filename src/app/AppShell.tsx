@@ -3,6 +3,7 @@ import { Link, Outlet, useLocation } from 'react-router';
 import { APP_COMMIT, APP_VERSION, LICENSE_URL, SOURCE_URL } from './build-info';
 import { useAccount } from './account';
 import { feedbackLink } from './feedback';
+import { useShowLanding } from './landing-state';
 import { t } from './i18n/pt-PT';
 import { LogoMark } from './Logo';
 import { applyUpdate, useUpdateAvailable } from './pwa';
@@ -15,6 +16,9 @@ export function AppShell() {
   const account = useAccount();
   const signedOut = account.status === 'ready' && !account.me;
   const onSignIn = pathname === '/entrar' || pathname === '/criar-conta' || pathname === '/conta';
+  // Before starting there is nothing to set: the landing page offers only "Entrar".
+  const showLanding = useShowLanding();
+  const landing = home && showLanding !== false;
   return (
     <>
       <header className="topbar">
@@ -29,9 +33,11 @@ export function AppShell() {
             </Link>
           )}
           {home ? (
-            <Link to="/definicoes" className="topbar-link">
-              Definições
-            </Link>
+            !landing && (
+              <Link to="/definicoes" className="topbar-link">
+                Definições
+              </Link>
+            )
           ) : (
             <Link to="/" className="topbar-link">
               Voltar
