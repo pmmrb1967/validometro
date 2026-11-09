@@ -2,7 +2,7 @@
 import { defineConfig, minimal2023Preset } from '@vite-pwa/assets-generator/config';
 
 /** The icon's own background, so the padding of maskable and Apple icons blends in. */
-const BRAND_BACKGROUND = '#1f4d3a';
+const BRAND_BACKGROUND = '#163a5f';
 
 export default defineConfig({
   preset: {

@@ -42,6 +42,13 @@ Este ficheiro dá contexto ao Claude Code sobre o projeto. Lê-o sempre antes de
 - Workers AI: quota diária partilhada de Neurons. Registar o consumo em `ai_usage` e degradar com elegância quando a quota estiver perto do fim (sugerir chave própria ou entrada manual).
 - D1: manter as consultas indexadas; o painel de admin mostra tamanho da BD e consultas diárias.
 
+## Identidade visual
+
+- **Cor da marca: azul-frio `#163a5f`** (o frigorífico, a conservação). Fundo `#f3f6f8`. O verde do Faturómetro (`#1f5c4a`) e o roxo do Wattómetro (`#2e2250`) ficam de fora, para os irmãos não se confundirem.
+- As cores do **semáforo** (`--fresh` `#4cb873`, `--soon` `#f2b33d`, `--expired` `#ef5b4c`, com variantes `*-text` para texto) são as únicas cores quentes e saturadas do ecrã. Não as usar para decoração.
+- **Logótipo:** mostrador da família "-ómetro" dividido nos três segmentos do semáforo, com uma **folha como ponteiro** a apontar para o verde. Fonte: `public/icon.svg` (os PNG geram-se com `pnpm icons`); no código, `LogoMark` em `src/app/Logo.tsx`.
+- Tipografia: Bricolage Grotesque (títulos e wordmark), como nos irmãos; corpo em fonte do sistema.
+
 ## Arquitetura (resumo)
 
 ```
