@@ -16,6 +16,8 @@ export default defineConfig(async () => {
           plugins: [
             cloudflareTest({
               wrangler: { configPath: './wrangler.toml' },
+              // Tests pass a fake Workers AI binding; never reach Cloudflare (CI has no login).
+              remoteBindings: false,
               miniflare: { bindings: { TEST_MIGRATIONS: migrations } },
             }),
           ],
