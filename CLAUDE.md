@@ -28,7 +28,7 @@ Este ficheiro dá contexto ao Claude Code sobre o projeto. Lê-o sempre antes de
 | Runtime | Cloudflare Workers (plano Free) |
 | Backend | Hono + TypeScript |
 | Base de dados | Cloudflare D1 (SQLite) |
-| Frontend | PWA servida pelo próprio Worker (assets estáticos), TypeScript, sem framework pesada salvo decisão em contrário |
+| Frontend | PWA servida pelo próprio Worker (assets estáticos): Vite + React 18 + `react-router` + TypeScript, como no Wattómetro. Lógica de domínio em `src/domain/`, sem React |
 | Armazenamento local | IndexedDB (modo sem conta e cache offline) |
 | Agendamento | Cron Triggers do Worker (verificação diária de validades) |
 | Notificações | Web Push (VAPID) |

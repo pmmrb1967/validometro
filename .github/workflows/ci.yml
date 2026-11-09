@@ -1,4 +1,5 @@
-# Checks on every push and pull request. Deploy is added once the Cloudflare account is set.
+# Checks on every push and pull request. On a push to main, deploys to Cloudflare once
+# every check has passed (https://app.validometro.workers.dev).
 name: CI
 
 on:
@@ -20,3 +21,38 @@ jobs:
       - run: pnpm lint
       - run: pnpm test
       - run: pnpm build
+
+  deploy:
+    # Only for main, after the checks; needs the CLOUDFLARE_API_TOKEN secret
+    # (account token: Workers Scripts Edit, D1 Edit).
+    needs: check
+    if: (github.event_name == 'push' || github.event_name == 'workflow_dispatch') && github.ref == 'refs/heads/main'
+    runs-on: ubuntu-latest
+    concurrency: deploy
+    env:
+      CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+      CLOUDFLARE_ACCOUNT_ID: 3c37a84e831f214acafff4873b338bba
+    steps:
+      - name: Token configured?
+        id: token
+        run: |
+          if [ -z "$CLOUDFLARE_API_TOKEN" ]; then
+            echo "::warning::CLOUDFLARE_API_TOKEN is not set: skipping the deploy."
+            echo "ok=false" >> "$GITHUB_OUTPUT"
+          else
+            echo "ok=true" >> "$GITHUB_OUTPUT"
+          fi
+      - uses: actions/checkout@v7
+        if: steps.token.outputs.ok == 'true'
+      - uses: actions/setup-node@v7
+        if: steps.token.outputs.ok == 'true'
+        with:
+          node-version: 24
+      - if: steps.token.outputs.ok == 'true'
+        run: corepack enable pnpm && pnpm install --frozen-lockfile
+      - name: Database migrations
+        if: steps.token.outputs.ok == 'true'
+        run: pnpm db:migrate:remote
+      - name: Worker (API + PWA)
+        if: steps.token.outputs.ok == 'true'
+        run: pnpm run deploy

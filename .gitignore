@@ -29,3 +29,4 @@ fixtures/private/
 *.jpg
 *.jpeg
 *.heic
+.playwright-mcp/

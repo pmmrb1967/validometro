@@ -10,11 +10,11 @@ Plano de implementação por fases. Cada fase termina com a app **a funcionar, t
 
 - [x] Inicializar o projeto (Hono + TypeScript + Wrangler), `package.json`, `tsconfig` estrito, ESLint/Prettier
 - [x] `LICENSE` AGPL-3.0 e cabeçalho de copyright
-- [ ] Criar a BD D1 `validometro` (remota: falta escolher a conta Cloudflare) e a primeira migração com o esquema de `CLAUDE.md` (feita)
+- [x] Criar a BD D1 `validometro` (UE) e a primeira migração com o esquema de `CLAUDE.md`
 - [x] Seed de `shelf_life_rules` (ver tabela no fim deste ficheiro)
 - [x] Shell da PWA: `manifest.webmanifest`, ícones, Service Worker com cache offline básico, layout mobile-first
 - [x] Vitest + `@cloudflare/vitest-plugin` (antigo `vitest-pool-workers`) com um teste de rota e um de D1
-- [ ] Primeiro deploy e verificação da instalação da PWA em Android e iPhone
+- [ ] Primeiro deploy (feito: https://app.validometro.workers.dev) e verificação da instalação da PWA em Android e iPhone
 
 **Pronto quando:** a PWA instala-se no telemóvel e mostra um ecrã vazio servido pelo Worker com a D1 ligada.
 

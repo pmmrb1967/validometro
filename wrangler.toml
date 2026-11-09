@@ -1,3 +1,4 @@
+# The app on Cloudflare: https://app.validometro.workers.dev
 # Validómetro: one Worker (Cloudflare free plan) serves the PWA (static assets in dist/) and
 # the API under /api/*, with D1. Setup, done once (see README.md):
 #   pnpm exec wrangler login
@@ -5,11 +6,11 @@
 #   (copy the database_id below and set account_id)
 #   pnpm db:migrate:remote
 #   pnpm deploy
-name = "validometro"
+name = "app"
 main = "src/worker/index.ts"
-# TODO(Phase 0): set the Cloudflare account that owns Validómetro (the login on this
-# machine sees several).
-# account_id = ""
+# Validómetro's own Cloudflare account (validometro@outlook.com; pmmrb1967@gmail.com is an
+# Administrator member): the login on this machine sees several.
+account_id = "3c37a84e831f214acafff4873b338bba"
 compatibility_date = "2026-10-01"
 compatibility_flags = ["nodejs_compat"]
 workers_dev = true
@@ -25,8 +26,7 @@ run_worker_first = ["/api/*", "/api"]
 [[d1_databases]]
 binding = "DB"
 database_name = "validometro"
-# TODO(Phase 0): replace with the id printed by `wrangler d1 create`.
-database_id = "00000000-0000-0000-0000-000000000000"
+database_id = "0916b1e9-1569-42f6-b23f-73f22422be6e" # created with --jurisdiction eu
 migrations_dir = "migrations"
 
 [observability]

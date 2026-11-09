@@ -28,7 +28,7 @@ pnpm exec wrangler login
 CLOUDFLARE_ACCOUNT_ID=<conta> pnpm exec wrangler d1 create validometro --jurisdiction eu
 # copiar o database_id para wrangler.toml e definir account_id
 pnpm db:migrate:remote
-pnpm deploy
+pnpm run deploy            # https://app.validometro.workers.dev
 ```
 
 ## Licença

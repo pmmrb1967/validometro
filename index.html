@@ -11,27 +11,13 @@
     <link rel="icon" href="/favicon.ico" sizes="48x48" />
     <link rel="icon" href="/icon.svg" type="image/svg+xml" />
     <link rel="apple-touch-icon" href="/apple-touch-icon-180x180.png" />
+    <meta name="mobile-web-app-capable" content="yes" />
     <meta name="apple-mobile-web-app-capable" content="yes" />
     <meta name="apple-mobile-web-app-title" content="Validómetro" />
     <title>Validómetro</title>
   </head>
   <body>
-    <header class="topbar">
-      <h1>Validómetro</h1>
-    </header>
-    <main id="app" class="screen">
-      <section class="empty" aria-labelledby="empty-title">
-        <div class="lights" aria-hidden="true"><span></span><span></span><span></span></div>
-        <h2 id="empty-title">Ainda não há nada registado</h2>
-        <p>
-          Em breve vais poder registar compras com uma foto do talão, o código de barras ou a voz.
-        </p>
-      </section>
-    </main>
-    <footer class="status">
-      <span id="status" role="status">A verificar a ligação…</span>
-      <span class="version">v<span id="version"></span></span>
-    </footer>
-    <script type="module" src="/src/app/main.ts"></script>
+    <div id="root"></div>
+    <script type="module" src="/src/app/main.tsx"></script>
   </body>
 </html>
