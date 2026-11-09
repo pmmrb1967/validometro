@@ -21,11 +21,14 @@ export async function recordUsage(
   operation: Operation,
   units: number,
   ok: boolean,
+  userId: string | null = null,
   now = new Date(),
 ): Promise<void> {
   await db
-    .prepare('INSERT INTO ai_usage (date, provider, operation, units, ok) VALUES (?, ?, ?, ?, ?)')
-    .bind(utcDay(now), provider, operation, Math.max(0, Math.round(units)), ok ? 1 : 0)
+    .prepare(
+      'INSERT INTO ai_usage (date, user_id, provider, operation, units, ok) VALUES (?, ?, ?, ?, ?, ?)',
+    )
+    .bind(utcDay(now), userId, provider, operation, Math.max(0, Math.round(units)), ok ? 1 : 0)
     .run();
 }
 

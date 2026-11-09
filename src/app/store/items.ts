@@ -12,8 +12,22 @@ import type { ExpirySource, IsoDate, Item, Location } from '../../domain/types';
 /** Household id of the account-less inventory. */
 export const LOCAL_HOUSEHOLD = 'local';
 
+/** An item changed here and not yet confirmed by the server (sync.ts). */
+export interface PendingChange {
+  id: string;
+  /** The item's updated_at when queued: a later change re-queues it. */
+  updated_at: string;
+}
+
+export interface Meta {
+  key: string;
+  value: string | number;
+}
+
 export class InventoryDb extends Dexie {
   items!: Table<Item, string>;
+  outbox!: Table<PendingChange, string>;
+  meta!: Table<Meta, string>;
 
   constructor(name = 'validometro') {
     super(name);
@@ -21,7 +35,39 @@ export class InventoryDb extends Dexie {
       // Only indexed fields here; the rest of the row is stored as is.
       items: 'id, status, [status+expires_at], location, ean',
     });
+    // Accounts (Phase 3): changes waiting to go to the server, and the sync cursor.
+    this.version(2).stores({ outbox: 'id', meta: 'key' });
   }
+}
+
+/** Told after every local change, so the app can sync soon (sync.ts). */
+export const localChangeListeners = new Set<() => void>();
+
+function changed(): void {
+  for (const listener of localChangeListeners) listener();
+}
+
+/** Writes a change with its time, and queues it for the server, in one transaction. */
+async function write(store: InventoryDb, item: Item): Promise<void> {
+  const updated_at = item.updated_at ?? new Date().toISOString();
+  await store.transaction('rw', store.items, store.outbox, async () => {
+    await store.items.put({ ...item, updated_at });
+    await store.outbox.put({ id: item.id, updated_at });
+  });
+  changed();
+}
+
+async function update(
+  store: InventoryDb,
+  id: string,
+  changes: Partial<Item>,
+  now: Date,
+): Promise<Item | undefined> {
+  const item = await store.items.get(id);
+  if (!item) return undefined;
+  const next = { ...item, ...changes, updated_at: now.toISOString() };
+  await write(store, next);
+  return next;
 }
 
 export const db = new InventoryDb();
@@ -59,8 +105,9 @@ export async function addItem(input: NewItem, now = new Date(), store = db): Pro
     status: 'ativo',
     resolved_at: null,
     created_at: at,
+    updated_at: at,
   };
-  await store.items.add(item);
+  await write(store, item);
   return item;
 }
 
@@ -71,12 +118,12 @@ export async function resolveItem(
   now = new Date(),
   store = db,
 ): Promise<void> {
-  await store.items.update(id, { status, resolved_at: now.toISOString() });
+  await update(store, id, { status, resolved_at: now.toISOString() }, now);
 }
 
 /** Undo of a resolve, from the snackbar. */
-export async function reactivateItem(id: string, store = db): Promise<void> {
-  await store.items.update(id, { status: 'ativo', resolved_at: null });
+export async function reactivateItem(id: string, now = new Date(), store = db): Promise<void> {
+  await update(store, id, { status: 'ativo', resolved_at: null }, now);
 }
 
 /** "Abri isto": records the opening and brings the expiry forward by the opened rule. */
@@ -87,14 +134,17 @@ export async function markOpened(
 ): Promise<Item | undefined> {
   const item = await store.items.get(id);
   if (!item || item.opened_at) return item;
-  const changes = openItem(item, lisbonDate(now), now);
-  await store.items.update(id, changes);
-  return { ...item, ...changes };
+  return update(store, id, openItem(item, lisbonDate(now), now), now);
 }
 
 /** "Editar data": the user's own date always wins. */
-export async function setExpiry(id: string, expiresAt: IsoDate, store = db): Promise<void> {
-  await store.items.update(id, { expires_at: expiresAt, expiry_source: 'manual' });
+export async function setExpiry(
+  id: string,
+  expiresAt: IsoDate,
+  now = new Date(),
+  store = db,
+): Promise<void> {
+  await update(store, id, { expires_at: expiresAt, expiry_source: 'manual' }, now);
 }
 
 export async function activeItems(store = db): Promise<Item[]> {

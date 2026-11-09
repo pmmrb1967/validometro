@@ -2,6 +2,7 @@
 // Copyright (C) 2026 Paulo Barbosa
 /** Settings: who reads receipts, printed dates and dictated lists. */
 import { useId, useState } from 'react';
+import { saveAccountAi, useAccount } from '../account';
 import { ApiError, testAi } from '../api';
 import {
   CLAUDE_MODEL_OPTIONS,
@@ -35,6 +36,28 @@ export function AiSection() {
   const [testing, setTesting] = useState(false);
   const provider = settings.provider;
   const needsKey = provider !== 'workers-ai';
+  const account = useAccount();
+  const me = account.status === 'ready' ? account.me : null;
+  const savedKey = me?.ai.provider === provider && me.ai.hasKey;
+  const localKey = provider === 'workers-ai' ? undefined : settings.keys[provider];
+
+  const saveToAccount = async (forget = false) => {
+    setStatus(undefined);
+    try {
+      await saveAccountAi({
+        provider,
+        key: forget ? '' : localKey,
+        model: provider === 'anthropic' ? settings.claudeModel : null,
+      });
+      if (!forget) {
+        // The account has it now: no copy needed on this phone.
+        saveAiSettings({ ...settings, keys: { ...settings.keys, [provider]: '' } });
+      }
+      setStatus(forget ? 'Chave apagada da conta.' : 'Guardada na conta, cifrada.');
+    } catch (err) {
+      setStatus(err instanceof ApiError ? err.message : 'Não foi possível guardar.');
+    }
+  };
 
   const test = async () => {
     setTesting(true);
@@ -82,8 +105,10 @@ export function AiSection() {
             type="password"
             autoComplete="off"
             spellCheck={false}
-            value={settings.keys[provider] ?? ''}
-            placeholder={provider === 'anthropic' ? 'sk-ant-…' : 'AIza…'}
+            value={localKey ?? ''}
+            placeholder={
+              savedKey ? 'Guardada na conta' : provider === 'anthropic' ? 'sk-ant-…' : 'AIza…'
+            }
             onChange={(event) => {
               saveAiSettings({
                 ...settings,
@@ -115,11 +140,21 @@ export function AiSection() {
         <button
           type="button"
           className="secondary"
-          disabled={testing || (needsKey && !settings.keys[provider])}
+          disabled={testing || (needsKey && !localKey && !savedKey)}
           onClick={() => void test()}
         >
           Testar ligação
         </button>
+        {me && needsKey && localKey && (
+          <button type="button" className="ghost" onClick={() => void saveToAccount()}>
+            Guardar na conta
+          </button>
+        )}
+        {me && needsKey && savedKey && !localKey && (
+          <button type="button" className="ghost" onClick={() => void saveToAccount(true)}>
+            Apagar da conta
+          </button>
+        )}
       </div>
       {status && (
         <p className="hint" role="status">
@@ -127,8 +162,10 @@ export function AiSection() {
         </p>
       )}
       <p className="hint">
-        A chave fica só neste telemóvel e vai com cada leitura; o servidor usa-a nesse pedido e não
-        a guarda. As fotos são lidas e apagadas logo a seguir: nunca ficam guardadas.
+        {me
+          ? 'Guardada na conta, a chave fica cifrada no servidor e serve em todos os teus telemóveis. Se não a guardares, fica só neste e vai com cada leitura.'
+          : 'A chave fica só neste telemóvel e vai com cada leitura; o servidor usa-a nesse pedido e não a guarda.'}{' '}
+        As fotos são lidas e apagadas logo a seguir: nunca ficam guardadas.
       </p>
     </section>
   );

@@ -34,5 +34,9 @@ migrations_dir = "migrations"
 binding = "AI"
 remote = true
 
+# The daily alert: 09:00 in Lisbon is 08:00 UTC in summer, 09:00 UTC in winter (alerts.ts).
+[triggers]
+crons = ["0 8 * * *", "0 9 * * *"]
+
 [observability]
 enabled = true

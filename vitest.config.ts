@@ -18,7 +18,13 @@ export default defineConfig(async () => {
               wrangler: { configPath: './wrangler.toml' },
               // Tests pass a fake Workers AI binding; never reach Cloudflare (CI has no login).
               remoteBindings: false,
-              miniflare: { bindings: { TEST_MIGRATIONS: migrations } },
+              miniflare: {
+                bindings: {
+                  TEST_MIGRATIONS: migrations,
+                  SESSION_SECRET: 'test-session-secret-at-least-32-characters',
+                  KEY_ENCRYPTION_SECRET: 'test-key-secret-at-least-32-characters!!',
+                },
+              },
             }),
           ],
           test: {

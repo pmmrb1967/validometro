@@ -25,9 +25,9 @@ import { dateSchema, receiptSchema, testSchema, voiceSchema } from '../ai/schema
 import { structured } from '../ai/structured';
 import { AiError, PROVIDERS, type AiErrorCode, type AiProvider, type Operation } from '../ai/types';
 import { lookupAliases, saveAliases } from './aliases';
+import { storedAi } from './account';
+import type { AppEnv } from './session';
 import { freeQuotaLeft, recordUsage } from './usage';
-
-type AppEnv = { Bindings: Env };
 
 export const ingest = new Hono<AppEnv>();
 
@@ -56,23 +56,37 @@ function aiFailure(c: Context<AppEnv>, operation: Operation, err: unknown) {
 
 /** Which provider this request uses: the user's own key when sent, Workers AI otherwise. */
 async function providerFor(c: Context<AppEnv>): Promise<AiProvider> {
-  const id = c.req.header('x-ai-provider') ?? 'workers-ai';
+  let id = c.req.header('x-ai-provider');
+  let key = c.req.header('x-ai-key')?.trim();
+  let model = c.req.header('x-ai-model');
+  // Signed in: the choice and the key saved with the account (sealed in D1).
+  // Signed in and no key sent: the one saved with the account, if it is for this provider.
+  const user = c.get('user');
+  if (user && !key) {
+    const saved = await storedAi(c.env, user);
+    if (!id || saved.provider === id) {
+      id = saved.provider;
+      key = saved.key ?? undefined;
+      model ??= saved.model ?? undefined;
+    }
+  }
+  id ??= 'workers-ai';
   if (!(PROVIDERS as readonly string[]).includes(id)) throw new AiError('no_key', 'provider');
   if (id === 'workers-ai') {
     if (!(await freeQuotaLeft(c.env.DB))) throw new AiError('quota', 'local count');
     return workersAi(c.env.AI);
   }
-  const key = c.req.header('x-ai-key')?.trim();
   if (!key || key.length > 300) throw new AiError('no_key', id);
   if (id === 'gemini') return gemini(key);
-  const model = c.req.header('x-ai-model');
   const known = (CLAUDE_MODELS as readonly string[]).includes(model ?? '');
   return anthropic(key, known ? (model as ClaudeModel) : undefined);
 }
 
 function recorder(c: Context<AppEnv>, provider: AiProvider, operation: Operation) {
   return (units: number, ok: boolean) =>
-    recordUsage(c.env.DB, provider.id, operation, units, ok).catch(() => undefined);
+    recordUsage(c.env.DB, provider.id, operation, units, ok, c.get('user')?.id).catch(
+      () => undefined,
+    );
 }
 
 /** About 1600 px JPEG at 0.7 is ~300 KB; 4 MB of base64 leaves room and stops abuse. */

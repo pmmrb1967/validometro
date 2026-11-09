@@ -58,6 +58,8 @@ export default defineConfig({
         globPatterns: ['**/*.{js,css,html,svg,png,ico,woff2}'],
         // The API shares the origin: never answer it with the app shell.
         navigateFallbackDenylist: [/^\/api(\/|$)/],
+        // The daily alert and its one-tap answers (public/push-sw.js).
+        importScripts: ['push-sw.js'],
       },
     }),
   ],

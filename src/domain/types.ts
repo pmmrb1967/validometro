@@ -36,6 +36,8 @@ export interface Item {
   status: ItemStatus;
   resolved_at: IsoInstant | null;
   created_at: IsoInstant;
+  /** Last change on the phone that made it: the newer change wins when syncing. */
+  updated_at?: IsoInstant;
 }
 
 export const LOCATION_LABELS: Record<Location, string> = {

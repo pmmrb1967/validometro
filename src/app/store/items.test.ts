@@ -81,7 +81,7 @@ describe('local inventory', () => {
       status: 'consumido',
       resolved_at: now.toISOString(),
     });
-    await reactivateItem(milk.id, store);
+    await reactivateItem(milk.id, new Date(), store);
     expect((await activeItems(store)).map((item) => item.id)).toEqual([milk.id]);
   });
 
@@ -116,10 +116,34 @@ describe('local inventory', () => {
       now,
       store,
     );
-    await setExpiry(bread.id, '2026-11-12', store);
+    await setExpiry(bread.id, '2026-11-12', new Date(), store);
     expect(await store.items.get(bread.id)).toMatchObject({
       expires_at: '2026-11-12',
       expiry_source: 'manual',
     });
+  });
+});
+
+describe('changes waiting for the server', () => {
+  it('queues every change with its time, once per item', async () => {
+    const milk = await addItem(
+      {
+        name: 'Leite',
+        category: 'leite_uht',
+        location: 'frigorifico',
+        expires_at: '2026-11-12',
+        expiry_source: 'estimada',
+      },
+      new Date('2026-11-09T10:00:00Z'),
+      store,
+    );
+    expect(await store.outbox.toArray()).toEqual([
+      { id: milk.id, updated_at: '2026-11-09T10:00:00.000Z' },
+    ]);
+    await resolveItem(milk.id, 'consumido', new Date('2026-11-09T11:00:00Z'), store);
+    expect(await store.outbox.toArray()).toEqual([
+      { id: milk.id, updated_at: '2026-11-09T11:00:00.000Z' },
+    ]);
+    expect((await store.items.get(milk.id))?.updated_at).toBe('2026-11-09T11:00:00.000Z');
   });
 });

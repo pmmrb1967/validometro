@@ -3,10 +3,12 @@
 import { Hono } from 'hono';
 import { z } from 'zod';
 import { isValidGtin } from '../domain/barcode';
+import { account } from './account';
+import { alerts } from './alerts';
 import { ingest } from './ingest';
 import { lookupProduct } from './products';
-
-export type AppEnv = { Bindings: Env };
+import { withUser, type AppEnv } from './session';
+import { sync } from './sync';
 
 const locationSchema = z.enum(['frigorifico', 'congelador', 'despensa']);
 
@@ -21,6 +23,8 @@ export const shelfLifeRuleSchema = z.object({
 export type ShelfLifeRule = z.infer<typeof shelfLifeRuleSchema>;
 
 export const app = new Hono<AppEnv>().basePath('/api');
+
+app.use('*', withUser);
 
 /** Liveness plus a round trip to D1, so a deploy shows the database is bound and migrated. */
 app.get('/health', async (c) => {
@@ -62,6 +66,9 @@ app.get('/products/:ean', async (c) => {
 });
 
 app.route('/', ingest);
+app.route('/', account);
+app.route('/', sync);
+app.route('/', alerts);
 
 app.notFound((c) => c.json({ error: 'Não encontrado.' }, 404));
 

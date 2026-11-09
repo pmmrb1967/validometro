@@ -125,7 +125,7 @@ npx wrangler d1 migrations apply validometro --remote
 npm run deploy
 ```
 
-Segredos (`wrangler secret put`): `VAPID_PUBLIC_KEY`, `VAPID_PRIVATE_KEY`, `KEY_ENCRYPTION_SECRET`, `ADMIN_EMAILS`.
+Segredos (`wrangler secret put`): `SESSION_SECRET`, `VAPID_PUBLIC_KEY`, `VAPID_PRIVATE_KEY`, `KEY_ENCRYPTION_SECRET`, `ADMIN_EMAILS`. Para `wrangler dev`, os dois primeiros vão em `.dev.vars` (não versionado).
 
 ## O que NÃO fazer
 

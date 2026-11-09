@@ -52,14 +52,16 @@ Plano de implementação por fases. Cada fase termina com a app **a funcionar, t
 
 ## Fase 3 — Contas, família e alertas
 
-- [ ] Autenticação: reutilizar o mecanismo do Wattómetro/Faturómetro
-- [ ] Agregado familiar: criar, convidar por código/link, sair
-- [ ] Migração do inventário local (IndexedDB) para D1 ao criar conta
-- [ ] Sincronização simples: o servidor é a fonte de verdade; cache offline com fila de alterações pendentes
-- [ ] Web Push: geração das chaves VAPID, subscrição, biblioteca de envio compatível com Workers (avaliar opções; sem dependências Node)
-- [ ] Cron diário (ex.: 09:00 Lisboa): para cada agregado, juntar os itens vermelhos/amarelos num único alerta
-- [ ] **Ações na notificação:** Comido / Deitado fora / Ainda tenho, tratadas no Service Worker sem abrir a app
-- [ ] Nota na UI para iPhone: as notificações exigem a PWA instalada no ecrã principal
+- [x] Autenticação: reutilizar o mecanismo do Wattómetro/Faturómetro (PBKDF2, cookie `__Host-vm_session` assinado com HMAC, 90 dias, bloqueio após falhas repetidas)
+- [x] Agregado familiar: criar, convidar por código/link (`/conta?convite=CÓDIGO`), sair. Quem entra sozinho leva os seus alimentos; quem sai fica com uma casa nova e vazia
+- [x] Migração do inventário local (IndexedDB) para D1 ao criar conta
+- [x] Sincronização simples: o servidor é a fonte de verdade; cache offline com fila de alterações pendentes (`outbox`), ganha a alteração mais recente (`updated_at`), cursor por `server_seq`
+- [x] Web Push: chaves VAPID, subscrição, envio RFC 8291/8292 só com WebCrypto (do Wattómetro)
+- [x] Cron diário às 09:00 de Lisboa (crons às 8h e 9h UTC; `alert_log` evita repetições): um alerta por agregado com os itens vermelhos/amarelos
+- [x] **Ações na notificação:** Comido / Deitado fora / Ainda tenho, tratadas no Service Worker (`public/push-sw.js`) sem abrir a app; mostra o item seguinte
+- [x] Nota na UI para iPhone: as notificações exigem a PWA instalada no ecrã principal
+- [x] A chave de IA pode ficar guardada na conta, cifrada (AES-GCM com `KEY_ENCRYPTION_SECRET`)
+- [ ] Verificar em dois telemóveis reais: despensa partilhada, alerta das 9h e resposta de 1 toque (Android; iPhone quando houver)
 
 **Pronto quando:** dois telemóveis da família veem a mesma despensa e o alerta diário funciona com resposta de 1 toque.
 
