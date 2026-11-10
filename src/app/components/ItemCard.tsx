@@ -21,7 +21,13 @@ import { canFreeze, canThaw } from '../../domain/freeze';
 import { canOffer } from '../../domain/offer';
 import { findRule } from '../../domain/shelf-life';
 import { daysLabel, type LitItem } from '../../domain/traffic-light';
-import { EXPIRY_KINDS, LOCATION_LABELS, type ExpiryKind } from '../../domain/types';
+import {
+  EXPIRY_KINDS,
+  LOCATION_LABELS,
+  LOCATIONS,
+  type ExpiryKind,
+  type Location,
+} from '../../domain/types';
 
 export interface ItemActions {
   onEaten: () => void;
@@ -32,6 +38,8 @@ export interface ItemActions {
   onOffer: () => void;
   /** "Comi 1" / "Bebi 1": one less of several. */
   onUseOne: () => void;
+  /** To another place: the fridge, the freezer or the pantry. */
+  onMove: (to: Location) => void;
   /** "Comi uma parte": what is left, in the item's unit (0: all of it). */
   onEatPart: (left: number) => void;
   /** Long life: "Está a acabar" (onto the list) and "Acabou" (out, and onto the list). */
@@ -61,6 +69,7 @@ export function ItemCard({
   const one = canTakeOne(item);
   const part = canEatPart(item);
   const [eatingPart, setEatingPart] = useState(false);
+  const [moving, setMoving] = useState(false);
   const [eaten, setEaten] = useState('');
   const [partError, setPartError] = useState<string>();
   const closePart = () => {
@@ -83,7 +92,6 @@ export function ItemCard({
   const advice = afterDateAdvice(item, daysLeft);
 
   const details = [
-    LOCATION_LABELS[item.location],
     item.opened_at ? 'aberto' : undefined,
     quantityText(item.quantity, item.unit),
   ].filter(Boolean);
@@ -96,7 +104,23 @@ export function ItemCard({
       <div className="item-main">
         <div className="item-text">
           <span className="item-name">{item.name}</span>
-          <span className="item-meta">{details.join(', ')}</span>
+          <span className="item-meta">
+            {/* The place is the "Mudar de sítio" control, like the date beside it. */}
+            <button
+              type="button"
+              className="item-place"
+              aria-label={`${LOCATION_LABELS[item.location]}. Mudar de sítio`}
+              aria-expanded={moving}
+              onClick={() => setMoving((open) => !open)}
+            >
+              {LOCATION_LABELS[item.location]}
+              <span className="edit-mark" aria-hidden="true">
+                {' '}
+                ✎
+              </span>
+            </button>
+            {details.length > 0 && `, ${details.join(', ')}`}
+          </span>
         </div>
         {/* The date is the "Editar data" control: one tap, where the eye already is. */}
         <button
@@ -119,6 +143,25 @@ export function ItemCard({
       </div>
 
       {advice && !editingDate && <p className="item-advice">{advice}</p>}
+
+      {moving && (
+        <div className="item-move" role="group" aria-label={`Mudar ${item.name} para`}>
+          <span className="item-move-label">Mudar para</span>
+          {LOCATIONS.filter((place) => place !== item.location).map((place) => (
+            <button
+              key={place}
+              type="button"
+              className="secondary"
+              onClick={() => {
+                setMoving(false);
+                actions.onMove(place);
+              }}
+            >
+              {LOCATION_LABELS[place]}
+            </button>
+          ))}
+        </div>
+      )}
 
       {eatingPart ? (
         <form

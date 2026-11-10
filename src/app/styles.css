@@ -528,6 +528,41 @@ button,
   text-align: right;
 }
 
+/* The place: tap to move it (fridge, freezer, pantry), like the date. */
+.item-place {
+  min-height: 32px;
+  margin: -6px 0 -6px -6px;
+  padding: 6px 0 6px 6px;
+  border: 0;
+  border-radius: 10px;
+  background: none;
+  color: inherit;
+  font: inherit;
+}
+
+.item-place:hover .edit-mark {
+  color: var(--text);
+}
+
+.item-move {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 8px;
+  margin-top: 10px;
+}
+
+.item-move-label {
+  color: var(--muted);
+  font-size: 0.85rem;
+}
+
+.item-move button {
+  min-height: 40px;
+  padding: 0 16px;
+  font-size: 0.9rem;
+}
+
 .item-days:hover .edit-mark {
   color: var(--text);
 }

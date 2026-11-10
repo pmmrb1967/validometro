@@ -6,6 +6,7 @@ import { Link } from 'react-router';
 import { usedWord } from '../../domain/consume';
 import { formatShortDate, lisbonDate } from '../../domain/dates';
 import { canFreeze, frozenDays } from '../../domain/freeze';
+import { freezesBadly } from '../../domain/move';
 import { offerText } from '../../domain/offer';
 import { isOpen, sameName } from '../../domain/shopping';
 import { bySoonest, light, type Light, type LitItem } from '../../domain/traffic-light';
@@ -30,6 +31,7 @@ import {
   resolveItem,
   restoreItem,
   eatPart,
+  moveTo,
   setExpiry,
   takeOne,
 } from '../store/items';
@@ -200,6 +202,23 @@ export function Home() {
                 left === 1 && !listed?.has(sameName(before.name))
                   ? { label: 'Juntar à lista', run: () => void addToList(before.name) }
                   : undefined,
+            });
+          });
+        },
+        onMove: (to) => {
+          void moveTo(entry.item.id, to).then((moved) => {
+            if (!moved) return;
+            const { before, after } = moved;
+            const when =
+              after.expires_at && after.expires_at !== before.expires_at
+                ? `, agora até ${formatShortDate(after.expires_at).replace(/\.$/, '')}`
+                : '';
+            const warning =
+              to === 'congelador' && freezesBadly(before) ? ' Isto não costuma congelar bem.' : '';
+            setUndo({
+              id: before.id,
+              before,
+              text: `${before.name}: ${IN_LOCATION[to]}${when}.${warning}`,
             });
           });
         },

@@ -194,15 +194,16 @@ test('a tempo: congelar o frango no fim, e tirá-lo do congelador', async ({ pag
   await expect(card.getByRole('button', { name: 'Oferecer' })).toBeVisible();
   await card.getByRole('button', { name: 'Congelei' }).click();
   await expect(page.getByRole('status').filter({ hasText: 'no congelador' })).toBeVisible();
-  await expect(card.getByText('Congelador', { exact: true })).toBeVisible();
+  await expect(card.getByRole('button', { name: 'Congelador. Mudar de sítio' })).toBeVisible();
   await expect(card.getByRole('button', { name: 'Congelei' })).toHaveCount(0);
 
   await card.getByRole('button', { name: 'Tirei do congelador' }).click();
   await expect(page.getByRole('status').filter({ hasText: 'fora do congelador' })).toBeVisible();
-  await expect(card.getByText('Frigorífico, aberto', { exact: true })).toBeVisible();
+  await expect(card.getByRole('button', { name: 'Frigorífico. Mudar de sítio' })).toBeVisible();
+  await expect(card).toContainText('Frigorífico ✎, aberto');
   // "Anular" puts it back as it was.
   await page.getByRole('button', { name: 'Anular' }).click();
-  await expect(card.getByText('Congelador', { exact: true })).toBeVisible();
+  await expect(card.getByRole('button', { name: 'Congelador. Mudar de sítio' })).toBeVisible();
 });
 
 test('partilhar um talão sem a app instalada explica o que fazer', async ({ page }) => {
@@ -402,4 +403,25 @@ test('comi uma parte: 400 g das costeletas, e "Anular" repõe o peso', async ({ 
   await expect(card).toContainText('0,778 kg');
   await page.getByRole('button', { name: 'Anular' }).click();
   await expect(card).toContainText('1,178 kg');
+});
+
+test('mudar de sítio: a cerveja da despensa para o frigorífico, e "Anular"', async ({ page }) => {
+  await page.goto('/');
+  await page.getByRole('button', { name: 'Começar sem conta' }).first().click();
+  await page.goto('/adicionar');
+  await page.getByLabel('Nome').fill('Iogurtes naturais');
+  await page.getByRole('button', { name: 'Guardar', exact: true }).click();
+  await expect(page).toHaveURL('/');
+  const card = page.getByRole('listitem').filter({ hasText: 'Iogurtes naturais' });
+  await card.getByRole('button', { name: 'Frigorífico. Mudar de sítio' }).click();
+  await card
+    .getByRole('group', { name: /Mudar .* para/ })
+    .getByRole('button', { name: 'Congelador' })
+    .click();
+  await expect(page.getByRole('status').filter({ hasText: 'no congelador' })).toContainText(
+    'não costuma congelar bem',
+  );
+  await expect(card.getByRole('button', { name: 'Congelador. Mudar de sítio' })).toBeVisible();
+  await page.getByRole('button', { name: 'Anular' }).click();
+  await expect(card.getByRole('button', { name: 'Frigorífico. Mudar de sítio' })).toBeVisible();
 });

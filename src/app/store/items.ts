@@ -7,6 +7,7 @@
 import Dexie, { type Table } from 'dexie';
 import { lisbonDate } from '../../domain/dates';
 import { freezeItem } from '../../domain/freeze';
+import { moveItem } from '../../domain/move';
 import { openItem } from '../../domain/shelf-life';
 import { restockSuggestion, type ShoppingEntry } from '../../domain/shopping';
 import type { ExpiryKind, ExpirySource, IsoDate, Item, Location } from '../../domain/types';
@@ -204,6 +205,19 @@ export async function freeze(id: string, now = new Date(), store = db): Promise<
   if (!item || item.location === 'congelador') return undefined;
   await update(store, id, freezeItem(lisbonDate(now)), now);
   return item;
+}
+
+/** To another place (domain/move.ts). Returns the item as it was, for "Anular". */
+export async function moveTo(
+  id: string,
+  to: Location,
+  now = new Date(),
+  store = db,
+): Promise<{ before: Item; after: Item } | undefined> {
+  const item = await store.items.get(id);
+  if (!item || item.location === to) return undefined;
+  const after = await update(store, id, moveItem(item, to, lisbonDate(now)), now);
+  return after && { before: item, after };
 }
 
 /** Undo of "Congelei" or "Abri isto": the item as it was, as a new change. */
