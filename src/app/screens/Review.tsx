@@ -13,6 +13,7 @@ import { kindFromReading } from '../../domain/date-kind';
 import { plausiblePrice, type DraftItem } from '../../domain/drafts';
 import { formatEuros } from '../../domain/stats';
 import { suggestExpiry } from '../../domain/shelf-life';
+import { parseQuantity, quantityInputText, UNITS } from '../../domain/units';
 import {
   LOCATION_LABELS,
   LOCATIONS,
@@ -32,6 +33,8 @@ interface Row extends DraftItem {
   expiry_kind?: ExpiryKind | null;
   /** The price as typed, while editing ("1,2"). */
   priceText: string;
+  /** The quantity as typed ("1,632"); empty = no quantity (principle 2: optional). */
+  quantityText: string;
 }
 
 const priceText = (price: number | null) =>
@@ -52,6 +55,7 @@ export function Review() {
         ...draft,
         include: draft.perishable,
         priceText: priceText(draft.price ?? null),
+        quantityText: quantityInputText(draft.quantity),
       })) ?? [],
   );
   const [saving, setSaving] = useState(false);
@@ -96,8 +100,8 @@ export function Review() {
         location: row.location,
         expires_at: row.expires_at,
         expiry_source: row.expires_at ? row.expiry_source : null,
-        quantity: row.quantity,
-        unit: row.unit,
+        quantity: parseQuantity(row.quantityText),
+        unit: parseQuantity(row.quantityText) === null ? null : row.unit?.trim() || null,
         expiry_kind: row.expiry_kind ?? null,
         price: plausiblePrice(Number(row.priceText.replace(',', '.'))),
       });
@@ -243,17 +247,39 @@ export function Review() {
                   onChange={(event) => update(row.key, { priceText: event.target.value })}
                 />
               </div>
+              <div className="row review-quantity">
+                <span className="review-raw">Quantidade</span>
+                <input
+                  className="review-amount"
+                  inputMode="decimal"
+                  aria-label={`Quantidade de ${row.name}`}
+                  placeholder="—"
+                  value={row.quantityText}
+                  onChange={(event) => update(row.key, { quantityText: event.target.value })}
+                />
+                <input
+                  className="review-unit"
+                  list="review-units"
+                  aria-label={`Unidade de ${row.name}`}
+                  placeholder="un."
+                  value={row.unit ?? ''}
+                  onChange={(event) => update(row.key, { unit: event.target.value || null })}
+                />
+              </div>
               <p className="review-raw">
                 {row.expires_at && row.expiry_source
                   ? `Validade ${SOURCE_LABEL[row.expiry_source]}${row.expiry_kind === 'consumir_de_preferencia' ? ' (de preferência)' : row.expiry_kind === 'consumir_ate' ? ' (consumir até)' : ''}.`
                   : 'Sem validade: fica fora do semáforo.'}
-                {row.quantity != null &&
-                  ` Quantidade: ${row.quantity}${row.unit ? ` ${row.unit}` : ''}.`}
               </p>
             </div>
           </li>
         ))}
       </ul>
+      <datalist id="review-units">
+        {UNITS.map((entry) => (
+          <option key={entry} value={entry} />
+        ))}
+      </datalist>
 
       {note && (
         <p className="note" role="status">

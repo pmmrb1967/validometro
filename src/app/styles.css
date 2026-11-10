@@ -961,6 +961,19 @@ textarea {
   width: 5.5rem;
 }
 
+.review-quantity {
+  align-items: center;
+  gap: 6px;
+}
+
+.review-amount {
+  width: 5.5rem;
+}
+
+.review-unit {
+  width: 4.5rem;
+}
+
 .review-grid {
   display: grid;
   grid-template-columns: 1fr 1fr;

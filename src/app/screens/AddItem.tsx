@@ -20,6 +20,7 @@ import {
   type ExpiryKind,
   type Location,
 } from '../../domain/types';
+import { UNITS } from '../../domain/units';
 import { ApiError, fetchProduct, readPrintedDate } from '../api';
 import { PhotoButton } from '../components/PhotoButton';
 import { hasCamera } from '../image';
@@ -27,7 +28,6 @@ import { QuickEntry } from '../components/QuickEntry';
 import { Scanner } from '../components/Scanner';
 import { addItem } from '../store/items';
 
-const UNITS = ['un.', 'emb.', 'g', 'kg', 'ml', 'L'];
 
 export function AddItem() {
   const navigate = useNavigate();
