@@ -44,6 +44,26 @@ export function piecesToLines(pieces: TextPiece[]): string[] {
     );
 }
 
+/** Where the products end: the totals ("Resumo", "TOTAL", "SUBTOTAL"). */
+const TOTALS = /^(resumo|sub-?total|total)\b/i;
+/** A date: 2026-11-10, 10/11/2026, 10-11-26. */
+const DATE = /\b(\d{4}-\d{2}-\d{2}|\d{2}[/.-]\d{2}[/.-]\d{2,4})\b/;
+/** About the person, not the purchase: never sent. */
+const PERSONAL =
+  /contribuinte|\bnif\b|cart[aã]o|atendid|atcud|saldo|expira|cliente n|telem[oó]vel|e-?mail/i;
+
+/**
+ * Only what the reading needs: the products (up to the totals) and the lines with the date.
+ * The rest of a digital receipt is about the person (tax number, loyalty card, who served)
+ * and stays on the phone (principle 7); it is also most of the text.
+ */
+export function receiptTextForAi(lines: string[]): string[] {
+  const end = lines.findIndex((line) => TOTALS.test(line.trim()));
+  const products = end === -1 ? lines : lines.slice(0, end);
+  const after = end === -1 ? [] : lines.slice(end).filter((line) => DATE.test(line));
+  return [...products, ...after].filter((line) => !PERSONAL.test(line));
+}
+
 export async function readPdfReceipt(file: Blob): Promise<PdfReceipt> {
   const [pdfjs, worker] = await Promise.all([
     import('pdfjs-dist'),
@@ -64,7 +84,7 @@ export async function readPdfReceipt(file: Blob): Promise<PdfReceipt> {
       );
       lines.push(...piecesToLines(pieces));
     }
-    const text = lines.join('\n').trim();
+    const text = receiptTextForAi(lines).join('\n').trim();
     if (text.length >= MIN_TEXT) return { text: text.slice(0, 30_000) };
 
     // Scanned: the first page as a photo, made small like any other.

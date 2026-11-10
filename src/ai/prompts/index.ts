@@ -20,14 +20,15 @@ Categorias:
 ${categoryList}`;
 
 export const RECEIPT_PROMPT = {
-  version: 'receipt.v3',
+  version: 'receipt.v4',
   system: `Lês talões de supermercados portugueses e devolves só JSON segundo o esquema dado. Não escreves mais nada.`,
   prompt: `Lê o talão da imagem.
 - "store": nome da loja (ex.: "Continente", "Pingo Doce", "Lidl"), ou null.
 - "date": data da compra em AAAA-MM-DD, ou null se não se ler.
-- "lines": uma entrada por produto alimentar ou bebida. Ignora sacos, descontos, cartões, talões de desconto, totais, IVA, pagamentos e artigos que não são comida.
-- "raw": o texto do produto tal como está impresso no talão, sem o preço.
-- "price": o valor pago por essa linha, em euros, como número (ex.: 2.58). Se houver um desconto logo a seguir só para esse produto, desconta-o. Se não se ler, null.
+- "lines": uma entrada por produto alimentar ou bebida. Não são produtos: sacos, linhas de desconto ("Poupança Imediata", "Desconto"), cartões, talões de desconto, depósitos de embalagens, totais, IVA, pagamentos, e artigos que não são comida (detergentes, lixívia, guardanapos, higiene, animais).
+- "raw": o texto do produto tal como está impresso, sem o preço, sem a quantidade ("2 X 7,99", "1,632 X 2,49") e sem a letra da taxa de IVA nem símbolos no início da linha ("E FERMENTO FERMIPAN 4" é "FERMENTO FERMIPAN 4"; "ºSUPER BOCK" é "SUPER BOCK").
+- "price": o valor pago por essa linha, em euros, como número (ex.: 2.58). Se a linha seguinte for um desconto só desse produto ("Poupança Imediata (8,00)"), subtrai-o (15,98 − 8,00 = 7.98). Se não se ler, null.
+- Os títulos de secção do talão ("TALHO", "CONGELADOS", "QUEIJOS", "FRUTAS E VEGETAIS"…) não são produtos, mas dizem o que é o produto: o que está em "CONGELADOS" é da categoria congelados, mesmo que o nome pareça fresco ("BROCOLOS PD 400G").
 
 ${lineRules}`,
 };
@@ -40,7 +41,7 @@ export const RECEIPT_PARTS_NOTE = (count: number) =>
 
 /** A digital receipt (PDF with text), already turned into lines on the phone (src/app/pdf.ts). */
 export const RECEIPT_TEXT_PROMPT = {
-  version: 'receipt-text.v1',
+  version: 'receipt-text.v2',
   system: RECEIPT_PROMPT.system,
   prompt: (text: string) => `Este é o texto de um talão digital, linha a linha:
 """
