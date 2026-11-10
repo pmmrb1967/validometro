@@ -267,6 +267,12 @@ export function Home() {
             onClick={() => setFilter(place)}
           >
             {place === 'tudo' ? 'Tudo' : LOCATION_LABELS[place]}
+            <span className="chip-count">
+              {' '}
+              {place === 'tudo'
+                ? lit.length
+                : lit.filter((entry) => entry.item.location === place).length}
+            </span>
           </button>
         ))}
       </div>

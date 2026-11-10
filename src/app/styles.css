@@ -365,6 +365,42 @@ button,
   font-weight: 550;
 }
 
+.chip-count {
+  margin-left: 2px;
+  font-weight: 500;
+  opacity: 0.7;
+}
+
+/* On a phone the four places share the width, all visible, none cut off. */
+@media (max-width: 560px) {
+  .filters {
+    overflow: visible;
+    gap: 6px;
+    margin: 0 0 8px;
+    padding: 4px 0 8px;
+  }
+
+  .filters .chip {
+    flex: 1 1 auto;
+    min-width: 0;
+    padding: 0 6px;
+    font-size: 0.875rem;
+    white-space: nowrap;
+  }
+
+  /* The counts go first, so the names always fit. */
+  .chip-count {
+    display: none;
+  }
+}
+
+@media (max-width: 350px) {
+  .filters .chip {
+    padding: 0 4px;
+    font-size: 0.8rem;
+  }
+}
+
 .chip[aria-pressed='true'] {
   background: var(--brand-strong);
   border-color: var(--brand-strong);
@@ -408,6 +444,41 @@ button,
   margin: 10px 0 0;
   padding: 0;
   list-style: none;
+}
+
+/* On a computer the food screen is wider, with cards in columns (forms stay narrow). */
+@media (min-width: 900px) {
+  .screen:has(> .home) {
+    max-width: 62rem;
+  }
+
+  .home .items {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    align-items: start;
+  }
+
+  .home .dinner-call {
+    width: fit-content;
+    padding: 0 32px;
+  }
+
+  body:has(.home) .fab {
+    right: max(16px, calc((100vw - 62rem) / 2 + 16px));
+  }
+}
+
+@media (min-width: 1300px) {
+  .screen:has(> .home) {
+    max-width: 88rem;
+  }
+
+  .home .items {
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+  }
+
+  body:has(.home) .fab {
+    right: max(16px, calc((100vw - 88rem) / 2 + 16px));
+  }
 }
 
 .item {
