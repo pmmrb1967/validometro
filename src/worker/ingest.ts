@@ -19,6 +19,7 @@ import {
 } from '../domain/drafts';
 import {
   DATE_PROMPT,
+  RECEIPT_PARTS_NOTE,
   RECEIPT_PROMPT,
   RECEIPT_TEXT_PROMPT,
   RECIPES_PROMPT,
@@ -131,7 +132,21 @@ export interface ReceiptDrafts {
 }
 
 /** A receipt as a photo ({image}) or as the text of a digital receipt PDF ({text}). */
-const receiptBody = z.union([imageBody, z.object({ text: z.string().trim().min(20).max(30_000) })]);
+/** Up to four parts of one long receipt, about 1.2 MB of photos in all. */
+export const MAX_RECEIPT_PARTS = 4;
+const receiptBody = z.union([
+  imageBody,
+  z.object({ images: z.array(imageBody.shape.image).min(1).max(MAX_RECEIPT_PARTS) }),
+  z.object({ text: z.string().trim().min(20).max(30_000) }),
+]);
+
+/** One photo, or the parts of a long receipt with a note on how they join. */
+function receiptPhotos(parts: string[]) {
+  return {
+    prompt: (parts.length > 1 ? RECEIPT_PARTS_NOTE(parts.length) : '') + RECEIPT_PROMPT.prompt,
+    images: parts.map((part) => ({ mime: 'image/jpeg' as const, base64: part })),
+  };
+}
 
 ingest.post('/ingest/receipt', async (c) => {
   const body = receiptBody.safeParse(await c.req.json().catch(() => null));
@@ -144,12 +159,9 @@ ingest.post('/ingest/receipt', async (c) => {
       {
         operation: 'receipt',
         system: RECEIPT_PROMPT.system,
-        ...('image' in input
-          ? {
-              prompt: RECEIPT_PROMPT.prompt,
-              image: { mime: 'image/jpeg' as const, base64: input.image },
-            }
-          : { prompt: RECEIPT_TEXT_PROMPT.prompt(input.text) }),
+        ...('text' in input
+          ? { prompt: RECEIPT_TEXT_PROMPT.prompt(input.text) }
+          : receiptPhotos('image' in input ? [input.image] : input.images)),
         schema: receiptSchema,
         schemaName: 'receipt',
         maxTokens: 4000,

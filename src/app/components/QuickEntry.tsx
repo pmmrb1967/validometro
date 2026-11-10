@@ -7,7 +7,14 @@
  */
 import { useEffect, useRef, useState } from 'react';
 import { useNavigate, useSearchParams } from 'react-router';
-import { ApiError, readReceipt, readReceiptText, readSpoken, type ReadingResult } from '../api';
+import {
+  ApiError,
+  MAX_RECEIPT_PARTS,
+  readReceipt,
+  readReceiptText,
+  readSpoken,
+  type ReadingResult,
+} from '../api';
 import { shrinkPhoto } from '../image';
 import { speechSupported, useDictation } from '../speech';
 import { setPendingReview, type ReadingSource } from '../store/review';
@@ -47,6 +54,13 @@ export function QuickEntry() {
   const canDictate = speechSupported();
   const handled = useRef(false);
   const fileInput = useRef<HTMLInputElement>(null);
+  /**
+   * The photos of the receipt being put together, top to bottom (a long receipt in parts, as
+   * the pages of an invoice in Faturómetro). Read in one request, as one receipt.
+   */
+  const [parts, setParts] = useState<string[]>([]);
+  const addParts = (images: string[]) =>
+    setParts((current) => [...current, ...images].slice(0, MAX_RECEIPT_PARTS));
 
   const run = async (label: string, source: ReadingSource, read: () => Promise<ReadingResult>) => {
     setBusy(label);
@@ -70,7 +84,35 @@ export function QuickEntry() {
     }
   };
 
-  /** A receipt file: a PDF is read as text (or as a picture, when scanned); an image as a photo. */
+  /**
+   * Receipt files: a PDF is read at once, as text (or as a picture, when scanned); images join
+   * the receipt's photos, read when the user says so. `now`: read a single image at once (a
+   * share from another app).
+   */
+  const readFiles = async (files: Blob[], now = false) => {
+    setError(undefined);
+    const pdf = files.find((file) => file.type === 'application/pdf');
+    if (pdf) return readFile(pdf);
+    const images = files.filter((file) => file.type.startsWith('image/'));
+    if (!images.length) {
+      setError('Escolhe um talão em PDF ou uma imagem (foto ou captura).');
+      return;
+    }
+    const small = (await Promise.all(images.map((file) => shrinkPhoto(file)))).filter(
+      (image): image is string => image !== null,
+    );
+    if (!small.length) {
+      setError('Não consegui abrir essa imagem. Tenta outra.');
+      return;
+    }
+    if (now && small.length === 1 && !parts.length) {
+      await run('A ler o talão…', 'receipt', () => readReceipt(small));
+      return;
+    }
+    addParts(small);
+  };
+
+  /** A PDF receipt: as text when it has one; else its first page as a picture. */
   const readFile = async (file: Blob) => {
     setError(undefined);
     if (file.type === 'application/pdf') {
@@ -93,14 +135,14 @@ export function QuickEntry() {
       );
       return;
     }
-    if (!file.type.startsWith('image/')) {
-      setError('Escolhe um talão em PDF ou uma imagem (foto ou captura).');
-      return;
-    }
-    const image = await shrinkPhoto(file);
-    if (image) await run('A ler o talão…', 'receipt', () => readReceipt(image));
-    else setError('Não consegui abrir essa imagem. Tenta outra.');
   };
+
+  const readParts = () =>
+    void run(
+      parts.length > 1 ? `A ler as ${parts.length} partes do talão…` : 'A ler o talão…',
+      'receipt',
+      () => readReceipt(parts),
+    );
 
   // A receipt shared from another app (public/push-sw.js): read it as if just photographed.
   useEffect(() => {
@@ -110,7 +152,7 @@ export function QuickEntry() {
     if (shared !== 'talao') return;
     void takeSharedReceipt()
       .then((blob) => {
-        if (blob) void readFile(blob);
+        if (blob) void readFiles([blob], true);
         else setError(SHARE_ERRORS.erro);
       })
       .catch(() => setError(SHARE_ERRORS.erro));
@@ -130,8 +172,8 @@ export function QuickEntry() {
       <div className="quick-buttons">
         <PhotoButton
           className="primary"
-          disabled={busy !== undefined}
-          onPhoto={(image) => void run('A ler o talão…', 'receipt', () => readReceipt(image))}
+          disabled={busy !== undefined || parts.length > 0}
+          onPhoto={(image) => addParts([image])}
           onError={setError}
         >
           Fotografar talão
@@ -148,12 +190,13 @@ export function QuickEntry() {
           ref={fileInput}
           type="file"
           accept="application/pdf,image/*"
+          multiple
           hidden
           aria-label="Talão em PDF ou imagem"
           onChange={(event) => {
-            const file = event.target.files?.[0];
+            const files = [...(event.target.files ?? [])];
             event.target.value = '';
-            if (file) void readFile(file);
+            if (files.length) void readFiles(files);
           }}
         />
         <button
@@ -171,6 +214,56 @@ export function QuickEntry() {
           {canDictate ? 'Ditar compras' : 'Escrever lista'}
         </button>
       </div>
+
+      {parts.length > 0 && (
+        <div className="receipt-parts" role="group" aria-label="Fotos do talão">
+          <p className="receipt-parts-title" role="status">
+            {parts.length === 1
+              ? 'Talão: 1 foto.'
+              : `Talão: ${parts.length} fotos, lidas como um só talão.`}
+          </p>
+          <ol className="receipt-thumbs">
+            {parts.map((part, index) => (
+              <li key={index}>
+                <img src={`data:image/jpeg;base64,${part}`} alt={`Parte ${index + 1}`} />
+              </li>
+            ))}
+          </ol>
+          <p className="hint">
+            {parts.length < MAX_RECEIPT_PARTS
+              ? 'Talão comprido? Fotografa a parte seguinte, de cima para baixo, repetindo uma ou duas linhas da anterior.'
+              : `Chegaste às ${MAX_RECEIPT_PARTS} partes: lê o talão.`}
+          </p>
+          <div className="receipt-parts-actions">
+            <button
+              type="button"
+              className="primary"
+              disabled={busy !== undefined}
+              onClick={readParts}
+            >
+              Ler talão
+            </button>
+            {parts.length < MAX_RECEIPT_PARTS && (
+              <PhotoButton
+                className="secondary"
+                disabled={busy !== undefined}
+                onPhoto={(image) => addParts([image])}
+                onError={setError}
+              >
+                Fotografar a parte seguinte
+              </PhotoButton>
+            )}
+            <button
+              type="button"
+              className="ghost"
+              disabled={busy !== undefined}
+              onClick={() => setParts([])}
+            >
+              Recomeçar
+            </button>
+          </div>
+        </div>
+      )}
 
       <p className="hint">
         Talão digital? Escolhe o PDF (do email ou da app do supermercado) em “Talão em ficheiro”, ou

@@ -93,6 +93,8 @@ O que nenhuma das apps concorrentes faz junto: distinguir os dois tipos de data,
 - [x] **"Oferecer"**: mensagem pronta para o WhatsApp/SMS (folha de partilha do telemóvel), na última semana e nunca depois de um "consumir até"
 - [x] **Partilhar o talão com a app** (Web Share Target, Android com a PWA instalada): a imagem ou captura do talão digital vai direta para a leitura e revisão; fica só na cache do telemóvel até ser lida
 - [x] **Talão em ficheiro** (0.8.1): PDF do talão digital ou imagem da galeria. O PDF é lido no telemóvel (pdf.js, carregado só quando é preciso): com texto, vai só o texto (prompt `receipt-text.v1`, funciona com a IA gratuita); digitalizado, vai a 1.ª página como imagem. Também se pode partilhar um PDF com a app
+- [x] **Talão comprido em várias fotos** (0.8.2): como as páginas no Faturómetro, as fotos juntam-se (até 4, de cima para baixo) e vão num só pedido, lidas como um só talão; a IA desconta as linhas repetidas entre partes. Também várias capturas escolhidas da galeria
+- [ ] Verificar com um talão comprido real em 2–3 fotos (sobretudo com o Workers AI, que nunca foi testado com várias imagens)
 - [x] **Lista de compras que poupa**: "Ainda tens X em casa, até …" e "Deitaste fora 2 das últimas 3 vezes: compra menos, ou a embalagem pequena"
 - [x] Página inicial: "Os alimentos lá de casa, por ordem de usar." (frigorífico, congelador e despensa) e os novos pontos
 - [ ] Verificar com talões reais se o preço por linha é bem lido (Workers AI e Gemini), junto com o teste de 10–15 talões

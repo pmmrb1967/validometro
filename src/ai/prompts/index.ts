@@ -32,6 +32,12 @@ export const RECEIPT_PROMPT = {
 ${lineRules}`,
 };
 
+/** A long receipt photographed in parts: said before the usual receipt prompt. */
+export const RECEIPT_PARTS_NOTE = (count: number) =>
+  `As ${count} imagens são partes seguidas do mesmo talão, de cima para baixo. Uma parte pode repetir as últimas linhas da anterior: nesse caso conta essas linhas uma só vez. Lê as partes como um único talão.
+
+`;
+
 /** A digital receipt (PDF with text), already turned into lines on the phone (src/app/pdf.ts). */
 export const RECEIPT_TEXT_PROMPT = {
   version: 'receipt-text.v1',

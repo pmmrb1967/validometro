@@ -103,6 +103,24 @@ describe('POST /api/ingest/receipt', () => {
     expect(sent).not.toContain('data:image');
   });
 
+  it('reads a long receipt in parts as one, in order, with a note on how they join', async () => {
+    const { ai, calls } = fakeAi(receipt);
+    const res = await post('/api/ingest/receipt', { images: [IMAGE, `${IMAGE}B`] }, ai);
+    expect(res.status).toBe(200);
+    const sent = JSON.stringify(calls[0]!.input);
+    expect(sent.indexOf(`base64,${IMAGE}"`)).toBeLessThan(sent.indexOf(`base64,${IMAGE}B`));
+    expect(sent).toContain('partes seguidas do mesmo talão');
+  });
+
+  it('takes at most four parts', async () => {
+    const res = await post(
+      '/api/ingest/receipt',
+      { images: Array(5).fill(IMAGE) },
+      fakeAi(receipt).ai,
+    );
+    expect(res.status).toBe(400);
+  });
+
   it('refuses a body that is neither a photo nor a receipt text', async () => {
     const res = await post('/api/ingest/receipt', { text: 'curto' }, fakeAi(receipt).ai);
     expect(res.status).toBe(400);

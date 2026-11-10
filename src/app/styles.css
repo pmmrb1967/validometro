@@ -820,6 +820,46 @@ select {
   min-height: 56px;
 }
 
+.receipt-parts {
+  display: grid;
+  gap: 10px;
+  margin-top: 12px;
+  padding: 14px;
+  border: 1px solid var(--border);
+  border-radius: 14px;
+  background: var(--surface);
+}
+
+.receipt-parts-title {
+  margin: 0;
+  font-weight: 650;
+}
+
+.receipt-thumbs {
+  display: flex;
+  gap: 8px;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+  overflow-x: auto;
+}
+
+.receipt-thumbs img {
+  display: block;
+  width: 64px;
+  height: 88px;
+  object-fit: cover;
+  object-position: top;
+  border-radius: 8px;
+  border: 1px solid var(--border);
+}
+
+.receipt-parts-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
 /* The camera first, across; the file and the voice below it. */
 .quick-buttons > button:first-child {
   grid-column: 1 / -1;

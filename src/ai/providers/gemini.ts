@@ -5,7 +5,13 @@
  * the Worker only forwards bytes. The key travels in a header, never in the URL or the logs.
  */
 import { jsonSchema } from '../schemas';
-import { AiError, type AiProvider, type AiResult, type StructuredRequest } from '../types';
+import {
+  AiError,
+  imagesOf,
+  type AiProvider,
+  type AiResult,
+  type StructuredRequest,
+} from '../types';
 
 export const GEMINI_MODEL = 'gemini-3.5-flash-lite';
 const ENDPOINT = 'https://generativelanguage.googleapis.com/v1beta/models';
@@ -38,8 +44,8 @@ export function gemini(apiKey: string, fetcher: typeof fetch = fetch): AiProvide
     id: 'gemini',
     async generate<T>(request: StructuredRequest<T>): Promise<AiResult> {
       const parts: object[] = [];
-      if (request.image)
-        parts.push({ inline_data: { mime_type: request.image.mime, data: request.image.base64 } });
+      for (const image of imagesOf(request))
+        parts.push({ inline_data: { mime_type: image.mime, data: image.base64 } });
       parts.push({ text: request.prompt });
       let res: Response;
       try {

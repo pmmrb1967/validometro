@@ -56,8 +56,14 @@ async function postJson<T>(path: string, body: unknown, fallback: string): Promi
   return (await res.json()) as T;
 }
 
-export function readReceipt(image: string): Promise<ReadingResult> {
-  return postJson('/api/ingest/receipt', { image }, 'Não foi possível ler o talão.');
+/** As many parts of one long receipt as the server takes (src/worker/ingest.ts). */
+export const MAX_RECEIPT_PARTS = 4;
+
+/** One photo, or the parts of a long receipt (top to bottom), read as one receipt. */
+export function readReceipt(images: string | string[]): Promise<ReadingResult> {
+  const parts = typeof images === 'string' ? [images] : images;
+  const body = parts.length === 1 ? { image: parts[0] } : { images: parts };
+  return postJson('/api/ingest/receipt', body, 'Não foi possível ler o talão.');
 }
 
 /** A digital receipt (PDF) read as text on the phone: no image to send. */

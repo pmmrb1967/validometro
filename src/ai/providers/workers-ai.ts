@@ -5,7 +5,13 @@
  * follows a JSON Schema; thinking is turned off (it would spend Neurons on a reading task).
  */
 import { jsonSchema } from '../schemas';
-import { AiError, type AiProvider, type AiResult, type StructuredRequest } from '../types';
+import {
+  AiError,
+  imagesOf,
+  type AiProvider,
+  type AiResult,
+  type StructuredRequest,
+} from '../types';
 
 export const WORKERS_AI_MODEL = '@cf/google/gemma-4-26b-a4b-it';
 
@@ -37,12 +43,13 @@ export function workersAi(ai: Ai): AiProvider {
   return {
     id: 'workers-ai',
     async generate<T>(request: StructuredRequest<T>): Promise<AiResult> {
-      const content = request.image
+      const images = imagesOf(request);
+      const content = images.length
         ? [
-            {
+            ...images.map((image) => ({
               type: 'image_url',
-              image_url: { url: `data:${request.image.mime};base64,${request.image.base64}` },
-            },
+              image_url: { url: `data:${image.mime};base64,${image.base64}` },
+            })),
             { type: 'text', text: request.prompt },
           ]
         : request.prompt;

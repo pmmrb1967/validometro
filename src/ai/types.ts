@@ -23,10 +23,17 @@ export interface StructuredRequest<T> {
   system: string;
   prompt: string;
   image?: AiImage;
+  /** Several photos of one document (a long receipt in parts), in order. */
+  images?: AiImage[];
   schema: z.ZodType<T>;
   /** Short identifier some APIs want for the schema ("receipt"). */
   schemaName: string;
   maxTokens: number;
+}
+
+/** The request's photos, in order: `images`, or the one `image`. */
+export function imagesOf(request: Pick<StructuredRequest<unknown>, 'image' | 'images'>): AiImage[] {
+  return request.images ?? (request.image ? [request.image] : []);
 }
 
 export interface AiResult {

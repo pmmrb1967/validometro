@@ -281,3 +281,38 @@ test('talão em PDF: o texto vai para a leitura, e a revisão abre', async ({ pa
   await expect(page.getByLabel('Nome')).toHaveValue('Iogurte natural');
   await expect(page.getByLabel('Preço de Iogurte natural, em euros')).toHaveValue('1,29');
 });
+
+/** A small receipt-like picture (a PNG), so the app can make it small like a real photo. */
+const PHOTO = Buffer.from(
+  'iVBORw0KGgoAAAANSUhEUgAAACgAAAA8CAIAAACb22+3AAAANElEQVR4nO3NAQkAAAwDoPVPtliLcQ5awPRIxGKxWCwWi8VisVgsFovFYrFYLBaLxWLxp3gc6fo8nfP3JQAAAABJRU5ErkJggg==',
+  'base64',
+);
+
+test('talão comprido: várias fotos, lidas como um só talão', async ({ page }) => {
+  let sent: { image?: string; images?: string[] } | undefined;
+  await page.route('**/api/ingest/receipt', async (route) => {
+    sent = route.request().postDataJSON() as typeof sent;
+    await route.fulfill({ json: { store: null, date: null, drafts: [] } });
+  });
+  await page.goto('/');
+  await page.getByRole('button', { name: 'Começar sem conta' }).first().click();
+  await page.goto('/adicionar');
+  const camera = page.locator('.quick-entry input[type=file][capture]');
+  await camera.first().setInputFiles({ name: 'a.png', mimeType: 'image/png', buffer: PHOTO });
+  await expect(page.getByText('Talão: 1 foto.')).toBeVisible();
+  // The next part, from the panel's own camera button.
+  await page.locator('.receipt-parts input[type=file]').setInputFiles({
+    name: 'b.png',
+    mimeType: 'image/png',
+    buffer: PHOTO,
+  });
+  await expect(page.getByText('Talão: 2 fotos, lidas como um só talão.')).toBeVisible();
+  await expect(page.getByRole('img', { name: 'Parte 2' })).toBeVisible();
+  await page.getByRole('button', { name: 'Ler talão' }).click();
+  await expect(page.getByRole('alert')).toContainText('Não encontrei alimentos');
+  expect(sent?.images).toHaveLength(2);
+  expect(sent?.image).toBeUndefined();
+  // "Recomeçar" leaves only the first button again.
+  await page.getByRole('button', { name: 'Recomeçar' }).click();
+  await expect(page.getByRole('group', { name: 'Fotos do talão' })).toHaveCount(0);
+});

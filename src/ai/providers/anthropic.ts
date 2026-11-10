@@ -6,7 +6,13 @@
  */
 import Anthropic from '@anthropic-ai/sdk';
 import { betaZodOutputFormat } from '@anthropic-ai/sdk/helpers/beta/zod';
-import { AiError, type AiProvider, type AiResult, type StructuredRequest } from '../types';
+import {
+  AiError,
+  imagesOf,
+  type AiProvider,
+  type AiResult,
+  type StructuredRequest,
+} from '../types';
 
 export const CLAUDE_MODELS = ['claude-opus-5-5', 'claude-sonnet-5-5', 'claude-haiku-5-5'] as const;
 export type ClaudeModel = (typeof CLAUDE_MODELS)[number];
@@ -36,10 +42,10 @@ export function anthropic(apiKey: string, model: ClaudeModel = DEFAULT_CLAUDE_MO
     id: 'anthropic',
     async generate<T>(request: StructuredRequest<T>): Promise<AiResult> {
       const content: Anthropic.Beta.BetaContentBlockParam[] = [];
-      if (request.image)
+      for (const image of imagesOf(request))
         content.push({
           type: 'image',
-          source: { type: 'base64', media_type: request.image.mime, data: request.image.base64 },
+          source: { type: 'base64', media_type: image.mime, data: image.base64 },
         });
       content.push({ type: 'text', text: request.prompt });
       const withFallback = model !== 'claude-haiku-5-5';
