@@ -18,6 +18,7 @@ pnpm db:migrate:local      # cria a D1 local e aplica as migrações
 pnpm dev:worker            # build + wrangler dev (API e PWA em http://localhost:8787)
 pnpm dev                   # alternativa: Vite com hot reload; /api vai para o wrangler dev
 pnpm test                  # Vitest dentro do workerd, com D1 local
+pnpm build && pnpm test:e2e  # Playwright: os fluxos principais, com API e D1 local vazia
 pnpm typecheck && pnpm lint
 ```
 

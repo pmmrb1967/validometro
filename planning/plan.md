@@ -76,11 +76,11 @@ Plano de implementação por fases. Cada fase termina com a app **a funcionar, t
 ## Fase 5 — Admin, robustez e lançamento
 
 - [x] Página inicial para quem chega pela primeira vez (sem conta e sem nada registado), como nos irmãos; "Entrar" na barra de topo; páginas `/entrar`, `/criar-conta` e `/privacidade`. Quem já usa a app vai direto ao semáforo
-- [ ] Painel de admin (emails em `ADMIN_EMAILS`): tamanho da D1, consultas/dia, uso de IA por fornecedor, utilizadores e agregados ativos
-- [ ] Aviso ao admin quando os limites do plano gratuito se aproximam (reutilizar a lógica pensada para o Prazómetro)
-- [ ] Exportar/apagar dados do utilizador (RGPD)
-- [ ] Página "Sobre", licença AGPL-3.0, link para o repositório
-- [ ] Testes end-to-end dos fluxos principais
+- [x] Painel de admin (emails em `ADMIN_EMAILS`): tamanho da D1, consultas/dia, uso de IA por fornecedor, utilizadores e agregados ativos (`/admin`; pedidos e linhas da D1 precisam do token `CF_ANALYTICS_TOKEN`)
+- [x] Aviso ao admin quando os limites do plano gratuito se aproximam (lógica do Prazómetro; Cron de hora a hora, push aos 70% e 90%)
+- [x] Exportar/apagar dados do utilizador (RGPD): ficheiro JSON em Definições, com e sem conta; apagar a conta ou os dados do telemóvel
+- [x] Página "Sobre" (`/sobre`, a apresentação), licença AGPL-3.0 e link para o repositório no rodapé
+- [x] Testes end-to-end dos fluxos principais (Playwright, telemóvel e computador, na CI)
 - [ ] Versão 1.0.0, uso em família durante 2–3 semanas, recolha de feedback
 
 ## Backlog (depois da 1.0)

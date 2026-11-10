@@ -4,7 +4,15 @@
 import type { Context } from 'hono';
 import { getCookie, setCookie } from 'hono/cookie';
 import { createMiddleware } from 'hono/factory';
-import { readSession, SESSION_COOKIE, SESSION_SECONDS, signSession, type User } from './auth';
+import { lisbonDate } from '../domain/dates';
+import {
+  normalizeEmail,
+  readSession,
+  SESSION_COOKIE,
+  SESSION_SECONDS,
+  signSession,
+  type User,
+} from './auth';
 
 export type AppEnv = { Bindings: Env; Variables: { user: User | null } };
 
@@ -56,6 +64,41 @@ export const requireUser = createMiddleware<AppEnv>(async (c, next) => {
   if (!c.get('user')) return c.json({ error: 'Sessão terminada. Entra outra vez.' }, 401);
   await next();
 });
+
+/** The administrators (secret ADMIN_EMAILS, comma-separated). */
+export function adminEmails(env: Env): string[] {
+  return (env.ADMIN_EMAILS ?? '')
+    .split(',')
+    .map((entry) => normalizeEmail(entry))
+    .filter(Boolean);
+}
+
+export const isAdmin = (env: Env, user: User) => adminEmails(env).includes(user.email);
+
+/** As requireUser, and only for the administrators (the panel, /admin). */
+export const requireAdmin = createMiddleware<AppEnv>(async (c, next) => {
+  if (c.req.method !== 'GET' && c.req.method !== 'HEAD' && !trustedOrigin(c)) {
+    return c.json({ error: 'Pedido recusado.' }, 403);
+  }
+  const user = c.get('user');
+  if (!user) return c.json({ error: 'Sessão terminada. Entra outra vez.' }, 401);
+  if (!isAdmin(c.env, user)) return c.json({ error: 'Não encontrado.' }, 404);
+  await next();
+});
+
+/**
+ * The Lisbon day the user last opened the app, for the panel's "active" count: one write per
+ * user and day at most (the WHERE skips it after the first).
+ */
+export async function markSeen(db: D1Database, user: User, now = new Date()): Promise<void> {
+  const today = lisbonDate(now);
+  await db
+    .prepare(
+      'UPDATE users SET last_seen_on = ? WHERE id = ? AND (last_seen_on IS NULL OR last_seen_on <> ?)',
+    )
+    .bind(today, user.id, today)
+    .run();
+}
 
 /** The user, after requireUser. */
 export function userOf(c: Context<AppEnv>): User {

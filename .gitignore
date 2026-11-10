@@ -30,3 +30,8 @@ fixtures/private/
 *.jpeg
 *.heic
 .playwright-mcp/
+
+# End-to-end server (scripts/e2e-server.mjs) and Playwright output
+wrangler.e2e.toml
+test-results/
+playwright-report/

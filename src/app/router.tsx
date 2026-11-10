@@ -2,6 +2,7 @@
 import { createBrowserRouter, Navigate } from 'react-router';
 import { AppShell } from './AppShell';
 import { Account } from './screens/Account';
+import { Admin } from './screens/Admin';
 import { AddItem } from './screens/AddItem';
 import { Home } from './screens/Home';
 import { Landing } from './screens/Landing';
@@ -25,6 +26,7 @@ export const router = createBrowserRouter([
       { path: 'criar-conta', element: <Account initialMode="criar" /> },
       { path: 'privacidade', element: <Privacy /> },
       { path: 'sobre', element: <Landing /> },
+      { path: 'admin', element: <Admin /> },
       { path: 'compras', element: <Shopping /> },
       { path: 'jantar', element: <Recipes /> },
       { path: 'desperdicio', element: <Stats /> },

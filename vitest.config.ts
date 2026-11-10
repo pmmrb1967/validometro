@@ -23,6 +23,7 @@ export default defineConfig(async () => {
                   TEST_MIGRATIONS: migrations,
                   SESSION_SECRET: 'test-session-secret-at-least-32-characters',
                   KEY_ENCRYPTION_SECRET: 'test-key-secret-at-least-32-characters!!',
+                  ADMIN_EMAILS: 'admin@example.pt, outro.admin@example.pt',
                 },
               },
             }),

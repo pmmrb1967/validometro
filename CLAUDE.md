@@ -125,7 +125,9 @@ npx wrangler d1 migrations apply validometro --remote
 npm run deploy
 ```
 
-Segredos (`wrangler secret put`): `SESSION_SECRET`, `VAPID_PUBLIC_KEY`, `VAPID_PRIVATE_KEY`, `KEY_ENCRYPTION_SECRET`, `ADMIN_EMAILS`. Para `wrangler dev`, os dois primeiros vão em `.dev.vars` (não versionado).
+Segredos (`wrangler secret put`): `SESSION_SECRET`, `VAPID_PUBLIC_KEY`, `VAPID_PRIVATE_KEY`, `KEY_ENCRYPTION_SECRET`, `ADMIN_EMAILS`, `CF_ANALYTICS_TOKEN` (opcional: token só de leitura "Account Analytics: Read", para o painel mostrar pedidos ao Worker e linhas da D1). Para `wrangler dev`, `SESSION_SECRET` e `KEY_ENCRYPTION_SECRET` vão em `.dev.vars` (não versionado).
+
+Painel de admin em `/admin` (só para `ADMIN_EMAILS`). O Cron corre de hora a hora: vigia os limites do plano gratuito (`src/worker/monitor.ts`, avisos por push aos admins aos 70% e 90%) e, às 9h de Lisboa, envia o alerta diário. Testes ponta a ponta: `pnpm build && pnpm test:e2e` (`e2e/`, servidor em `scripts/e2e-server.mjs`).
 
 ## O que NÃO fazer
 

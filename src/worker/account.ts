@@ -10,6 +10,7 @@
  *   POST /account/password {current, next}  → 204; other devices are signed out
  *   PUT  /account/ai {provider, key?, model?} → 204 (the key sealed with AES-GCM)
  *   DELETE /account {password}              → 204; an empty household goes with its items
+ *   GET  /account/export                    → JSON file with everything kept (RGPD)
  *   GET  /household; PUT /household {name}; POST /household/join {code};
  *   POST /household/leave; POST /household/code (a new invite code)
  */
@@ -17,7 +18,7 @@ import { Hono, type Context } from 'hono';
 import { deleteCookie } from 'hono/cookie';
 import { z } from 'zod';
 import { CLAUDE_MODELS } from '../ai/providers/anthropic';
-import { addressKey, login, normalizeEmail, SESSION_COOKIE, type User } from './auth';
+import { addressKey, login, SESSION_COOKIE, type User } from './auth';
 import {
   createAccount,
   householdInfo,
@@ -30,6 +31,8 @@ import { hashPassword, MIN_PASSWORD_LENGTH } from './password';
 import { open, seal } from './secret-box';
 import {
   COOKIE_OPTIONS,
+  isAdmin,
+  markSeen,
   nowSeconds,
   requireUser,
   sessionSecret,
@@ -55,13 +58,6 @@ const NewCredentials = z.object({
 
 async function body<T>(c: Context<AppEnv>, schema: z.ZodType<T>) {
   return schema.safeParse(await c.req.json().catch(() => null));
-}
-
-function adminEmails(env: Env): string[] {
-  return (env.ADMIN_EMAILS ?? '')
-    .split(',')
-    .map((entry) => normalizeEmail(entry))
-    .filter(Boolean);
 }
 
 interface AiRow {
@@ -97,7 +93,7 @@ async function me(c: Context<AppEnv>, user: User) {
   return {
     email: user.email,
     household: household && { id: household.id, name: household.name },
-    admin: adminEmails(c.env).includes(user.email),
+    admin: isAdmin(c.env, user),
     ai: {
       provider: FROM_DB[ai?.ai_provider ?? 'workers_ai'],
       model: ai?.ai_model ?? null,
@@ -168,6 +164,7 @@ account.post('/auth/logout', (c) => {
 
 account.get('/auth/me', async (c) => {
   const user = c.get('user');
+  if (user) await markSeen(c.env.DB, user);
   return c.json({ user: user ? await me(c, user) : null });
 });
 
@@ -265,6 +262,82 @@ account.delete('/account', requireUser, async (c) => {
   ]);
   deleteCookie(c, SESSION_COOKIE, COOKIE_OPTIONS);
   return c.body(null, 204);
+});
+
+/**
+ * Everything the server keeps about the user and their household (RGPD, right of access and
+ * portability), as one JSON file. Never the password nor the AI key, only whether there is one.
+ */
+account.get('/account/export', requireUser, async (c) => {
+  const user = userOf(c);
+  const db = c.env.DB;
+  const [profile, household, items, shopping, devices, usage] = await Promise.all([
+    db
+      .prepare(
+        'SELECT email, created_at, ai_provider, ai_model, ai_key_encrypted FROM users WHERE id = ?',
+      )
+      .bind(user.id)
+      .first<{
+        email: string;
+        created_at: string;
+        ai_provider: keyof typeof FROM_DB;
+        ai_model: string | null;
+        ai_key_encrypted: string | null;
+      }>(),
+    householdInfo(db, user),
+    db
+      .prepare(
+        `SELECT id, name, category, location, ean, quantity, unit, purchased_at, opened_at,
+                expires_at, expiry_source, status, resolved_at, created_at, updated_at
+         FROM items WHERE household_id = ? ORDER BY created_at`,
+      )
+      .bind(user.householdId)
+      .all(),
+    db
+      .prepare(
+        `SELECT id, name, category, source, state, item_id, created_at, updated_at
+         FROM shopping_list WHERE household_id = ? AND state <> 'removido' ORDER BY created_at`,
+      )
+      .bind(user.householdId)
+      .all(),
+    db
+      .prepare('SELECT endpoint, created_at FROM push_subscriptions WHERE user_id = ?')
+      .bind(user.id)
+      .all<{ endpoint: string; created_at: string }>(),
+    db
+      .prepare('SELECT date, provider, operation, ok FROM ai_usage WHERE user_id = ? ORDER BY id')
+      .bind(user.id)
+      .all<{ date: string; provider: string; operation: string; ok: number }>(),
+  ]);
+  const exported = {
+    exported_at: new Date().toISOString(),
+    app: 'Validómetro (https://app.validometro.workers.dev)',
+    account: profile && {
+      email: profile.email,
+      created_at: profile.created_at,
+      ai_provider: FROM_DB[profile.ai_provider],
+      ai_model: profile.ai_model,
+      ai_key_saved: Boolean(profile.ai_key_encrypted),
+    },
+    household: household && {
+      name: household.name,
+      members: household.members.map(({ email: memberEmail, role }) => ({
+        email: memberEmail,
+        role,
+      })),
+    },
+    items: items.results,
+    shopping_list: shopping.results,
+    // The push service only: the address itself works as a credential for that phone.
+    alert_devices: devices.results.map((row) => ({
+      service: new URL(row.endpoint).host,
+      created_at: row.created_at,
+    })),
+    ai_usage: usage.results.map((row) => ({ ...row, ok: row.ok === 1 })),
+  };
+  c.header('Content-Disposition', 'attachment; filename="validometro-dados.json"');
+  c.header('Cache-Control', 'no-store');
+  return c.json(exported);
 });
 
 account.get('/household', requireUser, async (c) => {

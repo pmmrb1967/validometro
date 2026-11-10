@@ -104,6 +104,34 @@ describe('accounts', () => {
     );
     expect(me.user.ai).toMatchObject({ provider: 'gemini', hasKey: true });
   });
+
+  it('exports everything kept about the user, without the password or the key', async () => {
+    const browser = await signUp('exporta@example.pt');
+    await browser.request('PUT', '/api/account/ai', { provider: 'gemini', key: 'AIza-segredo' });
+    await browser.request('POST', '/api/sync', { changes: [newItem('Queijo fresco')], cursor: 0 });
+    expect((await new Browser().request('GET', '/api/account/export')).status).toBe(401);
+
+    const res = await browser.request('GET', '/api/account/export');
+    expect(res.status).toBe(200);
+    expect(res.headers.get('content-disposition')).toContain('attachment');
+    const text = await res.text();
+    expect(text).not.toContain('segredo');
+    expect(text).not.toContain('pbkdf2');
+    const data = JSON.parse(text) as {
+      account: { email: string; ai_provider: string; ai_key_saved: boolean };
+      household: { members: { email: string }[] };
+      items: { name: string }[];
+      shopping_list: unknown[];
+    };
+    expect(data.account).toMatchObject({
+      email: 'exporta@example.pt',
+      ai_provider: 'gemini',
+      ai_key_saved: true,
+    });
+    expect(data.household.members).toEqual([{ email: 'exporta@example.pt', role: 'owner' }]);
+    expect(data.items.map((item) => item.name)).toEqual(['Queijo fresco']);
+    expect(data.shopping_list).toEqual([]);
+  });
 });
 
 describe('households', () => {

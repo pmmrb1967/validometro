@@ -133,26 +133,31 @@ export async function resolveItem(
   now = new Date(),
   store = db,
 ): Promise<void> {
-  const item = await update(store, id, { status, resolved_at: now.toISOString() }, now);
-  // Eaten: suggest buying it again (thrown away: no, the list warns instead).
-  if (item && status === 'consumido') {
-    const suggestion = restockSuggestion(item, await store.shopping.toArray(), now);
-    if (suggestion) await writeShopping(store, suggestion);
-  }
+  // One transaction: closing the app right after the tap keeps both or neither.
+  await store.transaction('rw', store.items, store.shopping, store.outbox, async () => {
+    const item = await update(store, id, { status, resolved_at: now.toISOString() }, now);
+    // Eaten: suggest buying it again (thrown away: no, the list warns instead).
+    if (item && status === 'consumido') {
+      const suggestion = restockSuggestion(item, await store.shopping.toArray(), now);
+      if (suggestion) await writeShopping(store, suggestion);
+    }
+  });
 }
 
 /** Undo of a resolve, from the snackbar. */
 export async function reactivateItem(id: string, now = new Date(), store = db): Promise<void> {
-  await update(store, id, { status: 'ativo', resolved_at: null }, now);
-  // Undo of "Comido": the suggestion it made goes too, if nobody acted on it yet.
-  const suggested = await store.shopping
-    .where('state')
-    .equals('sugerido')
-    .filter((entry) => entry.item_id === id)
-    .toArray();
-  for (const entry of suggested) {
-    await writeShopping(store, { ...entry, state: 'removido', updated_at: now.toISOString() });
-  }
+  await store.transaction('rw', store.items, store.shopping, store.outbox, async () => {
+    await update(store, id, { status: 'ativo', resolved_at: null }, now);
+    // Undo of "Comido": the suggestion it made goes too, if nobody acted on it yet.
+    const suggested = await store.shopping
+      .where('state')
+      .equals('sugerido')
+      .filter((entry) => entry.item_id === id)
+      .toArray();
+    for (const entry of suggested) {
+      await writeShopping(store, { ...entry, state: 'removido', updated_at: now.toISOString() });
+    }
+  });
 }
 
 /** "Abri isto": records the opening and brings the expiry forward by the opened rule. */

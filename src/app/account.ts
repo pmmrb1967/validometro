@@ -49,13 +49,18 @@ export function currentUser(): Me | null {
 /** Listeners for sign-in and sign-out (sync.ts links or clears the local copy). */
 export const accountListeners = new Set<(me: Me | null, before: Me | null) => void>();
 
+/** Raised on every sign-in or sign-out: an older "who is this?" answer must not undo it. */
+let generation = 0;
+
 function signedIn(me: Me | null): void {
+  generation++;
   const before = currentUser();
   set({ status: 'ready', me });
   for (const listener of accountListeners) listener(me, before);
 }
 
-async function call<T>(method: string, path: string, body?: unknown): Promise<T> {
+/** A JSON call with the session cookie; a 401 signs this device out. */
+export async function call<T>(method: string, path: string, body?: unknown): Promise<T> {
   let res: Response;
   try {
     res = await fetch(path, {
@@ -81,8 +86,11 @@ async function call<T>(method: string, path: string, body?: unknown): Promise<T>
 
 /** Who is signed in; offline, the last answer stands (the cookie still works later). */
 export async function refreshAccount(): Promise<Me | null> {
+  const started = generation;
   try {
     const { user } = await call<{ user: Me | null }>('GET', '/api/auth/me');
+    // Signed in or out while this was on its way (opening the app and signing up at once).
+    if (generation !== started) return currentUser();
     signedIn(user);
     return user;
   } catch {

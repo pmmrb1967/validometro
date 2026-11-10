@@ -54,10 +54,34 @@ export function Home() {
   const inPlace = lit.filter((entry) => filter === 'tudo' || entry.item.location === filter);
   const longLife = inPlace.filter((entry) => entry.longLife);
 
+  // Also after the last item: "Anular" must stay at hand when the list empties.
+  const snackbar = undo && (
+    <div className="snackbar" role="status">
+      <span>{undo.text}</span>
+      <button
+        type="button"
+        className="ghost on-dark"
+        onClick={() => {
+          void reactivateItem(undo.id);
+          setUndo(undefined);
+        }}
+      >
+        Anular
+      </button>
+    </div>
+  );
+
   if (items === undefined || showLanding === undefined) return null;
   // Someone new (no account, nothing here, never started): the landing page.
   if (showLanding) return <Landing />;
-  if (items.length === 0) return <Empty />;
+  if (items.length === 0) {
+    return (
+      <>
+        <Empty />
+        {snackbar}
+      </>
+    );
+  }
 
   const resolve = (item: Item, status: 'consumido' | 'deitado_fora') => {
     void resolveItem(item.id, status);
@@ -158,21 +182,7 @@ export function Home() {
         Adicionar
       </Link>
 
-      {undo && (
-        <div className="snackbar" role="status">
-          <span>{undo.text}</span>
-          <button
-            type="button"
-            className="ghost on-dark"
-            onClick={() => {
-              void reactivateItem(undo.id);
-              setUndo(undefined);
-            }}
-          >
-            Anular
-          </button>
-        </div>
-      )}
+      {snackbar}
     </div>
   );
 }

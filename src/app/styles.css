@@ -1360,3 +1360,146 @@ textarea {
 .screen:has(> .landing) {
   max-width: 68rem;
 }
+
+/* Admin panel: the free-plan meters, the people, the AI and the history */
+.admin {
+  display: grid;
+  gap: 16px;
+}
+
+.notice {
+  margin: 0;
+  padding: 12px 14px;
+  border-left: 4px solid var(--brand-strong);
+  border-radius: 0 12px 12px 0;
+  background: var(--surface);
+  line-height: 1.5;
+}
+
+.limits {
+  display: grid;
+  gap: 14px;
+  margin: 12px 0 14px;
+  padding: 0;
+  list-style: none;
+}
+
+.limit-head {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: space-between;
+  gap: 4px 12px;
+}
+
+.limit-value {
+  font-variant-numeric: tabular-nums;
+}
+
+.limit-value small,
+.limit-note {
+  color: var(--muted);
+}
+
+.limit-track {
+  display: flex;
+  height: 10px;
+  margin-top: 6px;
+  border-radius: 5px;
+  background: var(--border);
+  overflow: hidden;
+}
+
+.limit-bar {
+  min-width: 3px;
+  border-radius: 5px;
+  background: var(--brand-strong);
+}
+
+.limit-note {
+  margin: 4px 0 0;
+  font-size: 0.86rem;
+}
+
+/* A limit in danger is a state: the traffic-light colours, with the words beside them. */
+.limit-warning .limit-bar {
+  background: var(--soon);
+}
+
+.limit-warning .limit-note strong {
+  color: var(--soon-text);
+}
+
+.limit-critical .limit-bar {
+  background: var(--expired);
+}
+
+.limit-critical .limit-note strong {
+  color: var(--expired-text);
+}
+
+.admin-tiles {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(7.5rem, 1fr));
+  gap: 10px;
+  margin: 10px 0 0;
+}
+
+.admin-tiles div {
+  padding: 10px 12px;
+  border-radius: 12px;
+  border: 1px solid var(--border);
+}
+
+.admin-tiles dt {
+  color: var(--muted);
+  font-size: 0.86rem;
+}
+
+.admin-tiles dd {
+  margin: 2px 0 0;
+  font-family: 'Bricolage Grotesque Variable', system-ui, sans-serif;
+  font-size: 1.6rem;
+  font-weight: 700;
+}
+
+.table-wrap {
+  margin: 10px 0 8px;
+  overflow-x: auto;
+}
+
+.admin-table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 0.9rem;
+  font-variant-numeric: tabular-nums;
+}
+
+.admin-table th,
+.admin-table td {
+  padding: 6px 8px;
+  border-bottom: 1px solid var(--border);
+  text-align: right;
+  white-space: nowrap;
+}
+
+.admin-table th:first-child,
+.admin-table td:first-child,
+.admin-table td:nth-child(2) {
+  text-align: left;
+}
+
+.admin-table thead th {
+  color: var(--muted);
+  font-weight: 600;
+}
+
+.admin-alerts {
+  margin: 10px 0 0;
+  padding-left: 1.2em;
+  line-height: 1.6;
+}
+
+.admin-alerts span {
+  color: var(--muted);
+  font-variant-numeric: tabular-nums;
+}

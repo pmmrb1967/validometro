@@ -10,4 +10,6 @@ interface __BaseEnv_Env {
   VAPID_PRIVATE_KEY?: string;
   /** Administrators' emails, comma-separated. */
   ADMIN_EMAILS?: string;
+  /** Read-only Cloudflare API token ("Account Analytics: Read"), for the panel (monitor.ts). */
+  CF_ANALYTICS_TOKEN?: string;
 }

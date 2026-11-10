@@ -2,11 +2,21 @@
 // Copyright (C) 2026 Paulo Barbosa
 import { sendDailyAlerts } from './alerts';
 import { app } from './app';
+import { runMonitor } from './monitor';
 
 export default {
   fetch: app.fetch,
-  /** 08:00 and 09:00 UTC: the daily alert goes out at 09:00 in Lisbon (alerts.ts). */
+  /** Every hour: the free-plan watch, and at 09:00 in Lisbon the daily alert (alerts.ts). */
   scheduled(controller, env, ctx) {
-    ctx.waitUntil(sendDailyAlerts(env, new Date(controller.scheduledTime)));
+    const now = new Date(controller.scheduledTime);
+    ctx.waitUntil(
+      Promise.allSettled([sendDailyAlerts(env, now), runMonitor(env, now)]).then((results) => {
+        for (const result of results) {
+          if (result.status === 'rejected') {
+            console.error('Scheduled task failed', String(result.reason));
+          }
+        }
+      }),
+    );
   },
 } satisfies ExportedHandler<Env>;

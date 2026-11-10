@@ -17,7 +17,8 @@ export function Privacy() {
         <h2>Sem conta</h2>
         <p>
           O que registas fica só neste telemóvel (ou computador), no armazenamento do browser. O
-          servidor não guarda nada teu. Apagar os dados do site no browser apaga tudo.
+          servidor não guarda nada teu. Em Definições podes descarregar um ficheiro com tudo ou
+          apagar o que está neste telemóvel.
         </p>
       </section>
 
@@ -29,15 +30,16 @@ export function Privacy() {
           <li>os alimentos e a lista de compras da tua casa, visíveis só para quem lá está;</li>
           <li>os endereços de notificação dos telemóveis onde ligaste o alerta diário;</li>
           <li>a tua chave de IA, se a guardares na conta, cifrada;</li>
+          <li>o último dia em que abriste a app, só para contar quantas pessoas a usam;</li>
           <li>
             depois de várias tentativas de entrada falhadas, por pouco tempo, uma marca cifrada do
             endereço de rede, para travar quem tente adivinhar palavras-passe.
           </li>
         </ul>
         <p>
-          O único cookie é o da sessão, para não teres de entrar sempre. Ao apagar a conta (em
-          Definições), apagam-se os teus dados e, se mais ninguém estiver na tua casa, os alimentos
-          e a lista.
+          O único cookie é o da sessão, para não teres de entrar sempre. Em Definições podes
+          descarregar um ficheiro com tudo o que está guardado. Ao apagar a conta, apagam-se os teus
+          dados e, se mais ninguém estiver na tua casa, os alimentos e a lista.
         </p>
       </section>
 

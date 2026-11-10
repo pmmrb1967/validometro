@@ -55,7 +55,8 @@ async function queueEverything(store: InventoryDb): Promise<void> {
   });
 }
 
-async function clearCopy(store: InventoryDb): Promise<void> {
+/** Empties this device's copy (sign-out, household change, "Apagar os dados deste telemóvel"). */
+export async function clearCopy(store: InventoryDb): Promise<void> {
   await store.transaction('rw', store.items, store.shopping, store.outbox, store.meta, async () => {
     await store.items.clear();
     await store.shopping.clear();
@@ -117,6 +118,9 @@ async function round(store: InventoryDb, me: Me): Promise<void> {
     });
     if (!res.ok) throw new Error(`sync ${res.status}`);
     const answer = (await res.json()) as SyncResponse;
+    // Signed out (or someone else signed in) while waiting: this answer is not for this copy,
+    // which was cleared meanwhile.
+    if (currentUser()?.email !== me.email) return;
     const tables = [store.items, store.shopping, store.outbox, store.meta];
     await store.transaction('rw', tables, async () => {
       // Sent and not changed again meanwhile: no longer pending.

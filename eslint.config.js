@@ -8,7 +8,15 @@ import tseslint from 'typescript-eslint';
 
 export default tseslint.config(
   {
-    ignores: ['dist', 'dev-dist', 'coverage', '.wrangler', 'src/worker/worker-configuration.d.ts'],
+    ignores: [
+      'dist',
+      'dev-dist',
+      'coverage',
+      '.wrangler',
+      'test-results',
+      'playwright-report',
+      'src/worker/worker-configuration.d.ts',
+    ],
   },
   {
     files: ['**/*.{ts,tsx,js}'],

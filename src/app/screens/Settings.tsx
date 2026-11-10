@@ -2,14 +2,30 @@
 import { Link } from 'react-router';
 import { AccountSections } from '../components/AccountSections';
 import { AiSection } from '../components/AiSection';
+import { DataSection } from '../components/DataSection';
 import { InstallSection } from '../components/InstallSection';
+import { useAccount } from '../account';
 import { useHealth } from '../useHealth';
 
 export function Settings() {
   const health = useHealth();
+  const account = useAccount();
+  const admin = account.status === 'ready' && account.me?.admin === true;
   return (
     <div className="settings">
       <h1 className="page-title">Definições</h1>
+
+      {admin && (
+        <section className="card">
+          <h2>Administração</h2>
+          <p className="hint">
+            O uso do plano gratuito da Cloudflare, da IA e quantas pessoas usam a app.
+          </p>
+          <Link className="button secondary" to="/admin">
+            Abrir o painel
+          </Link>
+        </section>
+      )}
 
       <AccountSections />
 
@@ -17,16 +33,7 @@ export function Settings() {
 
       <AiSection />
 
-      <section className="card">
-        <h2>Os teus dados</h2>
-        <p className="hint">
-          Sem conta, tudo o que registas fica só neste telemóvel (ou computador). Com conta, os
-          alimentos ficam também no servidor, visíveis só para quem está na tua casa. Ao servidor
-          vão o código de barras, quando procuras um produto, e as fotos ou o que ditas, para serem
-          lidos; nada disso fica guardado. O servidor aprende as abreviaturas dos talões que
-          confirmas (ex.: "IOG NAT" é iogurte natural), sem saber de quem são.
-        </p>
-      </section>
+      <DataSection />
 
       <section className="card">
         <h2>Sobre</h2>

@@ -41,19 +41,19 @@ const SubscriptionBody = z.object({
 });
 const EndpointBody = z.object({ endpoint });
 
-interface SubscriptionRow {
+export interface SubscriptionRow {
   id: string;
   user_id: string;
   endpoint: string;
   keys_json: string;
 }
 
-function target(row: SubscriptionRow): PushTarget {
+export function target(row: SubscriptionRow): PushTarget {
   const keys = JSON.parse(row.keys_json) as { p256dh: string; auth: string };
   return { endpoint: row.endpoint, p256dh: keys.p256dh, auth: keys.auth };
 }
 
-async function forget(db: D1Database, endpointUrl: string): Promise<void> {
+export async function forget(db: D1Database, endpointUrl: string): Promise<void> {
   await db.prepare('DELETE FROM push_subscriptions WHERE endpoint = ?').bind(endpointUrl).run();
 }
 
@@ -188,8 +188,8 @@ export function lisbonHour(now: Date): number {
 }
 
 /**
- * The Cron runs at 08:00 and 09:00 UTC; only the run that is 09:00 in Lisbon sends (summer
- * and winter time). `alert_log` keeps one per household and day even if it runs again.
+ * The Cron runs every hour; only the run that is 09:00 in Lisbon sends (summer and winter
+ * time). `alert_log` keeps one per household and day even if it runs again.
  */
 export async function sendDailyAlerts(env: Env, now = new Date(), force = false): Promise<number> {
   await purgeLoginFailures(env.DB, Math.floor(now.getTime() / 1000));

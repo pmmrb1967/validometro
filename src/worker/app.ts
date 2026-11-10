@@ -4,6 +4,7 @@ import { Hono } from 'hono';
 import { z } from 'zod';
 import { isValidGtin } from '../domain/barcode';
 import { account } from './account';
+import { admin } from './admin';
 import { alerts } from './alerts';
 import { ingest } from './ingest';
 import { lookupProduct } from './products';
@@ -69,6 +70,7 @@ app.route('/', ingest);
 app.route('/', account);
 app.route('/', sync);
 app.route('/', alerts);
+app.route('/', admin);
 
 app.notFound((c) => c.json({ error: 'Não encontrado.' }, 404));
 
