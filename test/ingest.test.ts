@@ -231,6 +231,47 @@ describe('POST /api/ingest/voice', () => {
   });
 });
 
+describe('POST /api/ingest/shelf', () => {
+  it('lists what the photos show, in the place photographed', async () => {
+    const seen = JSON.stringify({
+      lines: [
+        {
+          name: 'Iogurte natural',
+          category: 'iogurtes',
+          quantity: 4,
+          unit: 'un',
+          perishable: true,
+          expires_at: null,
+        },
+      ],
+    });
+    const { ai, calls } = fakeAi(seen);
+    const res = await post(
+      '/api/ingest/shelf',
+      { images: [IMAGE, IMAGE], location: 'frigorifico' },
+      ai,
+    );
+    expect(res.status).toBe(200);
+    const { drafts } = (await res.json()) as ReceiptDrafts;
+    expect(drafts[0]).toMatchObject({
+      name: 'Iogurte natural',
+      location: 'frigorifico',
+      quantity: 4,
+      expiry_source: 'estimada',
+    });
+    expect(JSON.stringify(calls[0]!.input)).toContain('2 fotografias');
+  });
+
+  it('refuses a place that is not one', async () => {
+    const res = await post(
+      '/api/ingest/shelf',
+      { images: [IMAGE], location: 'sotao' },
+      fakeAi().ai,
+    );
+    expect(res.status).toBe(400);
+  });
+});
+
 describe('POST /api/ingest/date', () => {
   it('returns the printed date', async () => {
     const res = await post(

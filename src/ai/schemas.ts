@@ -37,6 +37,12 @@ export const voiceSchema = z.object({
 });
 export type VoiceReading = z.infer<typeof voiceSchema>;
 
+/** What is seen in a photo of the fridge, freezer or pantry (the first inventory). */
+export const shelfSchema = z.object({
+  lines: z.array(lineSchema.omit({ raw: true }).extend({ expires_at: isoDate })).max(80),
+});
+export type ShelfReading = z.infer<typeof shelfSchema>;
+
 export const dateSchema = z.object({
   date: isoDate,
   kind: z.enum(['consumir_ate', 'consumir_de_preferencia', 'desconhecido']),

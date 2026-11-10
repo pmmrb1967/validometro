@@ -26,6 +26,7 @@ import { PhotoButton } from '../components/PhotoButton';
 import { StatusNote } from '../components/BusyNote';
 import { hasCamera } from '../image';
 import { QuickEntry } from '../components/QuickEntry';
+import { ShelfEntry } from '../components/ShelfEntry';
 import { Scanner } from '../components/Scanner';
 import { addItem } from '../store/items';
 
@@ -381,6 +382,7 @@ export function AddItem() {
       </form>
 
       {scanning && <Scanner onCode={onCode} onClose={() => setScanning(false)} />}
+      <ShelfEntry />
     </div>
   );
 }

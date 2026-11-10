@@ -1856,3 +1856,18 @@ button.topbar-link {
   color: var(--expired-text);
   font-weight: 600;
 }
+
+/* The first inventory, at the end of the add screen (and from the empty home). */
+.shelf-entry {
+  margin-top: 32px;
+  scroll-margin-top: 16px;
+}
+
+.shelf-entry .field {
+  margin-bottom: 14px;
+}
+
+.empty .empty-alt {
+  margin-top: 16px;
+  font-size: 0.95rem;
+}

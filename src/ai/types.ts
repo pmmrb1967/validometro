@@ -9,7 +9,7 @@ import type { z } from 'zod';
 export const PROVIDERS = ['workers-ai', 'gemini', 'anthropic'] as const;
 export type ProviderId = (typeof PROVIDERS)[number];
 
-export type Operation = 'receipt' | 'voice' | 'date' | 'recipes' | 'test';
+export type Operation = 'receipt' | 'voice' | 'date' | 'recipes' | 'shelf' | 'test';
 
 /** A photo already made small by the browser (src/app/image.ts). */
 export interface AiImage {

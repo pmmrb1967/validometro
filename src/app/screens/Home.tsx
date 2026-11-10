@@ -326,6 +326,11 @@ function Empty() {
         <Link to="/adicionar" className="button primary">
           Adicionar alimento
         </Link>
+        <p className="empty-alt">
+          A casa já está cheia?{' '}
+          <Link to="/adicionar#inventario">Fotografa o frigorífico e a despensa</Link> e a app faz a
+          lista.
+        </p>
       </section>
       <GuestNote />
       <InstallSection />

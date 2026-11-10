@@ -65,6 +65,36 @@ Faz uma entrada por produto mencionado.
 ${lineRules}`,
 };
 
+/** The line rules, but "quantity" is what is seen, not what was bought (said above). */
+const lineRulesWithoutQuantity = lineRules
+  .split('\n')
+  .filter((line) => !line.startsWith('- "quantity"'))
+  .join('\n');
+
+const PLACES = {
+  frigorifico: 'do interior de um frigorífico (prateleiras, gavetas e porta)',
+  congelador: 'do interior de um congelador',
+  despensa: 'de uma despensa ou armário de cozinha',
+} as const;
+
+/** The first inventory: what is in the fridge, freezer or pantry, from one to four photos. */
+export const SHELF_PROMPT = {
+  version: 'shelf.v1',
+  system: `Fazes o inventário dos alimentos que se veem em fotografias de uma casa portuguesa e devolves só JSON segundo o esquema dado.`,
+  prompt: (
+    place: keyof typeof PLACES,
+    today: string,
+    photos: number,
+  ) => `Hoje é ${today} (AAAA-MM-DD). ${photos > 1 ? `As ${photos} fotografias são` : 'A fotografia é'} ${PLACES[place]}.${photos > 1 ? ' Podem mostrar partes repetidas: conta cada produto uma só vez.' : ''}
+
+Faz uma entrada por alimento ou bebida que consigas identificar com confiança. Não inventes o que não se vê: se uma embalagem estiver tapada ou ilegível, deixa-a de fora. Ignora o que não é comida (ímanes, tupperwares vazios, produtos de limpeza).
+- "quantity" e "unit": quantas unidades iguais se veem (ex.: 6 ovos é 6 e "un"; 3 iogurtes iguais é 3 e "un"). Se não for claro, null.
+- "expires_at": só se a data de validade estiver legível na fotografia, em AAAA-MM-DD; senão null. Nunca a adivinhes.
+- Um recipiente com comida feita é "sobras".
+
+${lineRulesWithoutQuantity}`,
+};
+
 export const DATE_PROMPT = {
   version: 'date.v1',
   system: `Lês a data de validade impressa em embalagens de comida e devolves só JSON segundo o esquema dado.`,

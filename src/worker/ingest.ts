@@ -23,13 +23,22 @@ import {
   RECEIPT_PROMPT,
   RECEIPT_TEXT_PROMPT,
   RECIPES_PROMPT,
+  SHELF_PROMPT,
   TEST_PROMPT,
   VOICE_PROMPT,
 } from '../ai/prompts';
 import { anthropic, CLAUDE_MODELS, type ClaudeModel } from '../ai/providers/anthropic';
 import { gemini } from '../ai/providers/gemini';
 import { workersAi } from '../ai/providers/workers-ai';
-import { dateSchema, receiptSchema, recipesSchema, testSchema, voiceSchema } from '../ai/schemas';
+import {
+  dateSchema,
+  receiptSchema,
+  recipesSchema,
+  shelfSchema,
+  testSchema,
+  voiceSchema,
+} from '../ai/schemas';
+import { placeDraft } from '../domain/shelf';
 import { structured } from '../ai/structured';
 import { AiError, PROVIDERS, type AiErrorCode, type AiProvider, type Operation } from '../ai/types';
 import { lookupAliases, saveAliases } from './aliases';
@@ -208,6 +217,46 @@ ingest.post('/ingest/voice', async (c) => {
     return c.json({ store: null, date: null, drafts } satisfies ReceiptDrafts);
   } catch (err) {
     return aiFailure(c, 'voice', err);
+  }
+});
+
+/** The first inventory: one to four photos of one place (fridge, freezer or pantry). */
+const shelfBody = z.object({
+  images: z.array(imageBody.shape.image).min(1).max(MAX_RECEIPT_PARTS),
+  location: z.enum(['frigorifico', 'congelador', 'despensa']),
+});
+
+ingest.post('/ingest/shelf', async (c) => {
+  const body = shelfBody.safeParse(await c.req.json().catch(() => null));
+  if (!body.success) return c.json({ error: 'Fotos inválidas.' }, 400);
+  const { images, location } = body.data;
+  try {
+    const provider = await providerFor(c);
+    const today = lisbonDate(new Date());
+    const reading = await structured(
+      provider,
+      {
+        operation: 'shelf',
+        system: SHELF_PROMPT.system,
+        prompt: SHELF_PROMPT.prompt(location, today, images.length),
+        images: images.map((base64) => ({ mime: 'image/jpeg' as const, base64 })),
+        schema: shelfSchema,
+        schemaName: 'shelf',
+        maxTokens: 4000,
+      },
+      recorder(c, provider, 'shelf'),
+    );
+    const drafts = reading.lines.map((line) =>
+      placeDraft(
+        toDraft({ ...line, raw: null, expires_at: null }, undefined, today),
+        location,
+        today,
+        plausiblePrintedDate(line.expires_at, today),
+      ),
+    );
+    return c.json({ store: null, date: null, drafts } satisfies ReceiptDrafts);
+  } catch (err) {
+    return aiFailure(c, 'shelf', err);
   }
 });
 

@@ -339,3 +339,48 @@ test('despensa: bebi 1 da água, e "está a acabar" põe-na na lista', async ({ 
     .click();
   await expect(page.getByText('Água Monchique 5L', { exact: true })).toBeVisible();
 });
+
+test('primeiro inventário: fotos do frigorífico vão para a revisão', async ({ page }) => {
+  let sent: { images?: string[]; location?: string } | undefined;
+  await page.route('**/api/ingest/shelf', async (route) => {
+    sent = route.request().postDataJSON() as typeof sent;
+    await route.fulfill({
+      json: {
+        store: null,
+        date: null,
+        drafts: [
+          {
+            key: 'k1',
+            raw: null,
+            name: 'Iogurte natural',
+            category: 'iogurtes',
+            location: 'congelador',
+            quantity: 4,
+            unit: 'un',
+            perishable: true,
+            expires_at: '2026-12-01',
+            expiry_source: 'estimada',
+            known: false,
+            price: null,
+          },
+        ],
+      },
+    });
+  });
+  await page.goto('/');
+  await page.getByRole('button', { name: 'Começar sem conta' }).first().click();
+  await page.getByRole('link', { name: 'Fotografa o frigorífico e a despensa' }).click();
+  await expect(page).toHaveURL('/adicionar#inventario');
+  const shelf = page.locator('.shelf-entry');
+  await shelf.getByRole('radio', { name: 'Congelador' }).check({ force: true });
+  await shelf
+    .locator('input[type=file]')
+    .setInputFiles({ name: 'a.png', mimeType: 'image/png', buffer: PHOTO });
+  await expect(shelf.getByText('Congelador: 1 foto.')).toBeVisible();
+  await shelf.getByRole('button', { name: 'Fazer a lista' }).click();
+  await expect(page).toHaveURL('/rever');
+  expect(sent).toMatchObject({ location: 'congelador' });
+  expect(sent?.images).toHaveLength(1);
+  await expect(page.getByText('Do que se vê nas fotos.')).toBeVisible();
+  await expect(page.getByLabel('Nome')).toHaveValue('Iogurte natural');
+});

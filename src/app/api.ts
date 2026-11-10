@@ -1,5 +1,6 @@
 // SPDX-License-Identifier: AGPL-3.0-or-later
 import type { DraftItem } from '../domain/drafts';
+import type { Location } from '../domain/types';
 import { aiHeaders } from './ai-settings';
 
 export interface Product {
@@ -69,6 +70,11 @@ export function readReceipt(images: string | string[]): Promise<ReadingResult> {
 /** A digital receipt (PDF) read as text on the phone: no image to send. */
 export function readReceiptText(text: string): Promise<ReadingResult> {
   return postJson('/api/ingest/receipt', { text }, 'Não foi possível ler o talão.');
+}
+
+/** The first inventory: photos of one place, read as what is in it. */
+export function readShelf(images: string[], location: Location): Promise<ReadingResult> {
+  return postJson('/api/ingest/shelf', { images, location }, 'Não foi possível ler as fotos.');
 }
 
 export function readSpoken(text: string): Promise<ReadingResult> {

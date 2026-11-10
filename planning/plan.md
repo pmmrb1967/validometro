@@ -111,6 +111,8 @@ O que nenhuma das apps concorrentes faz junto: distinguir os dois tipos de data,
 - Partilhar receitas
 - TWA para a Play Store, se fizer sentido
 
+Feito na 0.9.0: "Primeiro inventário" no fim de Adicionar (e atalho no ecrã vazio), até 4 fotos de um sítio, prompt `shelf.v1`, rota `/api/ingest/shelf`, datas estimadas a partir de hoje ou lidas na foto (`src/domain/shelf.ts`). Falta testar com fotos reais nos três fornecedores.
+
 ### Avaliação: inventário a partir de uma foto do interior do frigorífico ou da despensa
 
 - **Possível tecnicamente**, com o mesmo pipeline (foto reduzida no cliente → IA de visão → `DraftItem[]` → ecrã de revisão), um prompt novo `shelf.v1` e o esquema das linhas sem `raw`. A foto não é guardada.

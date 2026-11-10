@@ -17,11 +17,7 @@ import {
 } from '../api';
 import { hasCamera, shrinkPhoto } from '../image';
 import { speechSupported, useDictation } from '../speech';
-import { setPendingReview, type ReadingSource } from '../store/review';
-import { trackedStaples } from '../../domain/consume';
-import { lisbonDate } from '../../domain/dates';
-import { sameName } from '../../domain/shopping';
-import { db } from '../store/items';
+import { markTracked, setPendingReview, type ReadingSource } from '../store/review';
 import { BusyNote } from './BusyNote';
 import { PhotoButton } from './PhotoButton';
 
@@ -81,14 +77,7 @@ export function QuickEntry() {
         );
         return;
       }
-      // Staples this household already follows come ticked (domain/consume.ts).
-      const followed = trackedStaples(await db.items.toArray(), lisbonDate(new Date()));
-      const drafts = result.drafts.map((draft) =>
-        !draft.perishable && followed.has(sameName(draft.name))
-          ? { ...draft, tracked: true }
-          : draft,
-      );
-      setPendingReview({ ...result, drafts, source });
+      setPendingReview({ ...result, drafts: await markTracked(result.drafts), source });
       navigate('/rever');
     } catch (err) {
       setError(err instanceof ApiError ? err.message : 'Algo correu mal. Tenta outra vez.');

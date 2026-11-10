@@ -144,7 +144,9 @@ export function Review() {
       <p className="hint">
         {pending.source === 'receipt'
           ? `Talão${from ? ` ${from}` : ''}${from.endsWith('.') ? '' : '.'} `
-          : 'Do que disseste. '}
+          : pending.source === 'shelf'
+            ? 'Do que se vê nas fotos. As datas são estimadas a partir de hoje. '
+            : 'Do que disseste. '}
         Confirma os nomes e as datas. Se a embalagem tiver data, escreve-a ou fotografa-a.
       </p>
 
