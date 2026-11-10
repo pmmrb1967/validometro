@@ -3,7 +3,7 @@
 /**
  * The first page for someone new (no account, nothing registered): what the app does, and
  * three ways in. Who already uses it goes straight to the traffic light (Home), so the
- * installed icon never opens a presentation. "/sobre" shows it again at any time (footer link);
+ * installed icon never opens a presentation. "/sobre" shows it again at any time (Definições);
  * there the buttons lead back to the app instead of starting it again.
  */
 import { Link, useNavigate } from 'react-router';
@@ -51,7 +51,7 @@ const MORE = [
   },
 ];
 
-/** The main buttons: start (or go back to the app) and, without a session, the account ones. */
+/** The buttons, at the top only: start (or go back to the app) and, without a session, the account ones. */
 function Actions({ className }: { className: string }) {
   const navigate = useNavigate();
   const account = useAccount();
@@ -160,8 +160,6 @@ export function Landing() {
       </section>
 
       <InstallSection />
-
-      <Actions className="landing-final" />
     </div>
   );
 }

@@ -1317,14 +1317,6 @@ textarea {
   font-weight: 600;
 }
 
-.landing-final {
-  display: flex;
-  flex-wrap: wrap;
-  justify-content: center;
-  gap: 10px;
-  padding: 8px 0 12px;
-}
-
 @media (min-width: 760px) {
   .landing-hero {
     grid-template-columns: 1.15fr 1fr;
