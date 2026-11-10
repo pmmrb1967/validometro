@@ -337,7 +337,7 @@ test('despensa: bebi 1 da água, e "está a acabar" põe-na na lista', async ({ 
     .getByRole('navigation', { name: 'Secções' })
     .getByRole('link', { name: 'Compras' })
     .click();
-  await expect(page.getByText('Água Monchique 5L', { exact: true })).toBeVisible();
+  await expect(page.getByRole('checkbox', { name: /^Água Monchique 5L/ })).toBeVisible();
 });
 
 test('primeiro inventário: fotos do frigorífico vão para a revisão', async ({ page }) => {
@@ -383,4 +383,23 @@ test('primeiro inventário: fotos do frigorífico vão para a revisão', async (
   expect(sent?.images).toHaveLength(1);
   await expect(page.getByText('Do que se vê nas fotos.')).toBeVisible();
   await expect(page.getByLabel('Nome')).toHaveValue('Iogurte natural');
+});
+
+test('comi uma parte: 400 g das costeletas, e "Anular" repõe o peso', async ({ page }) => {
+  await page.goto('/');
+  await page.getByRole('button', { name: 'Começar sem conta' }).first().click();
+  await page.goto('/adicionar');
+  await page.getByLabel('Nome').fill('Costeletas de porco');
+  await page.getByLabel('Quantidade').fill('1,178');
+  await page.getByLabel('Unidade').fill('kg');
+  await page.getByRole('button', { name: 'Guardar', exact: true }).click();
+  await expect(page).toHaveURL('/');
+  const card = page.getByRole('listitem').filter({ hasText: 'Costeletas de porco' });
+  await card.getByRole('button', { name: 'Comi uma parte' }).click();
+  await card.getByLabel('Ou quanto comeste').fill('400 g');
+  await card.getByRole('button', { name: 'Guardar' }).click();
+  await expect(page.getByRole('status').filter({ hasText: 'sobra ~0,778 kg' })).toBeVisible();
+  await expect(card).toContainText('0,778 kg');
+  await page.getByRole('button', { name: 'Anular' }).click();
+  await expect(card).toContainText('1,178 kg');
 });

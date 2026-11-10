@@ -550,7 +550,8 @@ button,
   font-size: 0.8rem;
 }
 
-.item-date-form {
+.item-date-form,
+.item-part-form {
   display: flex;
   flex-wrap: wrap;
   align-items: end;
@@ -558,7 +559,27 @@ button,
   margin-top: 10px;
 }
 
-.item-date-form label {
+.item-part-form .part-shares {
+  display: flex;
+  gap: 8px;
+  width: 100%;
+}
+
+.item-part-form .part-shares button {
+  flex: 1;
+}
+
+.item-part-form label {
+  flex: 1 1 100%;
+}
+
+.item-part-form .note {
+  width: 100%;
+  margin: 0;
+}
+
+.item-date-form label,
+.item-part-form label {
   display: grid;
   gap: 4px;
   font-size: 0.85rem;

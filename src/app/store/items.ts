@@ -220,6 +220,35 @@ export async function takeOne(id: string, now = new Date(), store = db): Promise
   const item = await store.items.get(id);
   if (!item || item.quantity === null || item.quantity < 2) return null;
   const left = item.quantity - 1;
-  await update(store, id, { quantity: left }, now);
+  await update(store, id, { quantity: left, price: priceOfRest(item, left) }, now);
   return left;
+}
+
+/**
+ * The price follows what is left (a share of it eaten), so throwing the rest away later
+ * counts only the rest as waste.
+ */
+function priceOfRest(item: Item, left: number): number | null {
+  if (item.price == null || item.quantity === null || item.quantity <= 0) return item.price ?? null;
+  return Math.round(((item.price * left) / item.quantity) * 100) / 100;
+}
+
+/**
+ * "Comi uma parte": `left` is what remains, in the item's unit. Nothing left: eaten.
+ * Returns the item as it was, for "Anular".
+ */
+export async function eatPart(
+  id: string,
+  left: number,
+  now = new Date(),
+  store = db,
+): Promise<Item | undefined> {
+  const item = await store.items.get(id);
+  if (!item || item.quantity === null) return undefined;
+  if (left <= 0) {
+    await resolveItem(id, 'consumido', now, store);
+  } else {
+    await update(store, id, { quantity: left, price: priceOfRest(item, left) }, now);
+  }
+  return item;
 }

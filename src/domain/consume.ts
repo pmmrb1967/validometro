@@ -56,3 +56,59 @@ export function trackedStaples(items: Item[], today: IsoDate): Set<string> {
       .map((item) => sameName(item.name)),
   );
 }
+
+/** Grams or millilitres in one of each unit; kg and g are weight, L/cl/ml volume. */
+const MEASURES: Record<string, { dimension: 'weight' | 'volume'; base: number }> = {
+  g: { dimension: 'weight', base: 1 },
+  gr: { dimension: 'weight', base: 1 },
+  kg: { dimension: 'weight', base: 1000 },
+  ml: { dimension: 'volume', base: 1 },
+  cl: { dimension: 'volume', base: 10 },
+  l: { dimension: 'volume', base: 1000 },
+  lt: { dimension: 'volume', base: 1000 },
+};
+
+function measureOf(unit: string | null) {
+  return unit ? MEASURES[unit.trim().toLowerCase().replace(/\.$/, '')] : undefined;
+}
+
+/** Sold by weight or volume ("1,178 kg", "1 L"): "Comi uma parte" asks how much. */
+export function canEatPart(item: Pick<Item, 'quantity' | 'unit'>): boolean {
+  return item.quantity !== null && item.quantity > 0 && measureOf(item.unit) !== undefined;
+}
+
+/** "Comi uma parte" / "Bebi uma parte". */
+export function eatPartLabel(item: Pick<Item, 'name' | 'category'>): string {
+  return isDrink(item) ? 'Bebi uma parte' : 'Comi uma parte';
+}
+
+/** Rounded the way a kitchen scale shows it: 0.778 kg, 250 g. */
+function tidy(amount: number): number {
+  return Math.round(amount * 1000) / 1000;
+}
+
+/**
+ * What is left after eating `eaten` ("400 g", "0,4 kg", "400"), in the item's own unit; null
+ * when it cannot be read or is in another kind of unit (litres of a weight). A bare number on
+ * something in kg or L is taken as grams or millilitres when it is 10 or more ("400").
+ */
+export function leftAfterEating(
+  item: Pick<Item, 'quantity' | 'unit'>,
+  eaten: string,
+): number | null {
+  const own = measureOf(item.unit);
+  if (item.quantity === null || !own) return null;
+  const match = /^\s*(\d+(?:[.,]\d+)?)\s*([a-zA-Z]+\.?)?\s*$/.exec(eaten);
+  if (!match) return null;
+  const amount = Number(match[1]!.replace(',', '.'));
+  if (!(amount > 0)) return null;
+  let measure = match[2] ? measureOf(match[2]) : own;
+  if (!measure || measure.dimension !== own.dimension) return null;
+  if (!match[2] && own.base === 1000 && amount >= 10) measure = { ...own, base: 1 };
+  return Math.max(0, tidy(item.quantity - (amount * measure.base) / own.base));
+}
+
+/** "Metade" / "Um pouco" (a quarter): what is left, in the item's unit. */
+export function leftAfterShare(item: Pick<Item, 'quantity'>, share: 'metade' | 'pouco'): number {
+  return tidy((item.quantity ?? 0) * (share === 'metade' ? 0.5 : 0.75));
+}

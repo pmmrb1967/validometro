@@ -5,7 +5,7 @@ import { useEffect, useMemo, useState } from 'react';
 import { Link } from 'react-router';
 import { usedWord } from '../../domain/consume';
 import { formatShortDate, lisbonDate } from '../../domain/dates';
-import { frozenDays } from '../../domain/freeze';
+import { canFreeze, frozenDays } from '../../domain/freeze';
 import { offerText } from '../../domain/offer';
 import { isOpen, sameName } from '../../domain/shopping';
 import { bySoonest, light, type Light, type LitItem } from '../../domain/traffic-light';
@@ -29,6 +29,7 @@ import {
   reactivateItem,
   resolveItem,
   restoreItem,
+  eatPart,
   setExpiry,
   takeOne,
 } from '../store/items';
@@ -199,6 +200,21 @@ export function Home() {
                 left === 1 && !listed?.has(sameName(before.name))
                   ? { label: 'Juntar à lista', run: () => void addToList(before.name) }
                   : undefined,
+            });
+          });
+        },
+        onEatPart: (left) => {
+          void eatPart(entry.item.id, left).then((before) => {
+            if (!before) return;
+            const word = usedWord(before).toLowerCase();
+            const rest =
+              left > 0
+                ? `sobra ~${left.toLocaleString('pt-PT')}${before.unit ? ` ${before.unit}` : ''}`
+                : `${word}, não sobrou nada`;
+            setUndo({
+              id: before.id,
+              before,
+              text: `${before.name}: ${rest}.${left > 0 && canFreeze(before, entry.daysLeft) ? ' Congela o resto se não for para já.' : ''}`,
             });
           });
         },

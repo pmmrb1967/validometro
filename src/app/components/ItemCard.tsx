@@ -1,6 +1,15 @@
 // SPDX-License-Identifier: AGPL-3.0-or-later
 import { useState } from 'react';
-import { canTakeOne, takeOneLabel, usedWord } from '../../domain/consume';
+import {
+  canEatPart,
+  canTakeOne,
+  isDrink,
+  eatPartLabel,
+  leftAfterEating,
+  leftAfterShare,
+  takeOneLabel,
+  usedWord,
+} from '../../domain/consume';
 import {
   afterDateAdvice,
   bestBeforeLabel,
@@ -23,6 +32,8 @@ export interface ItemActions {
   onOffer: () => void;
   /** "Comi 1" / "Bebi 1": one less of several. */
   onUseOne: () => void;
+  /** "Comi uma parte": what is left, in the item's unit (0: all of it). */
+  onEatPart: (left: number) => void;
   /** Long life: "Está a acabar" (onto the list) and "Acabou" (out, and onto the list). */
   onRunningLow: () => void;
   onFinished: () => void;
@@ -48,6 +59,19 @@ export function ItemCard({
 }) {
   const { item, daysLeft, light, longLife } = lit;
   const one = canTakeOne(item);
+  const part = canEatPart(item);
+  const [eatingPart, setEatingPart] = useState(false);
+  const [eaten, setEaten] = useState('');
+  const [partError, setPartError] = useState<string>();
+  const closePart = () => {
+    setEatingPart(false);
+    setEaten('');
+    setPartError(undefined);
+  };
+  const leaving = (left: number) => {
+    actions.onEatPart(left);
+    closePart();
+  };
   const [editingDate, setEditingDate] = useState(false);
   const thaw = canThaw(item);
   // Only when opening changes something: an opened rule exists (eggs have none).
@@ -96,7 +120,62 @@ export function ItemCard({
 
       {advice && !editingDate && <p className="item-advice">{advice}</p>}
 
-      {editingDate ? (
+      {eatingPart ? (
+        <form
+          className="item-part-form"
+          onSubmit={(event) => {
+            event.preventDefault();
+            const left = leftAfterEating(item, eaten);
+            if (left === null) {
+              setPartError(`Escreve quanto, por exemplo “400 g” ou “0,4 ${item.unit ?? 'kg'}”.`);
+              return;
+            }
+            leaving(left);
+          }}
+        >
+          <div className="part-shares">
+            <button
+              type="button"
+              className="secondary"
+              onClick={() => leaving(leftAfterShare(item, 'metade'))}
+            >
+              Metade
+            </button>
+            <button
+              type="button"
+              className="secondary"
+              onClick={() => leaving(leftAfterShare(item, 'pouco'))}
+            >
+              Um pouco
+            </button>
+          </div>
+          <label>
+            {isDrink(item) ? 'Ou quanto bebeste' : 'Ou quanto comeste'}
+            <input
+              inputMode="decimal"
+              autoComplete="off"
+              placeholder={`ex.: 400 g (há ${quantityText(item.quantity, item.unit)})`}
+              value={eaten}
+              autoFocus
+              onChange={(event) => {
+                setEaten(event.target.value);
+                setPartError(undefined);
+              }}
+            />
+          </label>
+          {partError && (
+            <p className="note error" role="alert">
+              {partError}
+            </p>
+          )}
+          <button type="submit" className="secondary">
+            Guardar
+          </button>
+          <button type="button" className="ghost" onClick={closePart}>
+            Cancelar
+          </button>
+        </form>
+      ) : editingDate ? (
         <form
           className="item-date-form"
           onSubmit={(event) => {
@@ -176,8 +255,13 @@ export function ItemCard({
               )}
             </div>
           )}
-          {(freezable || offer || one) && (
+          {(freezable || offer || one || part) && (
             <div className="item-extra">
+              {part && (
+                <button type="button" className="extra-action" onClick={() => setEatingPart(true)}>
+                  {eatPartLabel(item)}
+                </button>
+              )}
               {one && (
                 <button type="button" className="extra-action" onClick={actions.onUseOne}>
                   {takeOneLabel(item)}

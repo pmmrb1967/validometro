@@ -1,6 +1,16 @@
 // SPDX-License-Identifier: AGPL-3.0-or-later
 import { describe, expect, it } from 'vitest';
-import { canTakeOne, isDrink, takeOneLabel, trackedStaples, usedWord } from './consume';
+import {
+  canEatPart,
+  canTakeOne,
+  eatPartLabel,
+  isDrink,
+  leftAfterEating,
+  leftAfterShare,
+  takeOneLabel,
+  trackedStaples,
+  usedWord,
+} from './consume';
 import type { Item } from './types';
 
 function item(overrides: Partial<Item>): Item {
@@ -56,5 +66,36 @@ describe('staples the household follows', () => {
       '2026-11-10',
     );
     expect([...followed]).toEqual(['azeite virgem extra']);
+  });
+});
+
+describe('eating part of something sold by weight', () => {
+  const chops = item({
+    name: 'Costeletas de porco',
+    category: 'carne',
+    quantity: 1.178,
+    unit: 'kg',
+  });
+
+  it('reads grams, kilos and a bare number', () => {
+    expect(leftAfterEating(chops, '400 g')).toBe(0.778);
+    expect(leftAfterEating(chops, '0,4 kg')).toBe(0.778);
+    expect(leftAfterEating(chops, '400')).toBe(0.778);
+    expect(leftAfterEating(chops, '0,5')).toBe(0.678);
+    expect(leftAfterEating(chops, '2 kg')).toBe(0);
+  });
+
+  it('refuses what it cannot read or another kind of unit', () => {
+    expect(leftAfterEating(chops, 'muito')).toBeNull();
+    expect(leftAfterEating(chops, '1 L')).toBeNull();
+    expect(leftAfterEating(item({ quantity: 4, unit: 'un' }), '1')).toBeNull();
+  });
+
+  it('offers it only for weights and volumes, in the right words', () => {
+    expect(canEatPart(chops)).toBe(true);
+    expect(canEatPart(item({ quantity: 4, unit: 'un' }))).toBe(false);
+    expect(eatPartLabel(chops)).toBe('Comi uma parte');
+    expect(eatPartLabel(item({ name: 'Sumo de laranja', category: null }))).toBe('Bebi uma parte');
+    expect(leftAfterShare(chops, 'metade')).toBe(0.589);
   });
 });
