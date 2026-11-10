@@ -229,7 +229,7 @@ const recipesBody = z.object({
     .max(20),
 });
 
-/** "O que jantar hoje?": 2–3 simple recipes with what is about to go off. Nothing is stored. */
+/** "O que cozinhar hoje?": 2–3 simple recipes with what is about to go off. Nothing is stored. */
 ingest.post('/ai/recipes', async (c) => {
   const body = recipesBody.safeParse(await c.req.json().catch(() => null));
   if (!body.success) return c.json({ error: 'Não há alimentos a aproveitar.' }, 400);

@@ -12,6 +12,7 @@ import {
   type Item,
   type Location,
 } from '../../domain/types';
+import { useAccount } from '../account';
 import { InstallSection } from '../components/InstallSection';
 import { ItemCard } from '../components/ItemCard';
 import { useShowLanding } from '../landing-state';
@@ -113,18 +114,9 @@ export function Home() {
 
   return (
     <div className="home">
-      <nav className="home-links" aria-label="Mais">
-        <Link className="button secondary" to="/compras">
-          Lista de compras
-        </Link>
-        <Link className="button secondary" to="/desperdicio">
-          Desperdício
-        </Link>
-      </nav>
-
       {dueSoon && (
-        <Link className="button primary dinner-call" to="/jantar">
-          O que jantar hoje?
+        <Link className="button primary dinner-call" to="/receitas">
+          O que cozinhar hoje?
         </Link>
       )}
 
@@ -178,12 +170,26 @@ export function Home() {
         </section>
       )}
 
+      <GuestNote />
+
       <Link to="/adicionar" className="fab">
         Adicionar
       </Link>
 
       {snackbar}
     </div>
+  );
+}
+
+/** Without an account, where the data lives (and so what clearing the browser would lose). */
+function GuestNote() {
+  const account = useAccount();
+  if (account.status !== 'ready' || account.me) return null;
+  return (
+    <p className="guest-note">
+      Sem conta: os dados ficam só neste browser. <Link to="/criar-conta">Criar conta</Link>{' '}
+      guarda-os e partilha-os com a família.
+    </p>
   );
 }
 
@@ -200,6 +206,7 @@ function Empty() {
           Adicionar alimento
         </Link>
       </section>
+      <GuestNote />
       <InstallSection />
     </div>
   );

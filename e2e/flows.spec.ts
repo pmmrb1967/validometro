@@ -56,7 +56,17 @@ test('sem conta: da página inicial ao semáforo, e o que foi comido volta à li
   await expect(page.getByRole('heading', { name: 'Ainda não há nada registado' })).toBeVisible();
   await expect(page.getByRole('button', { name: 'Anular' })).toBeVisible();
 
-  await page.goto('/compras');
+  // Without an account the top bar says so, and the home screen says where the data is.
+  const banner = page.getByRole('banner');
+  await expect(banner.getByText('sem conta', { exact: true })).toBeVisible();
+  await expect(banner.getByRole('link', { name: 'Criar conta' })).toBeVisible();
+  await expect(page.getByText('Sem conta: os dados ficam só neste browser.')).toBeVisible();
+
+  // The sections are one tap away, from any screen.
+  const tabs = page.getByRole('navigation', { name: 'Secções' });
+  await tabs.getByRole('link', { name: 'Compras' }).click();
+  await expect(page).toHaveURL('/compras');
+  await expect(tabs.getByRole('link', { name: 'Compras' })).toHaveAttribute('aria-current', 'page');
   await expect(page.getByRole('heading', { name: 'Acabou. Voltar a comprar?' })).toBeVisible();
   await expect(page.getByText('Natas')).toBeVisible();
 
@@ -86,6 +96,9 @@ test('conta: o que estava no telemóvel passa para a conta, sair leva à página
 
   await createAccount(page, address);
   await expect(page.getByText('Iogurtes naturais')).toBeVisible();
+  // Signed in: the email under the name, no "admin".
+  await expect(page.getByRole('banner').getByText(address)).toBeVisible();
+  await expect(page.getByRole('link', { name: 'Admin: abrir o painel' })).toHaveCount(0);
 
   // "Sair" is in the top bar, on every screen of the app.
   await page.goto('/compras');
@@ -142,8 +155,11 @@ test('painel: só para quem administra', async ({ page }) => {
     await page.locator('form').getByRole('button', { name: 'Entrar' }).click();
   }
   await expect(page).toHaveURL('/');
+  // "admin" in the top bar opens the panel; Definições too.
+  await page.getByRole('link', { name: 'Admin: abrir o painel' }).click();
+  await expect(page.getByRole('heading', { name: 'Plano gratuito' })).toBeVisible();
   await page.goto('/definicoes');
-  await page.getByRole('link', { name: 'Abrir o painel' }).click();
+  await page.getByRole('link', { name: 'Abrir o painel', exact: true }).click();
   await expect(page.getByRole('heading', { name: 'Plano gratuito' })).toBeVisible();
   await expect(page.getByText('Tamanho da base D1')).toBeVisible();
   await expect(page.getByRole('heading', { name: 'Quem usa' })).toBeVisible();

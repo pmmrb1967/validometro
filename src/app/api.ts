@@ -99,7 +99,7 @@ export interface Recipe {
   steps: string[];
 }
 
-/** "O que jantar hoje?": what is about to go off, never stored. */
+/** "O que cozinhar hoje?": what is about to go off, never stored. */
 export function suggestRecipes(
   items: { name: string; days: number }[],
 ): Promise<{ recipes: Recipe[] }> {

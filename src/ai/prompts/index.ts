@@ -63,14 +63,14 @@ export const TEST_PROMPT = {
 };
 
 export const RECIPES_PROMPT = {
-  version: 'recipes.v2',
+  version: 'recipes.v3',
   system: `Sugeres receitas caseiras simples, à portuguesa, para aproveitar alimentos que estão a acabar a validade. Escreves em português europeu e devolves só JSON segundo o esquema dado.`,
   prompt: (
     items: { name: string; days: number }[],
   ) => `Alimentos a aproveitar (dias até acabar a validade; negativo = já passou):
 ${items.map((item) => `- ${item.name} (${item.days})`).join('\n')}
 
-Sugere entre 2 e 3 receitas para o jantar de hoje.
+Sugere entre 2 e 3 receitas para uma refeição de hoje (almoço ou jantar).
 - Cada receita usa pelo menos um destes alimentos; dá prioridade aos que acabam primeiro.
 - Receitas simples, de casa, com no máximo 45 minutos.
 - Podes assumir que há em casa sal, pimenta, azeite, óleo, alho, cebola, água, farinha, açúcar, arroz e massa; põe em "falta" só o que não é isso nem está na lista (pouca coisa, ou nada).

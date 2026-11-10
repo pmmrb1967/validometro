@@ -46,7 +46,7 @@ const MORE = [
     body: 'O que foi comido volta à lista como sugestão. O que foi para o lixo não: a app pergunta se compraste demais.',
   },
   {
-    title: 'O que jantar hoje?',
+    title: 'O que cozinhar hoje?',
     body: 'Duas ou três receitas simples com o que está a acabar. E, ao fim do mês, quanto foi aproveitado.',
   },
 ];

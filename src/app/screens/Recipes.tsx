@@ -1,7 +1,7 @@
 // SPDX-License-Identifier: AGPL-3.0-or-later
 // Copyright (C) 2026 Paulo Barbosa
 /**
- * "O que jantar hoje?": the red and amber items go to the AI, 2–3 simple recipes come back.
+ * "O que cozinhar hoje?": the red and amber items go to the AI, 2–3 simple recipes come back.
  * Kept for the session only, so going back and forth does not ask (and spend) again.
  */
 import { useLiveQuery } from 'dexie-react-hooks';
@@ -97,7 +97,7 @@ export function Recipes() {
 
   return (
     <div className="recipes">
-      <h1 className="page-title">O que jantar hoje?</h1>
+      <h1 className="page-title">O que cozinhar hoje?</h1>
       {due.length === 0 ? (
         <>
           <p className="hint">
