@@ -22,6 +22,7 @@ import {
 } from '../../domain/types';
 import { ApiError, fetchProduct, readPrintedDate } from '../api';
 import { PhotoButton } from '../components/PhotoButton';
+import { hasCamera } from '../image';
 import { QuickEntry } from '../components/QuickEntry';
 import { Scanner } from '../components/Scanner';
 import { addItem } from '../store/items';
@@ -272,7 +273,7 @@ export function AddItem() {
                   );
               }}
             >
-              Ler data
+              {hasCamera() ? 'Fotografar a validade' : 'Foto da validade'}
             </PhotoButton>
             {expiresTouched && suggested && (
               <button
@@ -289,6 +290,14 @@ export function AddItem() {
             )}
           </div>
           <p className="hint">{expiryHint}</p>
+          {!printed && (
+            <p className="hint">
+              {hasCamera()
+                ? 'Fotografa a data impressa na embalagem'
+                : 'Escolhe uma foto da data impressa na embalagem'}
+              : a app lê-a, e também se é “consumir até” ou “de preferência”.
+            </p>
+          )}
           {dateNote && (
             <p className="note" role="status">
               {dateNote}

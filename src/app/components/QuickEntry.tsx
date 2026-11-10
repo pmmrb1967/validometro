@@ -15,7 +15,7 @@ import {
   readSpoken,
   type ReadingResult,
 } from '../api';
-import { shrinkPhoto } from '../image';
+import { hasCamera, shrinkPhoto } from '../image';
 import { speechSupported, useDictation } from '../speech';
 import { setPendingReview, type ReadingSource } from '../store/review';
 import { PhotoButton } from './PhotoButton';
@@ -52,6 +52,7 @@ export function QuickEntry() {
   const [voiceOpen, setVoiceOpen] = useState(false);
   const dictation = useDictation();
   const canDictate = speechSupported();
+  const camera = hasCamera();
   const handled = useRef(false);
   const fileInput = useRef<HTMLInputElement>(null);
   /**
@@ -176,7 +177,7 @@ export function QuickEntry() {
           onPhoto={(image) => addParts([image])}
           onError={setError}
         >
-          Fotografar talão
+          {camera ? 'Fotografar talão' : 'Foto do talão'}
         </PhotoButton>
         <button
           type="button"
@@ -250,7 +251,7 @@ export function QuickEntry() {
                 onPhoto={(image) => addParts([image])}
                 onError={setError}
               >
-                Fotografar a parte seguinte
+                {camera ? 'Fotografar a parte seguinte' : 'Juntar a parte seguinte'}
               </PhotoButton>
             )}
             <button

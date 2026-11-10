@@ -47,3 +47,11 @@ export async function shrinkPhoto(file: Blob): Promise<string | null> {
   const url = await dataUrl(blob);
   return url.slice(url.indexOf(',') + 1);
 }
+
+/**
+ * Whether the photo button opens a camera (a phone or tablet) or a file picker (a computer):
+ * the label says which, so "Fotografar" is never a folder that opens.
+ */
+export function hasCamera(): boolean {
+  return typeof window !== 'undefined' && window.matchMedia?.('(pointer: coarse)').matches;
+}

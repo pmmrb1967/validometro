@@ -22,6 +22,7 @@ import {
 } from '../../domain/types';
 import { ApiError, readPrintedDate, teachAliases } from '../api';
 import { PhotoButton } from '../components/PhotoButton';
+import { hasCamera } from '../image';
 import { addItem } from '../store/items';
 import { clearPendingReview, getPendingReview } from '../store/review';
 
@@ -231,7 +232,7 @@ export function Review() {
                       );
                   }}
                 >
-                  Ler data
+                  {hasCamera() ? 'Fotografar a validade' : 'Foto da validade'}
                 </PhotoButton>
                 <input
                   className="review-price"
