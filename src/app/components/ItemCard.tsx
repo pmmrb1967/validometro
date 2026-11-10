@@ -1,5 +1,6 @@
 // SPDX-License-Identifier: AGPL-3.0-or-later
 import { useState } from 'react';
+import { canTakeOne, takeOneLabel, usedWord } from '../../domain/consume';
 import {
   afterDateAdvice,
   bestBeforeLabel,
@@ -20,6 +21,11 @@ export interface ItemActions {
   onDate: (date: string, kind: ExpiryKind | null) => void;
   onFreeze: () => void;
   onOffer: () => void;
+  /** "Comi 1" / "Bebi 1": one less of several. */
+  onUseOne: () => void;
+  /** Long life: "Está a acabar" (onto the list) and "Acabou" (out, and onto the list). */
+  onRunningLow: () => void;
+  onFinished: () => void;
 }
 
 function quantityText(quantity: number | null, unit: string | null): string | undefined {
@@ -30,8 +36,18 @@ function quantityText(quantity: number | null, unit: string | null): string | un
 }
 
 /** One item: what, where, how long; and the one-tap answers. */
-export function ItemCard({ lit, actions }: { lit: LitItem; actions: ItemActions }) {
-  const { item, daysLeft, light } = lit;
+export function ItemCard({
+  lit,
+  actions,
+  onList = false,
+}: {
+  lit: LitItem;
+  actions: ItemActions;
+  /** Already on the shopping list (to buy): "Está a acabar" is done. */
+  onList?: boolean;
+}) {
+  const { item, daysLeft, light, longLife } = lit;
+  const one = canTakeOne(item);
   const [editingDate, setEditingDate] = useState(false);
   const thaw = canThaw(item);
   // Only when opening changes something: an opened rule exists (eggs have none).
@@ -127,21 +143,46 @@ export function ItemCard({ lit, actions }: { lit: LitItem; actions: ItemActions 
         </form>
       ) : (
         <>
-          <div className="item-actions">
-            <button type="button" className="action eaten" onClick={actions.onEaten}>
-              Comido
-            </button>
-            <button type="button" className="action thrown" onClick={actions.onThrownAway}>
-              Deitado fora
-            </button>
-            {canOpen && (
-              <button type="button" className="action" onClick={actions.onOpened}>
-                {thaw ? 'Tirei do congelador' : 'Abri isto'}
+          {longLife ? (
+            // A pantry staple: no date to watch, but the shopping list to keep.
+            <div className="item-actions">
+              <button
+                type="button"
+                className="action"
+                disabled={onList}
+                onClick={actions.onRunningLow}
+              >
+                {onList ? 'Na lista ✓' : 'Está a acabar'}
               </button>
-            )}
-          </div>
-          {(freezable || offer) && (
+              <button type="button" className="action eaten" onClick={actions.onFinished}>
+                Acabou
+              </button>
+              <button type="button" className="action thrown" onClick={actions.onThrownAway}>
+                Deitado fora
+              </button>
+            </div>
+          ) : (
+            <div className="item-actions">
+              <button type="button" className="action eaten" onClick={actions.onEaten}>
+                {usedWord(item)}
+              </button>
+              <button type="button" className="action thrown" onClick={actions.onThrownAway}>
+                Deitado fora
+              </button>
+              {canOpen && (
+                <button type="button" className="action" onClick={actions.onOpened}>
+                  {thaw ? 'Tirei do congelador' : 'Abri isto'}
+                </button>
+              )}
+            </div>
+          )}
+          {(freezable || offer || one) && (
             <div className="item-extra">
+              {one && (
+                <button type="button" className="extra-action" onClick={actions.onUseOne}>
+                  {takeOneLabel(item)}
+                </button>
+              )}
               {freezable && (
                 <button type="button" className="extra-action" onClick={actions.onFreeze}>
                   <span aria-hidden="true">❄ </span>Congelei

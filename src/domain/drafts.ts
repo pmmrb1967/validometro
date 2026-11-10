@@ -46,6 +46,8 @@ export interface DraftItem {
   known: boolean;
   /** In euros, from the receipt; null when not read. */
   price: number | null;
+  /** Long life, but this household follows it (consume.ts): comes ticked. Set on the phone. */
+  tracked?: boolean;
 }
 
 /**

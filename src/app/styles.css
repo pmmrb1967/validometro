@@ -571,6 +571,11 @@ button,
   color: var(--muted);
 }
 
+/* Room under the last card, so the round "Adicionar" never covers its buttons. */
+.home {
+  padding-bottom: 84px;
+}
+
 .group-long {
   margin-top: 28px;
   text-align: center;

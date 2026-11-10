@@ -3,9 +3,11 @@
 import { useLiveQuery } from 'dexie-react-hooks';
 import { useEffect, useMemo, useState } from 'react';
 import { Link } from 'react-router';
+import { usedWord } from '../../domain/consume';
 import { formatShortDate, lisbonDate } from '../../domain/dates';
 import { frozenDays } from '../../domain/freeze';
 import { offerText } from '../../domain/offer';
+import { isOpen, sameName } from '../../domain/shopping';
 import { bySoonest, light, type Light, type LitItem } from '../../domain/traffic-light';
 import {
   IN_LOCATION,
@@ -28,7 +30,9 @@ import {
   resolveItem,
   restoreItem,
   setExpiry,
+  takeOne,
 } from '../store/items';
+import { addToList, finished, runningLow, shoppingList, takeOffList } from '../store/shopping';
 
 type Filter = Location | 'tudo';
 
@@ -43,6 +47,10 @@ interface Undo {
   text: string;
   /** Undo of "Congelei" or "Abri isto": the item as it was. Else it was resolved. */
   before?: Item;
+  /** Any other undo ("Está a acabar", "Acabou"). */
+  revert?: () => Promise<void>;
+  /** A second button beside "Anular" ("Juntar à lista"). */
+  action?: { label: string; run: () => void };
 }
 
 /** The phone's share sheet (WhatsApp, SMS…); WhatsApp's link where there is none. */
@@ -61,6 +69,16 @@ async function share(text: string): Promise<void> {
 /** The traffic light: what to use first, grouped by how soon it expires. */
 export function Home() {
   const items = useLiveQuery(() => activeItems(), []);
+  // What is waiting on the shopping list: a staple there already says "Na lista".
+  const listed = useLiveQuery(
+    async () =>
+      new Set(
+        (await shoppingList())
+          .filter((entry) => isOpen(entry) && entry.state === 'pendente')
+          .map((entry) => sameName(entry.name)),
+      ),
+    [],
+  );
   const [filter, setFilter] = useState<Filter>('tudo');
   const [showLongLife, setShowLongLife] = useState(false);
   const [undo, setUndo] = useState<Undo>();
@@ -84,11 +102,27 @@ export function Home() {
   const snackbar = undo && (
     <div className="snackbar" role="status">
       <span>{undo.text}</span>
+      {undo.action && (
+        <button
+          type="button"
+          className="ghost on-dark"
+          onClick={() => {
+            undo.action?.run();
+            setUndo(undefined);
+          }}
+        >
+          {undo.action.label}
+        </button>
+      )}
       <button
         type="button"
         className="ghost on-dark"
         onClick={() => {
-          void (undo.before ? restoreItem(undo.before) : reactivateItem(undo.id));
+          void (undo.revert
+            ? undo.revert()
+            : undo.before
+              ? restoreItem(undo.before)
+              : reactivateItem(undo.id));
           setUndo(undefined);
         }}
       >
@@ -115,7 +149,7 @@ export function Home() {
       id: item.id,
       text:
         status === 'consumido'
-          ? `${item.name}: comido. Fica sugerido na lista de compras.`
+          ? `${item.name}: ${usedWord(item).toLowerCase()}. Fica sugerido na lista de compras.`
           : `${item.name}: deitado fora. Da próxima vez, comprar menos?`,
     });
   };
@@ -124,6 +158,7 @@ export function Home() {
     <ItemCard
       key={entry.item.id}
       lit={entry}
+      onList={listed?.has(sameName(entry.item.name)) ?? false}
       actions={{
         onEaten: () => resolve(entry.item, 'consumido'),
         onThrownAway: () => resolve(entry.item, 'deitado_fora'),
@@ -149,6 +184,47 @@ export function Home() {
             });
           }),
         onOffer: () => void share(offerText(entry.item, entry.daysLeft ?? 0)),
+        onUseOne: () => {
+          const before = entry.item;
+          void takeOne(before.id).then((left) => {
+            if (left === null) return;
+            setUndo({
+              id: before.id,
+              before,
+              text:
+                left === 1
+                  ? `${before.name}: fica 1. Está a acabar?`
+                  : `${before.name}: ficam ${left}.`,
+              action:
+                left === 1 && !listed?.has(sameName(before.name))
+                  ? { label: 'Juntar à lista', run: () => void addToList(before.name) }
+                  : undefined,
+            });
+          });
+        },
+        onRunningLow: () => {
+          const item = entry.item;
+          void runningLow(item).then(() =>
+            setUndo({
+              id: item.id,
+              text: `${item.name}: na lista de compras. Continua em casa até acabar.`,
+              revert: () => takeOffList(item.name),
+            }),
+          );
+        },
+        onFinished: () => {
+          const item = entry.item;
+          void finished(item.id).then(() =>
+            setUndo({
+              id: item.id,
+              text: `${item.name}: acabou. Está na lista de compras.`,
+              revert: async () => {
+                await reactivateItem(item.id);
+                await takeOffList(item.name);
+              },
+            }),
+          );
+        },
       }}
     />
   );
@@ -209,7 +285,7 @@ export function Home() {
             aria-expanded={showLongLife}
             onClick={() => setShowLongLife((open) => !open)}
           >
-            {showLongLife ? 'Esconder' : 'Mostrar'} longa duração ({longLife.length})
+            {showLongLife ? 'Esconder' : 'Mostrar'} o stock da despensa ({longLife.length})
           </button>
           {showLongLife && <ul className="items">{longLife.map(card)}</ul>}
         </section>

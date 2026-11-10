@@ -6,7 +6,7 @@
  */
 import { suggestCategory } from '../../domain/categories';
 import { isOpen, sameName, type ShoppingEntry, type ShoppingState } from '../../domain/shopping';
-import { db, LOCAL_HOUSEHOLD, writeShopping } from './items';
+import { db, LOCAL_HOUSEHOLD, resolveItem, writeShopping } from './items';
 
 /** Everything not removed (the screen sorts and hides). */
 export async function shoppingList(store = db): Promise<ShoppingEntry[]> {
@@ -55,5 +55,32 @@ export async function clearBought(now = new Date(), store = db): Promise<void> {
   const bought = await store.shopping.where('state').equals('comprado').toArray();
   for (const entry of bought) {
     await writeShopping(store, { ...entry, state: 'removido', updated_at: now.toISOString() });
+  }
+}
+
+/** "Está a acabar": on the list to buy, while what is left stays at home. */
+export async function runningLow(
+  item: { name: string },
+  now = new Date(),
+  store = db,
+): Promise<void> {
+  await addToList(item.name, now, store);
+}
+
+/** "Acabou": out of the house and straight onto the list (not just a suggestion). */
+export async function finished(id: string, now = new Date(), store = db): Promise<void> {
+  const item = await store.items.get(id);
+  if (!item) return;
+  await resolveItem(id, 'consumido', now, store);
+  await addToList(item.name, now, store);
+}
+
+/** Undo of "Está a acabar" / "Acabou": off the list again, if nobody bought it yet. */
+export async function takeOffList(name: string, now = new Date(), store = db): Promise<void> {
+  const list = await shoppingList(store);
+  for (const entry of list) {
+    if (isOpen(entry) && sameName(entry.name) === sameName(name)) {
+      await setShoppingState(entry.id, 'removido', now, store);
+    }
   }
 }

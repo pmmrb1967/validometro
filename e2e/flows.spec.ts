@@ -316,3 +316,26 @@ test('talão comprido: várias fotos, lidas como um só talão', async ({ page }
   await page.getByRole('button', { name: 'Recomeçar' }).click();
   await expect(page.getByRole('group', { name: 'Fotos do talão' })).toHaveCount(0);
 });
+
+test('despensa: bebi 1 da água, e "está a acabar" põe-na na lista', async ({ page }) => {
+  await page.goto('/');
+  await page.getByRole('button', { name: 'Começar sem conta' }).first().click();
+  await page.goto('/adicionar');
+  await page.getByLabel('Nome').fill('Água Monchique 5L');
+  await page.getByLabel('Quantidade').fill('2');
+  await page.getByRole('button', { name: 'Guardar', exact: true }).click();
+  await expect(page).toHaveURL('/');
+  await page.getByRole('button', { name: /o stock da despensa/ }).click();
+  const card = page.getByRole('listitem').filter({ hasText: 'Água Monchique 5L' });
+  await card.getByRole('button', { name: 'Bebi 1' }).click();
+  await expect(page.getByRole('status').filter({ hasText: 'fica 1' })).toBeVisible();
+  await expect(card.getByRole('button', { name: 'Bebi 1' })).toHaveCount(0);
+
+  await card.getByRole('button', { name: 'Está a acabar' }).click();
+  await expect(card.getByRole('button', { name: 'Na lista ✓' })).toBeDisabled();
+  await page
+    .getByRole('navigation', { name: 'Secções' })
+    .getByRole('link', { name: 'Compras' })
+    .click();
+  await expect(page.getByText('Água Monchique 5L', { exact: true })).toBeVisible();
+});

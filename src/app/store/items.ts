@@ -214,3 +214,12 @@ export async function restoreItem(before: Item, now = new Date(), store = db): P
 export async function activeItems(store = db): Promise<Item[]> {
   return store.items.where('status').equals('ativo').toArray();
 }
+
+/** "Comi 1" / "Bebi 1": one less of several. Returns how many are left. */
+export async function takeOne(id: string, now = new Date(), store = db): Promise<number | null> {
+  const item = await store.items.get(id);
+  if (!item || item.quantity === null || item.quantity < 2) return null;
+  const left = item.quantity - 1;
+  await update(store, id, { quantity: left }, now);
+  return left;
+}

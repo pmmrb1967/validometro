@@ -54,7 +54,7 @@ export function Review() {
     () =>
       pending?.drafts.map((draft) => ({
         ...draft,
-        include: draft.perishable,
+        include: draft.perishable || draft.tracked === true,
         priceText: priceText(draft.price ?? null),
         quantityText: quantityInputText(draft.quantity),
       })) ?? [],
@@ -172,9 +172,19 @@ export function Review() {
                   {row.known && ' (já conhecido)'}
                 </p>
               )}
-              {!row.perishable && !row.include && (
-                <p className="review-raw">Longa duração: fica de fora, a menos que o marques.</p>
-              )}
+              {!row.perishable &&
+                (row.tracked ? (
+                  <p className="review-raw">
+                    Já acompanhas o stock disto: em casa, “Está a acabar” junta-o à lista.
+                  </p>
+                ) : (
+                  !row.include && (
+                    <p className="review-raw">
+                      Longa duração: fica de fora. Marca-o para acompanhares o stock; nas próximas
+                      compras já vem marcado.
+                    </p>
+                  )
+                ))}
               <div className="review-grid">
                 <select
                   aria-label="Tipo"
