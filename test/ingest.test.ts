@@ -92,6 +92,22 @@ describe('POST /api/ingest/receipt', () => {
     expect(input.response_format.type).toBe('json_schema');
   });
 
+  it('reads the text of a digital receipt (PDF), with no image', async () => {
+    const { ai, calls } = fakeAi(receipt);
+    const text = ['CONTINENTE', 'IOG NAT 4X125 1,29', 'ARROZ AGULHA 1KG 1,49'].join('\n');
+    const res = await post('/api/ingest/receipt', { text }, ai);
+    expect(res.status).toBe(200);
+    expect(((await res.json()) as ReceiptDrafts).drafts).toHaveLength(2);
+    const sent = JSON.stringify(calls[0]!.input);
+    expect(sent).toContain('IOG NAT 4X125');
+    expect(sent).not.toContain('data:image');
+  });
+
+  it('refuses a body that is neither a photo nor a receipt text', async () => {
+    const res = await post('/api/ingest/receipt', { text: 'curto' }, fakeAi(receipt).ai);
+    expect(res.status).toBe(400);
+  });
+
   it('counts the call in ai_usage', async () => {
     await post('/api/ingest/receipt', { image: IMAGE }, fakeAi(receipt).ai);
     const row = await env.DB.prepare('SELECT provider, operation, units, ok FROM ai_usage').first();

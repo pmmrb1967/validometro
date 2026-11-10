@@ -60,6 +60,11 @@ export function readReceipt(image: string): Promise<ReadingResult> {
   return postJson('/api/ingest/receipt', { image }, 'Não foi possível ler o talão.');
 }
 
+/** A digital receipt (PDF) read as text on the phone: no image to send. */
+export function readReceiptText(text: string): Promise<ReadingResult> {
+  return postJson('/api/ingest/receipt', { text }, 'Não foi possível ler o talão.');
+}
+
 export function readSpoken(text: string): Promise<ReadingResult> {
   return postJson('/api/ingest/voice', { text }, 'Não foi possível perceber a lista.');
 }

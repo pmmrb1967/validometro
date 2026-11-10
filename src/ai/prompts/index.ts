@@ -32,6 +32,18 @@ export const RECEIPT_PROMPT = {
 ${lineRules}`,
 };
 
+/** A digital receipt (PDF with text), already turned into lines on the phone (src/app/pdf.ts). */
+export const RECEIPT_TEXT_PROMPT = {
+  version: 'receipt-text.v1',
+  system: RECEIPT_PROMPT.system,
+  prompt: (text: string) => `Este é o texto de um talão digital, linha a linha:
+"""
+${text}
+"""
+
+${RECEIPT_PROMPT.prompt.replace('Lê o talão da imagem.', 'Lê o talão.')}`,
+};
+
 export const VOICE_PROMPT = {
   version: 'voice.v2',
   system: `Transformas o que alguém disse sobre compras de comida numa lista, e devolves só JSON segundo o esquema dado.`,

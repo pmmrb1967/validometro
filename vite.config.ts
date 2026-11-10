@@ -47,7 +47,7 @@ export default defineConfig({
           action: '/partilhar',
           method: 'POST',
           enctype: 'multipart/form-data',
-          params: { files: [{ name: 'talao', accept: ['image/*'] }] },
+          params: { files: [{ name: 'talao', accept: ['image/*', 'application/pdf'] }] },
         },
         icons: [
           { src: 'pwa-64x64.png', sizes: '64x64', type: 'image/png' },
@@ -63,6 +63,8 @@ export default defineConfig({
       },
       workbox: {
         globPatterns: ['**/*.{js,css,html,svg,png,ico,woff2}'],
+        // pdf.js (~1 MB) only loads when a PDF receipt is chosen, and needs the network anyway.
+        globIgnores: ['**/pdf-*.js', '**/pdf.worker*'],
         // The API shares the origin: never answer it with the app shell.
         navigateFallbackDenylist: [/^\/api(\/|$)/],
         // The daily alert and its one-tap answers (public/push-sw.js).

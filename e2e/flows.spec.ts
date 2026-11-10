@@ -213,3 +213,71 @@ test('partilhar um talão sem a app instalada explica o que fazer', async ({ pag
   await expect(page.getByRole('alert')).toContainText('instala a app no ecrã principal');
   await expect(page).toHaveURL('/adicionar');
 });
+
+/** A one-page digital receipt, with its text (as the supermarkets' PDFs have). */
+function receiptPdf(lines: string[]): Buffer {
+  const text = lines.map((line, index) => `BT /F1 10 Tf 20 ${780 - index * 14} Td (${line}) Tj ET`);
+  const stream = text.join('\n');
+  const objects = [
+    '<< /Type /Catalog /Pages 2 0 R >>',
+    '<< /Type /Pages /Kids [3 0 R] /Count 1 >>',
+    '<< /Type /Page /Parent 2 0 R /MediaBox [0 0 300 800] /Resources << /Font << /F1 4 0 R >> >> /Contents 5 0 R >>',
+    '<< /Type /Font /Subtype /Type1 /BaseFont /Helvetica >>',
+    `<< /Length ${stream.length} >>\nstream\n${stream}\nendstream`,
+  ];
+  let pdf = '%PDF-1.4\n';
+  const offsets = objects.map((body, index) => {
+    const at = pdf.length;
+    pdf += `${index + 1} 0 obj\n${body}\nendobj\n`;
+    return at;
+  });
+  const xref = pdf.length;
+  pdf += `xref\n0 ${objects.length + 1}\n0000000000 65535 f \n`;
+  pdf += offsets.map((at) => `${String(at).padStart(10, '0')} 00000 n \n`).join('');
+  pdf += `trailer\n<< /Size ${objects.length + 1} /Root 1 0 R >>\nstartxref\n${xref}\n%%EOF\n`;
+  return Buffer.from(pdf, 'latin1');
+}
+
+test('talão em PDF: o texto vai para a leitura, e a revisão abre', async ({ page }) => {
+  let sent: { text?: string; image?: string } | undefined;
+  // No AI in the tests: answer as the reader would, and keep what the app sent.
+  await page.route('**/api/ingest/receipt', async (route) => {
+    sent = route.request().postDataJSON() as typeof sent;
+    await route.fulfill({
+      json: {
+        store: 'Continente',
+        date: null,
+        drafts: [
+          {
+            key: 'k1',
+            raw: 'IOG NAT 4X125',
+            name: 'Iogurte natural',
+            category: 'iogurtes',
+            location: 'frigorifico',
+            quantity: 4,
+            unit: 'un',
+            perishable: true,
+            expires_at: '2026-12-01',
+            expiry_source: 'estimada',
+            known: false,
+            price: 1.29,
+          },
+        ],
+      },
+    });
+  });
+  await page.goto('/');
+  await page.getByRole('button', { name: 'Começar sem conta' }).first().click();
+  await page.goto('/adicionar');
+  await page.getByLabel('Talão em PDF ou imagem').setInputFiles({
+    name: 'talao.pdf',
+    mimeType: 'application/pdf',
+    buffer: receiptPdf(['CONTINENTE MODELO', 'IOG NAT 4X125      1,29', 'ARROZ AGULHA 1KG   1,49']),
+  });
+  await expect(page).toHaveURL('/rever');
+  expect(sent?.image).toBeUndefined();
+  expect(sent?.text).toContain('IOG NAT 4X125');
+  expect(sent?.text).toContain('ARROZ AGULHA');
+  await expect(page.getByLabel('Nome')).toHaveValue('Iogurte natural');
+  await expect(page.getByLabel('Preço de Iogurte natural, em euros')).toHaveValue('1,29');
+});

@@ -133,7 +133,11 @@ self.addEventListener('fetch', (event) => {
         const form = await event.request.formData();
         const file = form
           .getAll('talao')
-          .find((entry) => typeof entry !== 'string' && entry.type.startsWith('image/'));
+          .find(
+            (entry) =>
+              typeof entry !== 'string' &&
+              (entry.type.startsWith('image/') || entry.type === 'application/pdf'),
+          );
         if (!file) return shareRedirect('vazia');
         const cache = await caches.open(SHARE_CACHE);
         await cache.put(

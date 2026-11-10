@@ -820,6 +820,11 @@ select {
   min-height: 56px;
 }
 
+/* The camera first, across; the file and the voice below it. */
+.quick-buttons > button:first-child {
+  grid-column: 1 / -1;
+}
+
 .voice-panel {
   display: grid;
   gap: 10px;

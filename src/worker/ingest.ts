@@ -20,6 +20,7 @@ import {
 import {
   DATE_PROMPT,
   RECEIPT_PROMPT,
+  RECEIPT_TEXT_PROMPT,
   RECIPES_PROMPT,
   TEST_PROMPT,
   VOICE_PROMPT,
@@ -129,9 +130,13 @@ export interface ReceiptDrafts {
   drafts: DraftItem[];
 }
 
+/** A receipt as a photo ({image}) or as the text of a digital receipt PDF ({text}). */
+const receiptBody = z.union([imageBody, z.object({ text: z.string().trim().min(20).max(30_000) })]);
+
 ingest.post('/ingest/receipt', async (c) => {
-  const image = await imageFrom(c);
-  if (!image) return c.json({ error: 'Foto inválida.' }, 400);
+  const body = receiptBody.safeParse(await c.req.json().catch(() => null));
+  if (!body.success) return c.json({ error: 'Talão inválido.' }, 400);
+  const input = body.data;
   try {
     const provider = await providerFor(c);
     const reading = await structured(
@@ -139,8 +144,12 @@ ingest.post('/ingest/receipt', async (c) => {
       {
         operation: 'receipt',
         system: RECEIPT_PROMPT.system,
-        prompt: RECEIPT_PROMPT.prompt,
-        image,
+        ...('image' in input
+          ? {
+              prompt: RECEIPT_PROMPT.prompt,
+              image: { mime: 'image/jpeg' as const, base64: input.image },
+            }
+          : { prompt: RECEIPT_TEXT_PROMPT.prompt(input.text) }),
         schema: receiptSchema,
         schemaName: 'receipt',
         maxTokens: 4000,

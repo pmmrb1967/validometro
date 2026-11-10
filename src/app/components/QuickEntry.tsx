@@ -1,12 +1,13 @@
 // SPDX-License-Identifier: AGPL-3.0-or-later
 // Copyright (C) 2026 Paulo Barbosa
 /**
- * The fast ways in: a photo of the receipt, or saying what was bought. Both end on the same
- * review screen; nothing is saved before the user confirms.
+ * The fast ways in: a photo of the receipt, a receipt file (PDF or image, e.g. the digital
+ * receipt from the supermarket), or saying what was bought. All end on the same review
+ * screen; nothing is saved before the user confirms.
  */
 import { useEffect, useRef, useState } from 'react';
 import { useNavigate, useSearchParams } from 'react-router';
-import { ApiError, readReceipt, readSpoken, type ReadingResult } from '../api';
+import { ApiError, readReceipt, readReceiptText, readSpoken, type ReadingResult } from '../api';
 import { shrinkPhoto } from '../image';
 import { speechSupported, useDictation } from '../speech';
 import { setPendingReview, type ReadingSource } from '../store/review';
@@ -17,7 +18,7 @@ const SHARE_CACHE = 'validometro-partilha';
 const SHARED_RECEIPT = '/partilha/talao';
 
 const SHARE_ERRORS: Record<string, string> = {
-  vazia: 'O que partilhaste não tem uma imagem. Partilha a foto ou a captura do talão.',
+  vazia: 'O que partilhaste não é uma imagem nem um PDF. Partilha o talão em PDF ou uma captura.',
   erro: 'Não consegui abrir o que partilhaste. Tenta outra vez ou fotografa o talão.',
   'sem-app':
     'Para partilhar talões com o Validómetro, instala a app no ecrã principal e abre-a uma vez.',
@@ -45,6 +46,7 @@ export function QuickEntry() {
   const dictation = useDictation();
   const canDictate = speechSupported();
   const handled = useRef(false);
+  const fileInput = useRef<HTMLInputElement>(null);
 
   const run = async (label: string, source: ReadingSource, read: () => Promise<ReadingResult>) => {
     setBusy(label);
@@ -68,6 +70,38 @@ export function QuickEntry() {
     }
   };
 
+  /** A receipt file: a PDF is read as text (or as a picture, when scanned); an image as a photo. */
+  const readFile = async (file: Blob) => {
+    setError(undefined);
+    if (file.type === 'application/pdf') {
+      setBusy('A abrir o PDF…');
+      let pdf;
+      try {
+        const { readPdfReceipt } = await import('../pdf');
+        pdf = await readPdfReceipt(file);
+      } catch {
+        pdf = null;
+      }
+      setBusy(undefined);
+      if (!pdf) {
+        setError('Não consegui abrir este PDF. Tenta outro, ou fotografa o talão.');
+        return;
+      }
+      const reading = pdf;
+      await run('A ler o talão…', 'receipt', () =>
+        'text' in reading ? readReceiptText(reading.text) : readReceipt(reading.image),
+      );
+      return;
+    }
+    if (!file.type.startsWith('image/')) {
+      setError('Escolhe um talão em PDF ou uma imagem (foto ou captura).');
+      return;
+    }
+    const image = await shrinkPhoto(file);
+    if (image) await run('A ler o talão…', 'receipt', () => readReceipt(image));
+    else setError('Não consegui abrir essa imagem. Tenta outra.');
+  };
+
   // A receipt shared from another app (public/push-sw.js): read it as if just photographed.
   useEffect(() => {
     if (!shared || handled.current) return;
@@ -75,9 +109,8 @@ export function QuickEntry() {
     setParams({}, { replace: true });
     if (shared !== 'talao') return;
     void takeSharedReceipt()
-      .then((blob) => (blob ? shrinkPhoto(blob) : null))
-      .then((image) => {
-        if (image) void run('A ler o talão partilhado…', 'receipt', () => readReceipt(image));
+      .then((blob) => {
+        if (blob) void readFile(blob);
         else setError(SHARE_ERRORS.erro);
       })
       .catch(() => setError(SHARE_ERRORS.erro));
@@ -107,6 +140,26 @@ export function QuickEntry() {
           type="button"
           className="secondary"
           disabled={busy !== undefined}
+          onClick={() => fileInput.current?.click()}
+        >
+          Talão em ficheiro
+        </button>
+        <input
+          ref={fileInput}
+          type="file"
+          accept="application/pdf,image/*"
+          hidden
+          aria-label="Talão em PDF ou imagem"
+          onChange={(event) => {
+            const file = event.target.files?.[0];
+            event.target.value = '';
+            if (file) void readFile(file);
+          }}
+        />
+        <button
+          type="button"
+          className="secondary"
+          disabled={busy !== undefined}
           aria-expanded={voiceOpen}
           onClick={() => {
             const opening = !voiceOpen;
@@ -120,8 +173,8 @@ export function QuickEntry() {
       </div>
 
       <p className="hint">
-        Talão digital? Na app do supermercado, partilha a imagem ou a captura do talão e escolhe o
-        Validómetro (com a app instalada, em Android).
+        Talão digital? Escolhe o PDF (do email ou da app do supermercado) em “Talão em ficheiro”, ou
+        partilha-o diretamente com o Validómetro (com a app instalada, em Android).
       </p>
 
       {voiceOpen && (
