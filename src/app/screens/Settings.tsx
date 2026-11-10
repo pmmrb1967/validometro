@@ -1,4 +1,5 @@
 // SPDX-License-Identifier: AGPL-3.0-or-later
+import { Link } from 'react-router';
 import { AccountSections } from '../components/AccountSections';
 import { AiSection } from '../components/AiSection';
 import { InstallSection } from '../components/InstallSection';
@@ -30,7 +31,8 @@ export function Settings() {
       <section className="card">
         <h2>Sobre</h2>
         <p className="hint">
-          Validómetro: controla as validades dos alimentos lá de casa e desperdiça menos.
+          Validómetro: controla as validades dos alimentos lá de casa e desperdiça menos.{' '}
+          <Link to="/sobre">Ver a apresentação</Link>.
         </p>
         <p className="hint" role="status">
           Servidor: {health}

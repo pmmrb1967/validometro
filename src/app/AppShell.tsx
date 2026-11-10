@@ -62,7 +62,6 @@ export function AppShell() {
         <p>{t.legal.copyright}</p>
         <p className="footer-links">
           <a href={feedbackLink(pathname)}>{t.feedback.footer}</a>
-          {!landing && pathname !== '/sobre' && <Link to="/sobre">Sobre a app</Link>}
           <Link to="/privacidade">Privacidade</Link>
           <a href={LICENSE_URL} rel="noreferrer">
             {t.legal.license}

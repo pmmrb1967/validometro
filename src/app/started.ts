@@ -29,6 +29,17 @@ export function markStarted(): void {
   for (const listener of listeners) listener();
 }
 
+/** After signing out: back to the landing page, as someone new on this phone. */
+export function forgetStarted(): void {
+  try {
+    localStorage.removeItem(KEY);
+  } catch {
+    // Private mode: nothing was kept.
+  }
+  started = false;
+  for (const listener of listeners) listener();
+}
+
 export function useStarted(): boolean {
   return useSyncExternalStore(
     (listener) => {

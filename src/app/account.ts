@@ -6,6 +6,7 @@
  */
 import { useSyncExternalStore } from 'react';
 import { ApiError } from './api';
+import { forgetStarted } from './started';
 
 export interface Me {
   email: string;
@@ -104,6 +105,7 @@ export async function signIn(email: string, password: string): Promise<Me> {
 
 export async function signOut(): Promise<void> {
   await call('POST', '/api/auth/logout');
+  forgetStarted();
   signedIn(null);
 }
 
@@ -113,6 +115,7 @@ export async function changePassword(current: string, next: string): Promise<voi
 
 export async function deleteAccount(password: string): Promise<void> {
   await call('DELETE', '/api/account', { password });
+  forgetStarted();
   signedIn(null);
 }
 

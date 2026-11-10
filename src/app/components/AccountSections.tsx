@@ -2,7 +2,7 @@
 // Copyright (C) 2026 Paulo Barbosa
 /** Settings: the account, the household (who shares the fridge) and the daily alert. */
 import { useEffect, useState, type FormEvent } from 'react';
-import { Link } from 'react-router';
+import { Link, useNavigate } from 'react-router';
 import {
   changePassword,
   deleteAccount,
@@ -62,6 +62,12 @@ function AccountSection({ me }: { me: Me }) {
   const [current, setCurrent] = useState('');
   const [next, setNext] = useState('');
   const [status, setStatus] = useState<string>();
+  const navigate = useNavigate();
+  // Signing out (or deleting the account) ends on the landing page, as in the sibling apps.
+  const leave = async (done: Promise<void>) => {
+    await done;
+    void navigate('/', { replace: true });
+  };
 
   const submit = async (event: FormEvent) => {
     event.preventDefault();
@@ -71,7 +77,8 @@ function AccountSection({ me }: { me: Me }) {
         await changePassword(current, next);
         setStatus('Palavra-passe mudada. Os outros dispositivos vão pedir para entrar outra vez.');
       } else {
-        await deleteAccount(current);
+        await leave(deleteAccount(current));
+        return;
       }
       setOpen(undefined);
       setCurrent('');
@@ -86,7 +93,11 @@ function AccountSection({ me }: { me: Me }) {
       <h2>Conta</h2>
       <p className="hint">{me.email}</p>
       <div className="row wrap">
-        <button type="button" className="secondary" onClick={() => void signOut()}>
+        <button
+          type="button"
+          className="secondary"
+          onClick={() => void leave(signOut()).catch((err: unknown) => setStatus(message(err)))}
+        >
           Sair
         </button>
         <button
