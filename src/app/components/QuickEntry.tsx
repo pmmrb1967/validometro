@@ -18,6 +18,7 @@ import {
 import { hasCamera, shrinkPhoto } from '../image';
 import { speechSupported, useDictation } from '../speech';
 import { setPendingReview, type ReadingSource } from '../store/review';
+import { BusyNote } from './BusyNote';
 import { PhotoButton } from './PhotoButton';
 
 /** Where public/push-sw.js leaves a shared receipt until it is read. */
@@ -306,9 +307,7 @@ export function QuickEntry() {
       )}
 
       {busy && (
-        <p className="note" role="status">
-          {busy}
-        </p>
+        <BusyNote detail="Com a leitura gratuita pode demorar até meio minuto.">{busy}</BusyNote>
       )}
       {error && (
         <p className="note error" role="alert">

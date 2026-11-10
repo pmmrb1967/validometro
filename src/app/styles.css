@@ -893,6 +893,51 @@ textarea {
   color: var(--expired-text);
 }
 
+/* Something is being read: seen at once, in the brand's colour, with a spinner. */
+.note.busy {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  margin: 12px 0;
+  padding: 12px 14px;
+  border: 1px solid var(--brand-strong);
+  border-radius: 12px;
+  background: color-mix(in srgb, var(--brand-strong) 10%, var(--surface));
+  color: var(--text);
+}
+
+.note.busy > span:last-child {
+  display: grid;
+}
+
+.note.busy small {
+  color: var(--muted);
+}
+
+.spinner {
+  flex: none;
+  width: 22px;
+  height: 22px;
+  border: 3px solid color-mix(in srgb, var(--brand-strong) 25%, transparent);
+  border-top-color: var(--link);
+  border-radius: 50%;
+  animation: spin 0.9s linear infinite;
+}
+
+@keyframes spin {
+  to {
+    transform: rotate(360deg);
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .spinner {
+    animation: none;
+    border-top-color: color-mix(in srgb, var(--brand-strong) 25%, transparent);
+    border-right-color: var(--link);
+  }
+}
+
 .section-title {
   margin: 0 0 4px;
   font-size: 1.05rem;

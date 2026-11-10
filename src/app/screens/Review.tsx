@@ -23,6 +23,7 @@ import {
 } from '../../domain/types';
 import { ApiError, readPrintedDate, teachAliases } from '../api';
 import { PhotoButton } from '../components/PhotoButton';
+import { StatusNote } from '../components/BusyNote';
 import { hasCamera } from '../image';
 import { addItem } from '../store/items';
 import { clearPendingReview, getPendingReview } from '../store/review';
@@ -281,11 +282,7 @@ export function Review() {
         ))}
       </datalist>
 
-      {note && (
-        <p className="note" role="status">
-          {note}
-        </p>
-      )}
+      <StatusNote text={note} />
 
       {total > 0 && (
         <p className="hint">

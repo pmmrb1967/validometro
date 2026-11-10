@@ -23,11 +23,11 @@ import {
 import { UNITS } from '../../domain/units';
 import { ApiError, fetchProduct, readPrintedDate } from '../api';
 import { PhotoButton } from '../components/PhotoButton';
+import { StatusNote } from '../components/BusyNote';
 import { hasCamera } from '../image';
 import { QuickEntry } from '../components/QuickEntry';
 import { Scanner } from '../components/Scanner';
 import { addItem } from '../store/items';
-
 
 export function AddItem() {
   const navigate = useNavigate();
@@ -174,11 +174,7 @@ export function AddItem() {
       <button type="button" className="secondary scan-button" onClick={() => setScanning(true)}>
         Ler código de barras
       </button>
-      {productNote && (
-        <p className="note" role="status">
-          {productNote}
-        </p>
-      )}
+      <StatusNote text={productNote} />
 
       <form className="form" onSubmit={(event) => void save(event)}>
         <label className="field">
@@ -298,11 +294,7 @@ export function AddItem() {
               : a app lê-a, e também se é “consumir até” ou “de preferência”.
             </p>
           )}
-          {dateNote && (
-            <p className="note" role="status">
-              {dateNote}
-            </p>
-          )}
+          <StatusNote text={dateNote} />
         </div>
 
         {expiresTouched && (
