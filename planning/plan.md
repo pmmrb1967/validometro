@@ -98,7 +98,7 @@ O que nenhuma das apps concorrentes faz junto: distinguir os dois tipos de data,
 - [x] **Stock da despensa** (0.8.8): os de longa duração que a casa guardou no último ano vêm marcados nos talões seguintes; no cartão, "Está a acabar" (vai para a lista e fica em casa) e "Acabou" (sai e vai para a lista); "Comi 1"/"Bebi 1" para várias unidades, com "Juntar à lista" quando fica 1; "Bebido" em vez de "Comido" para leite, água, sumos e cerveja
 - [x] **Lista de compras que poupa**: "Ainda tens X em casa, até …" e "Deitaste fora 2 das últimas 3 vezes: compra menos, ou a embalagem pequena"
 - [x] Página inicial: "Os alimentos lá de casa, por ordem de usar." (frigorífico, congelador e despensa) e os novos pontos
-- [ ] Verificar com talões reais se o preço por linha é bem lido (Workers AI e Gemini), junto com o teste de 10–15 talões
+- [ ] Verificar com talões reais se o preço por linha é bem lido (Workers AI e Gemini), junto com o teste de 10–15 talões. Feito 1: PDF do Pingo Doce (10/11/2026) com Workers AI, 17/17 produtos e todos os preços certos, descontos incluídos (soma bate com o total pago)
 - [ ] Verificar no Android a partilha a partir das apps Continente, Pingo Doce e Lidl Plus
 - [ ] **Alertas de recolha de produtos** (ASAE/DGAV/RASFF cruzados com os códigos de barras de casa). Em pausa: não se encontrou um feed ou API estruturado (a ASAE publica avisos em texto; o portal RASFF para consumidores não tem API pública documentada). Retomar se aparecer uma fonte estável; ler o HTML dos avisos seria frágil
 
