@@ -38,6 +38,8 @@ const BEST_BEFORE: Record<string, string> = {
   congelados: 'Sempre congelado, continua seguro: só perde qualidade com o tempo.',
   molhos_frascos: 'Fechado, costuma aguentar semanas.',
   longa_duracao: 'Costuma aguentar meses depois desta data.',
+  bebidas: 'Fechada, costuma aguentar meses depois desta data.',
+  doces_snacks: 'Fechado, costuma aguentar semanas ou meses depois desta data (pode perder sabor).',
 };
 
 /** The category's usual kind; null when it varies (fruit, vegetables, other). */

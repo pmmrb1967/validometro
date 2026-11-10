@@ -10,17 +10,17 @@ const categoryList = CATEGORIES.map((category) => `- ${category.id}: ${category.
 
 const lineRules = `Para cada produto alimentar:
 - "name": nome claro em português de Portugal, como se diz em casa ("Iogurte natural", "Peito de frango"). Expande abreviaturas. Sem marca, a menos que seja o que identifica o produto.
-- "category": uma das categorias abaixo (o id), ou null se nenhuma servir.
+- "category": uma das categorias abaixo (o id), ou null se nenhuma servir. Bebidas (água, sumos, refrigerantes, cerveja, vinho), mesmo em lata ou garrafa, são "bebidas" — não "longa_duracao". Chocolate, bombons, bolachas, gomas, batatas fritas e outros snacks são "doces_snacks". Farinha, fermento, açúcar, sal, massa, arroz, leguminosas secas, enlatados de comida e azeite são "longa_duracao". O leite e as bebidas vegetais ficam nas categorias de leite.
 - "quantity" e "unit": quantas unidades se compraram (ex.: 2 e "un"; "4X125G" é 4 e "un"), ou o peso quando se vende ao quilo (ex.: 0.85 e "kg"). O tamanho da embalagem ("1L", "400G") não é quantidade. Se não for claro, null. Nunca inventes.
-- "perishable": true para o que se estraga em dias ou semanas (frescos, lacticínios, carne, peixe, pão, fruta, legumes, refeições prontas, congelados); false para despensa de longa duração (arroz, massa, enlatados, azeite, café, bebidas não lácteas).
+- "perishable": true para o que se estraga em dias ou semanas (frescos, lacticínios, carne, peixe, pão, fruta, legumes, refeições prontas, congelados); false para despensa de longa duração (arroz, massa, enlatados, azeite, café, bebidas não lácteas, chocolate, bolachas).
 
-Abreviaturas comuns nos talões: M/G meio-gordo, M/D magro/desnatado, NAT natural, PESC pescada, FIL filetes, FGO/FRANGO frango, PER peru, POR porco, BOV bovino, QJ queijo, FIAMB fiambre, IOG iogurte, LIQ líquido, CONG congelado, EMB embalagem, UN unidade, INTEG integral.
+Abreviaturas comuns nos talões: M/G meio-gordo, M/D magro/desnatado, NAT natural, PESC pescada, FIL filetes, FGO/FRANGO frango, PER peru, POR porco, BOV bovino, QJ queijo, FIAMB fiambre, IOG iogurte, LIQ líquido, CONG congelado, EMB embalagem, UN unidade, INTEG integral, CERV cerveja, BOMB bombons, CHOC chocolate, BOL bolachas, REFRIG refrigerante.
 
 Categorias:
 ${categoryList}`;
 
 export const RECEIPT_PROMPT = {
-  version: 'receipt.v4',
+  version: 'receipt.v5',
   system: `Lês talões de supermercados portugueses e devolves só JSON segundo o esquema dado. Não escreves mais nada.`,
   prompt: `Lê o talão da imagem.
 - "store": nome da loja (ex.: "Continente", "Pingo Doce", "Lidl"), ou null.
@@ -41,7 +41,7 @@ export const RECEIPT_PARTS_NOTE = (count: number) =>
 
 /** A digital receipt (PDF with text), already turned into lines on the phone (src/app/pdf.ts). */
 export const RECEIPT_TEXT_PROMPT = {
-  version: 'receipt-text.v2',
+  version: 'receipt-text.v3',
   system: RECEIPT_PROMPT.system,
   prompt: (text: string) => `Este é o texto de um talão digital, linha a linha:
 """
@@ -52,7 +52,7 @@ ${RECEIPT_PROMPT.prompt.replace('Lê o talão da imagem.', 'Lê o talão.')}`,
 };
 
 export const VOICE_PROMPT = {
-  version: 'voice.v2',
+  version: 'voice.v3',
   system: `Transformas o que alguém disse sobre compras de comida numa lista, e devolves só JSON segundo o esquema dado.`,
   prompt: (transcript: string, today: string) => `Hoje é ${today} (AAAA-MM-DD). A pessoa disse:
 """

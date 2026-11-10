@@ -193,6 +193,23 @@ describe('categories', () => {
     expect(suggestCategory('Detergente')).toBeUndefined();
   });
 
+  it('gives drinks and sweets their own long-life types (talão 2026-11-10)', () => {
+    expect(suggestCategory('Água Monchique 5L')).toBe('bebidas');
+    expect(suggestCategory('Cerveja em lata')).toBe('bebidas'); // longer than "lata"
+    expect(suggestCategory('Cerveja preta Super Bock Stout')).toBe('bebidas');
+    expect(suggestCategory('Bombons')).toBe('doces_snacks');
+    expect(suggestCategory('Bolachas Maria')).toBe('doces_snacks');
+    expect(suggestCategory('Fermento de padeiro')).toBe('longa_duracao');
+    expect(suggestCategory('Farinha para pão branco')).toBe('longa_duracao'); // "farinha" is longer than "pao"
+    for (const id of ['bebidas', 'doces_snacks', 'longa_duracao']) {
+      expect(isLongLife(id)).toBe(true);
+      expect(categoryById(id)?.defaultLocation).toBe('despensa');
+    }
+    expect(categoryFromOffTags(['en:beverages', 'en:milks'])).toBe('leite_uht');
+    expect(categoryFromOffTags(['en:beverages', 'en:waters'])).toBe('bebidas');
+    expect(categoryFromOffTags(['en:sweet-snacks', 'en:biscuits'])).toBe('doces_snacks');
+  });
+
   it('matches whole words only', () => {
     // "sal" must not match "salmão" or "salada".
     expect(suggestCategory('Salmão')).toBe('peixe_fresco');

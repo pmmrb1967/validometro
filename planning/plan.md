@@ -145,4 +145,6 @@ Valores **indicativos** (em dias) para estimar a validade quando não há data i
 | Congelados (genérico) | congelador | — | 120 |
 | Carne/peixe congelado em casa | congelador | — | 90 |
 | Molhos / frascos | frigorífico | aberto | 14 |
-| Enlatados / massa / arroz | despensa | fechado | longa duração (fora do semáforo) |
+| Mercearia (massa, arroz, enlatados, farinha) | despensa | fechado | longa duração (fora do semáforo) |
+| Bebidas (água, sumos, cerveja, vinho) | despensa | fechado | longa duração (fora do semáforo) |
+| Doces e snacks (chocolate, bolachas) | despensa | fechado | longa duração (fora do semáforo) |
