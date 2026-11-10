@@ -960,6 +960,8 @@ textarea {
 
 .account-mode {
   margin: 0;
+  /* Two options, not the default three: "Já tenho conta" fits on one line. */
+  grid-template-columns: repeat(2, 1fr);
 }
 
 /* Home: the other screens */

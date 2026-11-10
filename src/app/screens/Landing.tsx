@@ -3,11 +3,13 @@
 /**
  * The first page for someone new (no account, nothing registered): what the app does, and
  * three ways in. Who already uses it goes straight to the traffic light (Home), so the
- * installed icon never opens a presentation.
+ * installed icon never opens a presentation. "/sobre" shows it again at any time (footer link);
+ * there the buttons lead back to the app instead of starting it again.
  */
-import { Link } from 'react-router';
+import { Link, useNavigate } from 'react-router';
+import { useAccount } from '../account';
 import { InstallSection } from '../components/InstallSection';
-import { markStarted } from '../started';
+import { markStarted, useStarted } from '../started';
 
 const PREVIEW = [
   { name: 'Iogurtes naturais', when: 'Expira hoje', light: 'red' },
@@ -49,6 +51,35 @@ const MORE = [
   },
 ];
 
+/** The main buttons: start (or go back to the app) and, without a session, the account ones. */
+function Actions({ className }: { className: string }) {
+  const navigate = useNavigate();
+  const account = useAccount();
+  const started = useStarted();
+  const signedIn = account.status === 'ready' && Boolean(account.me);
+  const start = () => {
+    markStarted();
+    void navigate('/');
+  };
+  return (
+    <div className={className}>
+      <button type="button" className="primary" onClick={start}>
+        {started || signedIn ? 'Abrir a app' : 'Começar sem conta'}
+      </button>
+      {!signedIn && (
+        <>
+          <Link className="button secondary" to="/criar-conta">
+            Criar conta
+          </Link>
+          <Link className="button ghost" to="/entrar">
+            Já tenho conta
+          </Link>
+        </>
+      )}
+    </div>
+  );
+}
+
 export function Landing() {
   return (
     <div className="landing">
@@ -62,17 +93,7 @@ export function Landing() {
             para deitar menos comida fora. Registar uma compra leva segundos; responder ao alerta,
             um toque.
           </p>
-          <div className="landing-actions">
-            <button type="button" className="primary" onClick={markStarted}>
-              Começar sem conta
-            </button>
-            <Link className="button secondary" to="/criar-conta">
-              Criar conta
-            </Link>
-            <Link className="button ghost" to="/entrar">
-              Já tenho conta
-            </Link>
-          </div>
+          <Actions className="landing-actions" />
           <p className="hint">
             Sem conta, tudo fica só neste telemóvel. A conta serve para partilhar com a família e
             receber o alerta diário; podes criá-la depois sem perder nada.
@@ -140,14 +161,7 @@ export function Landing() {
 
       <InstallSection />
 
-      <section className="landing-final">
-        <button type="button" className="primary" onClick={markStarted}>
-          Começar sem conta
-        </button>
-        <Link className="button secondary" to="/criar-conta">
-          Criar conta
-        </Link>
-      </section>
+      <Actions className="landing-final" />
     </div>
   );
 }
