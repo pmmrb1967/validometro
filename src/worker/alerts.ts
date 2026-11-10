@@ -14,7 +14,9 @@
 import { Hono } from 'hono';
 import { z } from 'zod';
 import { addDays, daysBetween, lisbonDate } from '../domain/dates';
+import { pastBestBefore } from '../domain/date-kind';
 import { AMBER_MAX_DAYS, daysLabel } from '../domain/traffic-light';
+import type { ExpiryKind } from '../domain/types';
 import { purgeLoginFailures } from './auth';
 import { requireUser, userOf, type AppEnv } from './session';
 import { isPushEndpoint, sendPush, type Fetcher, type PushTarget, type VapidKeys } from './webpush';
@@ -138,6 +140,9 @@ interface DueRow {
   id: string;
   name: string;
   expires_at: string;
+  category?: string | null;
+  opened_at?: string | null;
+  expiry_kind?: ExpiryKind | null;
 }
 
 /** "Iogurtes, leite e mais 2": what comes after the item shown. */
@@ -154,11 +159,15 @@ export function buildAlert(due: DueRow[], today: string): ExpiryAlert | null {
   if (!due.length) return null;
   const items = due.map((row, index) => {
     const days = daysBetween(today, row.expires_at);
-    const when = daysLabel(days).toLowerCase();
+    const kind = { category: row.category ?? null, opened_at: row.opened_at ?? null };
+    const quality = pastBestBefore({ ...kind, expiry_kind: row.expiry_kind ?? null }, days);
+    // Past a "de preferência" date it is a look, not an alarm (date-kind.ts).
+    const when = quality ? 'passou da data de preferência' : daysLabel(days).toLowerCase();
+    const next = after(due.slice(index + 1).map((other) => other.name));
     return {
       id: row.id,
       title: `${row.name}: ${when}`,
-      body: after(due.slice(index + 1).map((next) => next.name)),
+      body: quality ? `Olha, cheira, prova: costuma estar bom. ${next}` : next,
     };
   });
   return { kind: 'expiry', tag: 'validades', url: '/', items };
@@ -168,7 +177,7 @@ export function buildAlert(due: DueRow[], today: string): ExpiryAlert | null {
 export async function dueItems(db: D1Database, householdId: string, today: string) {
   const { results } = await db
     .prepare(
-      `SELECT id, name, expires_at FROM items
+      `SELECT id, name, expires_at, category, opened_at, expiry_kind FROM items
        WHERE household_id = ? AND status = 'ativo' AND expires_at IS NOT NULL AND expires_at <= ?
        ORDER BY expires_at, name LIMIT ?`,
     )

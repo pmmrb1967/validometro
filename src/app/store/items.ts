@@ -6,9 +6,10 @@
  */
 import Dexie, { type Table } from 'dexie';
 import { lisbonDate } from '../../domain/dates';
+import { freezeItem } from '../../domain/freeze';
 import { openItem } from '../../domain/shelf-life';
 import { restockSuggestion, type ShoppingEntry } from '../../domain/shopping';
-import type { ExpirySource, IsoDate, Item, Location } from '../../domain/types';
+import type { ExpiryKind, ExpirySource, IsoDate, Item, Location } from '../../domain/types';
 
 /** Household id of the account-less inventory. */
 export const LOCAL_HOUSEHOLD = 'local';
@@ -93,6 +94,10 @@ export interface NewItem {
   location: Location;
   expires_at: IsoDate | null;
   expiry_source: ExpirySource | null;
+  /** "Consumir até" or "de preferência", when the package says. */
+  expiry_kind?: ExpiryKind | null;
+  /** Euros; optional, always. */
+  price?: number | null;
   /** Optional, always. */
   quantity?: number | null;
   unit?: string | null;
@@ -117,6 +122,8 @@ export async function addItem(input: NewItem, now = new Date(), store = db): Pro
     opened_at: input.opened ? at : null,
     expires_at: input.expires_at,
     expiry_source: input.expires_at ? input.expiry_source : null,
+    expiry_kind: input.expires_at ? (input.expiry_kind ?? null) : null,
+    price: input.price ?? null,
     status: 'ativo',
     resolved_at: null,
     created_at: at,
@@ -171,14 +178,37 @@ export async function markOpened(
   return update(store, id, openItem(item, lisbonDate(now), now), now);
 }
 
-/** "Editar data": the user's own date always wins. */
+/** "Editar data": the user's own date always wins; the kind too, when given. */
 export async function setExpiry(
   id: string,
   expiresAt: IsoDate,
+  kind?: ExpiryKind | null,
   now = new Date(),
   store = db,
 ): Promise<void> {
-  await update(store, id, { expires_at: expiresAt, expiry_source: 'manual' }, now);
+  await update(
+    store,
+    id,
+    {
+      expires_at: expiresAt,
+      expiry_source: 'manual',
+      ...(kind !== undefined ? { expiry_kind: kind } : {}),
+    },
+    now,
+  );
+}
+
+/** "Congelei": into the freezer, with the home-frozen shelf life. Returns the item before. */
+export async function freeze(id: string, now = new Date(), store = db): Promise<Item | undefined> {
+  const item = await store.items.get(id);
+  if (!item || item.location === 'congelador') return undefined;
+  await update(store, id, freezeItem(lisbonDate(now)), now);
+  return item;
+}
+
+/** Undo of "Congelei" or "Abri isto": the item as it was, as a new change. */
+export async function restoreItem(before: Item, now = new Date(), store = db): Promise<void> {
+  await update(store, before.id, { ...before }, now);
 }
 
 export async function activeItems(store = db): Promise<Item[]> {

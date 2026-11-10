@@ -80,6 +80,8 @@ Esquema de referência; as migrações ficam em `migrations/`.
   - quantity **nullable**, unit **nullable**
   - purchased_at, opened_at nullable
   - expires_at, expiry_source (`impressa` | `estimada` | `manual`)
+  - expiry_kind nullable (`consumir_ate` | `consumir_de_preferencia`; nulo = o habitual da categoria, `src/domain/date-kind.ts`)
+  - price **nullable** (euros, do talão ou escrito; só para contar o desperdício em euros)
   - status (`ativo` | `consumido` | `deitado_fora`), resolved_at nullable
   - índices: (household_id, status, expires_at)
 - `product_aliases`: dicionário partilhado de abreviaturas dos talões

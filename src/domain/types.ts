@@ -11,6 +11,9 @@ export type Location = (typeof LOCATIONS)[number];
 export type OpenState = 'fechado' | 'aberto';
 export type ItemStatus = 'ativo' | 'consumido' | 'deitado_fora';
 export type ExpirySource = 'impressa' | 'estimada' | 'manual';
+/** What the package says before the date: safety ("até") or quality ("de preferência"). */
+export const EXPIRY_KINDS = ['consumir_ate', 'consumir_de_preferencia'] as const;
+export type ExpiryKind = (typeof EXPIRY_KINDS)[number];
 
 /** A calendar date, `YYYY-MM-DD` (ISO 8601). Expiry is a day, not an instant. */
 export type IsoDate = string;
@@ -33,6 +36,10 @@ export interface Item {
   /** Null when there is no date and no rule: a long-life item, out of the traffic light. */
   expires_at: IsoDate | null;
   expiry_source: ExpirySource | null;
+  /** Null when unknown: the category's usual kind applies (date-kind.ts). */
+  expiry_kind?: ExpiryKind | null;
+  /** What it cost, in euros (the receipt's line, or typed). Optional, like quantity. */
+  price?: number | null;
   status: ItemStatus;
   resolved_at: IsoInstant | null;
   created_at: IsoInstant;

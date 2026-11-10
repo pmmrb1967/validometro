@@ -36,7 +36,7 @@ test('sem conta: da página inicial ao semáforo, e o que foi comido volta à li
 }) => {
   await page.goto('/');
   await expect(
-    page.getByRole('heading', { name: 'O que está no frigorífico, por ordem de usar.' }),
+    page.getByRole('heading', { name: 'Os alimentos lá de casa, por ordem de usar.' }),
   ).toBeVisible();
   // Before starting there is nothing to set: only "Entrar".
   await expect(page.getByRole('link', { name: 'Definições' })).toHaveCount(0);
@@ -183,4 +183,33 @@ test('dados: descarregar tudo, e apagar o que está no telemóvel', async ({ pag
   await page.getByRole('button', { name: 'Apagar tudo' }).click();
   await expect(page).toHaveURL('/');
   await expect(page.getByRole('button', { name: 'Começar sem conta' }).first()).toBeVisible();
+});
+
+test('a tempo: congelar o frango no fim, e tirá-lo do congelador', async ({ page }) => {
+  await page.goto('/');
+  await page.getByRole('button', { name: 'Começar sem conta' }).first().click();
+  // Fresh chicken: two days by the rules, so "Congelei" and "Oferecer" are at hand.
+  await addItem(page, 'Peito de frango');
+  const card = page.getByRole('listitem').filter({ hasText: 'Peito de frango' });
+  await expect(card.getByRole('button', { name: 'Oferecer' })).toBeVisible();
+  await card.getByRole('button', { name: 'Congelei' }).click();
+  await expect(page.getByRole('status').filter({ hasText: 'no congelador' })).toBeVisible();
+  await expect(card.getByText('Congelador', { exact: true })).toBeVisible();
+  await expect(card.getByRole('button', { name: 'Congelei' })).toHaveCount(0);
+
+  await card.getByRole('button', { name: 'Tirei do congelador' }).click();
+  await expect(page.getByRole('status').filter({ hasText: 'fora do congelador' })).toBeVisible();
+  await expect(card.getByText('Frigorífico, aberto', { exact: true })).toBeVisible();
+  // "Anular" puts it back as it was.
+  await page.getByRole('button', { name: 'Anular' }).click();
+  await expect(card.getByText('Congelador', { exact: true })).toBeVisible();
+});
+
+test('partilhar um talão sem a app instalada explica o que fazer', async ({ page }) => {
+  const answer = await page.request.post('/partilhar', { maxRedirects: 0 });
+  expect(answer.status()).toBe(303);
+  expect(answer.headers().location).toMatch(/\/adicionar\?partilha=sem-app$/);
+  await page.goto('/adicionar?partilha=sem-app');
+  await expect(page.getByRole('alert')).toContainText('instala a app no ecrã principal');
+  await expect(page).toHaveURL('/adicionar');
 });

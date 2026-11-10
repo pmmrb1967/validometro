@@ -7,7 +7,7 @@
 import { useLiveQuery } from 'dexie-react-hooks';
 import { useMemo } from 'react';
 import { lisbonDate } from '../../domain/dates';
-import { wasteStats } from '../../domain/stats';
+import { formatEuros, wasteStats } from '../../domain/stats';
 import { db } from '../store/items';
 
 const MONTH = new Intl.DateTimeFormat('pt-PT', { month: 'short', timeZone: 'UTC' });
@@ -48,6 +48,19 @@ export function Stats() {
             </p>
           </section>
 
+          {stats.priced > 0 && (
+            <section className="card stat-euros">
+              <h2>Em dinheiro</h2>
+              <p className="stat-number">{formatEuros(stats.wastedEuros)}</p>
+              <p className="hint">
+                deitados fora nos últimos 6 meses
+                {stats.eatenEuros > 0 && `, e ${formatEuros(stats.eatenEuros)} aproveitados`}. Conta
+                só os alimentos com preço ({stats.priced} de {total}): os que vieram do talão ou a
+                que escreveste o preço.
+              </p>
+            </section>
+          )}
+
           <section className="card">
             <h2>Deitados fora por mês</h2>
             <ul className="bars" aria-label="Alimentos deitados fora por mês">
@@ -55,7 +68,7 @@ export function Stats() {
                 <li
                   key={month.month}
                   className="bar-row"
-                  title={`${monthLabel(month.month)}: ${month.wasted} deitados fora, ${month.eaten} comidos`}
+                  title={`${monthLabel(month.month)}: ${month.wasted} deitados fora${month.wastedEuros > 0 ? ` (${formatEuros(month.wastedEuros)})` : ''}, ${month.eaten} comidos`}
                 >
                   <span className="bar-label">{monthLabel(month.month)}</span>
                   <span className="bar-track">

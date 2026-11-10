@@ -20,6 +20,8 @@ export interface DraftLine {
   perishable: boolean;
   /** Only when the user said the date out loud. */
   expires_at?: string | null;
+  /** The receipt line's price, in euros. */
+  price?: number | null;
 }
 
 /** What the shared dictionary already knows about a receipt abbreviation. */
@@ -42,6 +44,8 @@ export interface DraftItem {
   expiry_source: ExpirySource | null;
   /** The name came from the dictionary, not from the AI's guess. */
   known: boolean;
+  /** In euros, from the receipt; null when not read. */
+  price: number | null;
 }
 
 /**
@@ -111,7 +115,14 @@ export function toDraft(
     expires_at: expires,
     expiry_source: said ? 'manual' : expires ? 'estimada' : null,
     known: alias !== undefined,
+    price: plausiblePrice(line.price),
   };
+}
+
+/** A line's price, kept when it looks like one (a misread total or code is not). */
+export function plausiblePrice(value: number | null | undefined): number | null {
+  if (value == null || !Number.isFinite(value) || value <= 0 || value > 500) return null;
+  return Math.round(value * 100) / 100;
 }
 
 /** A date the AI read on a package, kept only when it is plausible for food. */

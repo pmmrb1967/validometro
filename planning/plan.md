@@ -83,13 +83,36 @@ Plano de implementação por fases. Cada fase termina com a app **a funcionar, t
 - [x] Testes end-to-end dos fluxos principais (Playwright, telemóvel e computador, na CI)
 - [ ] Versão 1.0.0, uso em família durante 2–3 semanas, recolha de feedback
 
+## Fase 6 — Diferenciação (0.8.0)
+
+O que nenhuma das apps concorrentes faz junto: distinguir os dois tipos de data, salvar a tempo e contar o desperdício em euros.
+
+- [x] **"Consumir até" ≠ "de preferência"** (`src/domain/date-kind.ts`): a foto da data lê o tipo; o utilizador escolhe-o ao adicionar ou ao editar a data; sem indicação, vale o habitual da categoria. Depois de uma data "de preferência": "olha, cheira, prova" em vez de alarme (cartão e alerta das 9h); depois de "consumir até": "não arrisques". Aberto conta sempre como "consumir até"
+- [x] **Desperdício em euros**: preço por linha lido do talão (prompt `receipt.v3`), editável na revisão; campo opcional ao adicionar; "Em dinheiro" em `/desperdicio` (conta só o que tem preço)
+- [x] **"Congelei"** (`src/domain/freeze.ts`): na última semana, para carne, peixe, pão, sobras, fiambre, leite fresco e fruta; passa para o congelador com 90 dias. "Tirei do congelador" volta ao frigorífico com a regra de aberto. Ambos com "Anular"
+- [x] **"Oferecer"**: mensagem pronta para o WhatsApp/SMS (folha de partilha do telemóvel), na última semana e nunca depois de um "consumir até"
+- [x] **Partilhar o talão com a app** (Web Share Target, Android com a PWA instalada): a imagem ou captura do talão digital vai direta para a leitura e revisão; fica só na cache do telemóvel até ser lida
+- [x] **Lista de compras que poupa**: "Ainda tens X em casa, até …" e "Deitaste fora 2 das últimas 3 vezes: compra menos, ou a embalagem pequena"
+- [x] Página inicial: "Os alimentos lá de casa, por ordem de usar." (frigorífico, congelador e despensa) e os novos pontos
+- [ ] Verificar com talões reais se o preço por linha é bem lido (Workers AI e Gemini), junto com o teste de 10–15 talões
+- [ ] Verificar no Android a partilha a partir das apps Continente, Pingo Doce e Lidl Plus
+- [ ] **Alertas de recolha de produtos** (ASAE/DGAV/RASFF cruzados com os códigos de barras de casa). Em pausa: não se encontrou um feed ou API estruturado (a ASAE publica avisos em texto; o portal RASFF para consumidores não tem API pública documentada). Retomar se aparecer uma fonte estável; ler o HTML dos avisos seria frágil
+
 ## Backlog (depois da 1.0)
 
-- Importar o talão digital das apps dos supermercados, se houver forma viável
+- **Seletor PT/EN** (data a decidir). Até lá, passar os textos para `src/app/i18n/pt-PT.ts` à medida que se mexe nos ecrãs. Alvo possível: estrangeiros a viver em Portugal (talões e rótulos portugueses explicados em inglês). Implica prompts, categorias, emails e privacidade em inglês
+- **Talão por email** (reencaminhar o email ou PDF do talão digital para um endereço da casa): o Cloudflare Email Routing é gratuito mas exige um domínio próprio na Cloudflare (custo anual), a decidir antes. Talões em PDF precisam também de leitura de PDF (Gemini e Claude leem; Workers AI não)
+- **Foto do frigorífico/despensa para fazer o inventário** (avaliação em baixo)
 - Widget/atalho "Adicionar por voz" no ecrã principal
-- Modo "congelei isto" (muda localização e validade)
 - Partilhar receitas
 - TWA para a Play Store, se fizer sentido
+
+### Avaliação: inventário a partir de uma foto do interior do frigorífico ou da despensa
+
+- **Possível tecnicamente**, com o mesmo pipeline (foto reduzida no cliente → IA de visão → `DraftItem[]` → ecrã de revisão), um prompt novo `shelf.v1` e o esquema das linhas sem `raw`. A foto não é guardada.
+- **Limites reais:** a IA vê embalagens, não validades (a data raramente está virada para a câmara), por isso tudo ficaria com data estimada a partir de hoje, o que está errado para o que já está em casa há dias. Produtos atrás de outros, em gavetas, em caixas ou de marca branca parecida não aparecem ou saem trocados; contar unidades é pouco fiável. Gemini e Claude fazem isto razoavelmente; o modelo gratuito do Workers AI deve falhar mais.
+- **Onde vale a pena:** (1) **o primeiro inventário**, quando se começa a usar a app com a casa já cheia (é aí que registar à mão custa); (2) **"o que ainda tenho?"**: comparar a foto com a lista ativa e propor marcar como comido o que já não se vê. Não como forma diária de registar: o talão é melhor.
+- **Proposta:** "Fotografar o frigorífico" no primeiro uso e em Adicionar, com o aviso "confirma as datas"; na revisão, a data vem "estimada desde hoje" e a pessoa ajusta. Custo: 1 chamada de visão por foto (cabe na quota gratuita). Esforço: cerca de 1 dia, mais testes com fotos reais de 3–4 frigoríficos antes de decidir se fica.
 
 ---
 

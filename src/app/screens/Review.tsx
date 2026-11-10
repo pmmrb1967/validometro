@@ -9,9 +9,17 @@ import { useState } from 'react';
 import { Link, useNavigate } from 'react-router';
 import { CATEGORIES, categoryById } from '../../domain/categories';
 import { formatShortDate, isIsoDate, lisbonDate } from '../../domain/dates';
-import type { DraftItem } from '../../domain/drafts';
+import { kindFromReading } from '../../domain/date-kind';
+import { plausiblePrice, type DraftItem } from '../../domain/drafts';
+import { formatEuros } from '../../domain/stats';
 import { suggestExpiry } from '../../domain/shelf-life';
-import { LOCATION_LABELS, LOCATIONS, type ExpirySource, type Location } from '../../domain/types';
+import {
+  LOCATION_LABELS,
+  LOCATIONS,
+  type ExpiryKind,
+  type ExpirySource,
+  type Location,
+} from '../../domain/types';
 import { ApiError, readPrintedDate, teachAliases } from '../api';
 import { PhotoButton } from '../components/PhotoButton';
 import { addItem } from '../store/items';
@@ -19,7 +27,14 @@ import { clearPendingReview, getPendingReview } from '../store/review';
 
 interface Row extends DraftItem {
   include: boolean;
+  /** From the date photo: "consumir até" or "de preferência". */
+  expiry_kind?: ExpiryKind | null;
+  /** The price as typed, while editing ("1,2"). */
+  priceText: string;
 }
+
+const priceText = (price: number | null) =>
+  price === null ? '' : price.toFixed(2).replace('.', ',');
 
 const SOURCE_LABEL: Record<ExpirySource, string> = {
   estimada: 'estimada',
@@ -31,7 +46,12 @@ export function Review() {
   const navigate = useNavigate();
   const [pending] = useState(getPendingReview);
   const [rows, setRows] = useState<Row[]>(
-    () => pending?.drafts.map((draft) => ({ ...draft, include: draft.perishable })) ?? [],
+    () =>
+      pending?.drafts.map((draft) => ({
+        ...draft,
+        include: draft.perishable,
+        priceText: priceText(draft.price ?? null),
+      })) ?? [],
   );
   const [saving, setSaving] = useState(false);
   const [note, setNote] = useState<string>();
@@ -61,6 +81,10 @@ export function Review() {
   };
 
   const chosen = rows.filter((row) => row.include && row.name.trim());
+  const total = chosen.reduce(
+    (sum, row) => sum + (plausiblePrice(Number(row.priceText.replace(',', '.'))) ?? 0),
+    0,
+  );
 
   const save = async () => {
     setSaving(true);
@@ -73,6 +97,8 @@ export function Review() {
         expiry_source: row.expires_at ? row.expiry_source : null,
         quantity: row.quantity,
         unit: row.unit,
+        expiry_kind: row.expiry_kind ?? null,
+        price: plausiblePrice(Number(row.priceText.replace(',', '.'))),
       });
     }
     await teachAliases(
@@ -192,8 +218,12 @@ export function Review() {
                   onPhoto={(image) => {
                     setNote(`A ler a data de ${row.name}…`);
                     readPrintedDate(image)
-                      .then(({ date }) => {
-                        update(row.key, { expires_at: date, expiry_source: 'impressa' });
+                      .then(({ date, kind }) => {
+                        update(row.key, {
+                          expires_at: date,
+                          expiry_source: 'impressa',
+                          expiry_kind: kindFromReading(kind),
+                        });
                         setNote(undefined);
                       })
                       .catch((err: unknown) =>
@@ -203,10 +233,18 @@ export function Review() {
                 >
                   Ler data
                 </PhotoButton>
+                <input
+                  className="review-price"
+                  inputMode="decimal"
+                  aria-label={`Preço de ${row.name}, em euros`}
+                  placeholder="€"
+                  value={row.priceText}
+                  onChange={(event) => update(row.key, { priceText: event.target.value })}
+                />
               </div>
               <p className="review-raw">
                 {row.expires_at && row.expiry_source
-                  ? `Validade ${SOURCE_LABEL[row.expiry_source]}.`
+                  ? `Validade ${SOURCE_LABEL[row.expiry_source]}${row.expiry_kind === 'consumir_de_preferencia' ? ' (de preferência)' : row.expiry_kind === 'consumir_ate' ? ' (consumir até)' : ''}.`
                   : 'Sem validade: fica fora do semáforo.'}
                 {row.quantity != null &&
                   ` Quantidade: ${row.quantity}${row.unit ? ` ${row.unit}` : ''}.`}
@@ -219,6 +257,13 @@ export function Review() {
       {note && (
         <p className="note" role="status">
           {note}
+        </p>
+      )}
+
+      {total > 0 && (
+        <p className="hint">
+          Preços dos alimentos escolhidos: {formatEuros(total)}. Servem para contar o desperdício em
+          euros; podes corrigi-los ou apagá-los.
         </p>
       )}
 

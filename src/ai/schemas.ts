@@ -27,7 +27,8 @@ export const lineSchema = z.object({
 export const receiptSchema = z.object({
   store: z.string().max(80).nullable(),
   date: isoDate,
-  lines: z.array(lineSchema).max(150),
+  // Not every model sends the price (receipt.v2 answers had none): missing is null.
+  lines: z.array(lineSchema.extend({ price: z.number().nullable().default(null) })).max(150),
 });
 export type ReceiptReading = z.infer<typeof receiptSchema>;
 

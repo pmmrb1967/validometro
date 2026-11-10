@@ -17,6 +17,7 @@
 import { Hono } from 'hono';
 import { z } from 'zod';
 import { SHOPPING_STATES } from '../domain/shopping';
+import { EXPIRY_KINDS } from '../domain/types';
 import { requireUser, userOf, type AppEnv } from './session';
 
 export const sync = new Hono<AppEnv>();
@@ -36,6 +37,9 @@ export const itemSchema = z.object({
   opened_at: instant.nullable(),
   expires_at: isoDate.nullable(),
   expiry_source: z.enum(['impressa', 'estimada', 'manual']).nullable(),
+  // Absent from phones still on an older version.
+  expiry_kind: z.enum(EXPIRY_KINDS).nullable().default(null),
+  price: z.number().min(0).max(10_000).nullable().default(null),
   status: z.enum(['ativo', 'consumido', 'deitado_fora']),
   resolved_at: instant.nullable(),
   created_at: instant,
@@ -79,6 +83,8 @@ const ITEM_COLUMNS = [
   'opened_at',
   'expires_at',
   'expiry_source',
+  'expiry_kind',
+  'price',
   'status',
   'resolved_at',
   'created_at',

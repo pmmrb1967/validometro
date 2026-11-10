@@ -76,6 +76,53 @@ export function recentlyWasted(items: Item[], today: IsoDate): Set<string> {
   );
 }
 
+/**
+ * Already at home: an active item with the same name, or whose name starts with what is on
+ * the list ("leite" finds "Leite meio-gordo"). The one that ends soonest, so the list can say
+ * "ainda tens, até sexta" before buying more.
+ */
+export function atHome(name: string, active: Item[]): Item | undefined {
+  const key = sameName(name);
+  if (!key) return undefined;
+  return active
+    .filter((item) => {
+      if (item.status !== 'ativo') return false;
+      const other = sameName(item.name);
+      return other === key || other.startsWith(`${key} `);
+    })
+    .sort((a, b) => (a.expires_at ?? '9999').localeCompare(b.expires_at ?? '9999'))[0];
+}
+
+/** How far back the buying habits are read. */
+export const HABIT_DAYS = 120;
+
+export interface WasteHabit {
+  wasted: number;
+  ended: number;
+}
+
+/**
+ * What tends to end in the bin: in the last months, thrown away at least twice and at least
+ * half the times it ended. The list then says to buy less, or the smaller pack.
+ */
+export function wasteHabits(items: Item[], today: IsoDate): Map<string, WasteHabit> {
+  const since = addDays(today, -HABIT_DAYS);
+  const counts = new Map<string, WasteHabit>();
+  for (const item of items) {
+    if (item.status === 'ativo' || !item.resolved_at || item.resolved_at.slice(0, 10) < since) {
+      continue;
+    }
+    const key = sameName(item.name);
+    const entry = counts.get(key) ?? { wasted: 0, ended: 0 };
+    entry.ended++;
+    if (item.status === 'deitado_fora') entry.wasted++;
+    counts.set(key, entry);
+  }
+  return new Map(
+    [...counts].filter(([, habit]) => habit.wasted >= 2 && habit.wasted * 2 >= habit.ended),
+  );
+}
+
 /** Suggestions first, then what to buy (oldest first), then what is in the cart. */
 export function shoppingOrder(a: ShoppingEntry, b: ShoppingEntry): number {
   const rank: Record<ShoppingState, number> = {

@@ -446,6 +446,7 @@ button,
 
 .item-days {
   flex: none;
+  max-width: 55%;
   align-items: flex-end;
   margin: -6px -6px 0 0;
   padding: 6px;
@@ -513,6 +514,40 @@ button,
 
 .action.thrown {
   border-color: color-mix(in srgb, var(--expired) 50%, var(--border));
+}
+
+.light-red.best-before .days {
+  color: var(--soon-text);
+}
+
+.item-advice {
+  margin: 8px 0 0;
+  color: var(--muted);
+  font-size: 0.85rem;
+}
+
+.item-extra {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 6px 10px;
+  margin-top: 8px;
+}
+
+.extra-action {
+  min-height: 36px;
+  padding: 0 12px;
+  border-radius: 999px;
+  border: 1px solid var(--border);
+  background: none;
+  color: var(--link);
+  font-size: 0.85rem;
+  font-weight: 600;
+}
+
+.extra-hint {
+  color: var(--muted);
+  font-size: 0.8rem;
 }
 
 .item-date-form {
@@ -646,6 +681,10 @@ select {
   display: grid;
   grid-template-columns: repeat(3, 1fr);
   gap: 6px;
+}
+
+.segmented-two {
+  grid-template-columns: repeat(2, 1fr);
 }
 
 .segmented label {
@@ -873,6 +912,10 @@ textarea {
   font-size: 0.85rem;
 }
 
+.review-price {
+  width: 5.5rem;
+}
+
 .review-grid {
   display: grid;
   grid-template-columns: 1fr 1fr;
@@ -1070,9 +1113,14 @@ textarea {
   text-decoration: line-through;
 }
 
-.waste-note {
+.waste-note,
+.home-note {
   color: var(--muted);
   font-size: 0.82rem;
+}
+
+.home-note {
+  color: var(--fresh-text);
 }
 
 /* Recipes */

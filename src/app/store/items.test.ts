@@ -116,7 +116,7 @@ describe('local inventory', () => {
       now,
       store,
     );
-    await setExpiry(bread.id, '2026-11-12', new Date(), store);
+    await setExpiry(bread.id, '2026-11-12', undefined, new Date(), store);
     expect(await store.items.get(bread.id)).toMatchObject({
       expires_at: '2026-11-12',
       expiry_source: 'manual',

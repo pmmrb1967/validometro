@@ -4,20 +4,47 @@
  * The fast ways in: a photo of the receipt, or saying what was bought. Both end on the same
  * review screen; nothing is saved before the user confirms.
  */
-import { useState } from 'react';
-import { useNavigate } from 'react-router';
+import { useEffect, useRef, useState } from 'react';
+import { useNavigate, useSearchParams } from 'react-router';
 import { ApiError, readReceipt, readSpoken, type ReadingResult } from '../api';
+import { shrinkPhoto } from '../image';
 import { speechSupported, useDictation } from '../speech';
 import { setPendingReview, type ReadingSource } from '../store/review';
 import { PhotoButton } from './PhotoButton';
 
+/** Where public/push-sw.js leaves a shared receipt until it is read. */
+const SHARE_CACHE = 'validometro-partilha';
+const SHARED_RECEIPT = '/partilha/talao';
+
+const SHARE_ERRORS: Record<string, string> = {
+  vazia: 'O que partilhaste não tem uma imagem. Partilha a foto ou a captura do talão.',
+  erro: 'Não consegui abrir o que partilhaste. Tenta outra vez ou fotografa o talão.',
+  'sem-app':
+    'Para partilhar talões com o Validómetro, instala a app no ecrã principal e abre-a uma vez.',
+};
+
+/** The shared image, taken out of the cache: it is read once and not kept. */
+async function takeSharedReceipt(): Promise<Blob | null> {
+  if (!('caches' in window)) return null;
+  const cache = await caches.open(SHARE_CACHE);
+  const response = await cache.match(SHARED_RECEIPT);
+  await cache.delete(SHARED_RECEIPT);
+  return response ? response.blob() : null;
+}
+
 export function QuickEntry() {
   const navigate = useNavigate();
+  const [params, setParams] = useSearchParams();
+  const shared = params.get('partilha');
   const [busy, setBusy] = useState<string>();
-  const [error, setError] = useState<string>();
+  // A share that could not be read comes with its reason (public/push-sw.js).
+  const [error, setError] = useState<string | undefined>(() =>
+    shared && shared !== 'talao' ? (SHARE_ERRORS[shared] ?? SHARE_ERRORS.erro) : undefined,
+  );
   const [voiceOpen, setVoiceOpen] = useState(false);
   const dictation = useDictation();
   const canDictate = speechSupported();
+  const handled = useRef(false);
 
   const run = async (label: string, source: ReadingSource, read: () => Promise<ReadingResult>) => {
     setBusy(label);
@@ -40,6 +67,23 @@ export function QuickEntry() {
       setBusy(undefined);
     }
   };
+
+  // A receipt shared from another app (public/push-sw.js): read it as if just photographed.
+  useEffect(() => {
+    if (!shared || handled.current) return;
+    handled.current = true;
+    setParams({}, { replace: true });
+    if (shared !== 'talao') return;
+    void takeSharedReceipt()
+      .then((blob) => (blob ? shrinkPhoto(blob) : null))
+      .then((image) => {
+        if (image) void run('A ler o talão partilhado…', 'receipt', () => readReceipt(image));
+        else setError(SHARE_ERRORS.erro);
+      })
+      .catch(() => setError(SHARE_ERRORS.erro));
+    // run and setParams are stable enough here: this runs once per share.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [shared]);
 
   const readVoice = () => {
     dictation.stop();
@@ -74,6 +118,11 @@ export function QuickEntry() {
           {canDictate ? 'Ditar compras' : 'Escrever lista'}
         </button>
       </div>
+
+      <p className="hint">
+        Talão digital? Na app do supermercado, partilha a imagem ou a captura do talão e escolhe o
+        Validómetro (com a app instalada, em Android).
+      </p>
 
       {voiceOpen && (
         <div className="voice-panel">

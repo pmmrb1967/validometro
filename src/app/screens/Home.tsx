@@ -3,7 +3,9 @@
 import { useLiveQuery } from 'dexie-react-hooks';
 import { useEffect, useMemo, useState } from 'react';
 import { Link } from 'react-router';
-import { lisbonDate } from '../../domain/dates';
+import { formatShortDate, lisbonDate } from '../../domain/dates';
+import { frozenDays } from '../../domain/freeze';
+import { offerText } from '../../domain/offer';
 import { bySoonest, light, type Light, type LitItem } from '../../domain/traffic-light';
 import {
   IN_LOCATION,
@@ -18,7 +20,15 @@ import { ItemCard } from '../components/ItemCard';
 import { useShowLanding } from '../landing-state';
 import { LogoMark } from '../Logo';
 import { Landing } from './Landing';
-import { activeItems, markOpened, reactivateItem, resolveItem, setExpiry } from '../store/items';
+import {
+  activeItems,
+  freeze,
+  markOpened,
+  reactivateItem,
+  resolveItem,
+  restoreItem,
+  setExpiry,
+} from '../store/items';
 
 type Filter = Location | 'tudo';
 
@@ -31,6 +41,21 @@ const GROUPS: { light: Light; title: string; hint: string }[] = [
 interface Undo {
   id: string;
   text: string;
+  /** Undo of "Congelei" or "Abri isto": the item as it was. Else it was resolved. */
+  before?: Item;
+}
+
+/** The phone's share sheet (WhatsApp, SMS…); WhatsApp's link where there is none. */
+async function share(text: string): Promise<void> {
+  if (navigator.share) {
+    try {
+      await navigator.share({ text });
+    } catch {
+      // Closed without sharing: nothing to do.
+    }
+    return;
+  }
+  window.open(`https://wa.me/?text=${encodeURIComponent(text)}`, '_blank', 'noopener');
 }
 
 /** The traffic light: what to use first, grouped by how soon it expires. */
@@ -63,7 +88,7 @@ export function Home() {
         type="button"
         className="ghost on-dark"
         onClick={() => {
-          void reactivateItem(undo.id);
+          void (undo.before ? restoreItem(undo.before) : reactivateItem(undo.id));
           setUndo(undefined);
         }}
       >
@@ -102,8 +127,28 @@ export function Home() {
       actions={{
         onEaten: () => resolve(entry.item, 'consumido'),
         onThrownAway: () => resolve(entry.item, 'deitado_fora'),
-        onOpened: () => void markOpened(entry.item.id),
-        onDate: (date) => void setExpiry(entry.item.id, date),
+        onOpened: () => {
+          const before = entry.item;
+          void markOpened(before.id).then((after) => {
+            if (!after || before.location !== 'congelador') return;
+            setUndo({
+              id: before.id,
+              before,
+              text: `${before.name}: fora do congelador, ${after.expires_at ? `usar até ${formatShortDate(after.expires_at).replace(/\.$/, '')}` : 'usar em breve'}.`,
+            });
+          });
+        },
+        onDate: (date, kind) => void setExpiry(entry.item.id, date, kind),
+        onFreeze: () =>
+          void freeze(entry.item.id).then((before) => {
+            if (!before) return;
+            setUndo({
+              id: before.id,
+              before,
+              text: `${before.name}: no congelador, dura cerca de ${Math.round(frozenDays() / 30)} meses.`,
+            });
+          }),
+        onOffer: () => void share(offerText(entry.item, entry.daysLeft ?? 0)),
       }}
     />
   );

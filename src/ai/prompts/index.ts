@@ -20,13 +20,14 @@ Categorias:
 ${categoryList}`;
 
 export const RECEIPT_PROMPT = {
-  version: 'receipt.v2',
+  version: 'receipt.v3',
   system: `Lês talões de supermercados portugueses e devolves só JSON segundo o esquema dado. Não escreves mais nada.`,
   prompt: `Lê o talão da imagem.
 - "store": nome da loja (ex.: "Continente", "Pingo Doce", "Lidl"), ou null.
 - "date": data da compra em AAAA-MM-DD, ou null se não se ler.
 - "lines": uma entrada por produto alimentar ou bebida. Ignora sacos, descontos, cartões, talões de desconto, totais, IVA, pagamentos e artigos que não são comida.
 - "raw": o texto do produto tal como está impresso no talão, sem o preço.
+- "price": o valor pago por essa linha, em euros, como número (ex.: 2.58). Se houver um desconto logo a seguir só para esse produto, desconta-o. Se não se ler, null.
 
 ${lineRules}`,
 };

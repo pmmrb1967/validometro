@@ -42,6 +42,13 @@ export default defineConfig({
         theme_color: '#163a5f',
         // Lets Chrome/Edge tell the app it is installed (install.ts, getInstalledRelatedApps).
         related_applications: [{ platform: 'webapp', url: '/manifest.webmanifest' }],
+        // "Partilhar" from another app (a digital receipt, a screenshot): public/push-sw.js.
+        share_target: {
+          action: '/partilhar',
+          method: 'POST',
+          enctype: 'multipart/form-data',
+          params: { files: [{ name: 'talao', accept: ['image/*'] }] },
+        },
         icons: [
           { src: 'pwa-64x64.png', sizes: '64x64', type: 'image/png' },
           { src: 'pwa-192x192.png', sizes: '192x192', type: 'image/png' },

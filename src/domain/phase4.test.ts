@@ -122,8 +122,8 @@ describe('waste statistics', () => {
       '2026-10',
       '2026-11',
     ]);
-    expect(stats.months.at(-1)).toEqual({ month: '2026-11', eaten: 1, wasted: 1 });
-    expect(stats.months.at(-2)).toEqual({ month: '2026-10', eaten: 0, wasted: 2 });
+    expect(stats.months.at(-1)).toEqual({ month: '2026-11', eaten: 1, wasted: 1, wastedEuros: 0 });
+    expect(stats.months.at(-2)).toEqual({ month: '2026-10', eaten: 0, wasted: 2, wastedEuros: 0 });
     expect(stats.months.find((m) => m.month === '2026-09')?.eaten).toBe(1);
     expect(stats.categories[0]).toMatchObject({ category: 'saladas', wasted: 2 });
     expect(stats).toMatchObject({ eaten: 2, wasted: 3 });

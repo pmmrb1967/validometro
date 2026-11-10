@@ -8,9 +8,18 @@
 import { useCallback, useId, useRef, useState, type FormEvent } from 'react';
 import { useNavigate } from 'react-router';
 import { categoryById, CATEGORIES, suggestCategory } from '../../domain/categories';
+import { defaultKind, EXPIRY_KIND_LABELS, kindFromReading } from '../../domain/date-kind';
 import { daysBetween, isIsoDate, lisbonDate } from '../../domain/dates';
+import { plausiblePrice } from '../../domain/drafts';
 import { findRule, isLongLife, suggestExpiry } from '../../domain/shelf-life';
-import { IN_LOCATION, LOCATION_LABELS, LOCATIONS, type Location } from '../../domain/types';
+import {
+  EXPIRY_KINDS,
+  IN_LOCATION,
+  LOCATION_LABELS,
+  LOCATIONS,
+  type ExpiryKind,
+  type Location,
+} from '../../domain/types';
 import { ApiError, fetchProduct, readPrintedDate } from '../api';
 import { PhotoButton } from '../components/PhotoButton';
 import { QuickEntry } from '../components/QuickEntry';
@@ -36,6 +45,9 @@ export function AddItem() {
   /** The date was read from the package (principle 5: printed beats estimated). */
   const [printed, setPrinted] = useState(false);
   const [dateNote, setDateNote] = useState<string>();
+  /** "Consumir até" or "de preferência"; '' = the category's usual. */
+  const [kind, setKind] = useState<ExpiryKind | ''>('');
+  const [price, setPrice] = useState('');
   const [quantity, setQuantity] = useState('');
   const [unit, setUnit] = useState('');
   const [ean, setEan] = useState<string | null>(null);
@@ -97,6 +109,8 @@ export function AddItem() {
     setExpiresTouched(false);
     setPrinted(false);
     setDateNote(undefined);
+    setKind('');
+    setPrice('');
     setQuantity('');
     setUnit('');
     setEan(null);
@@ -116,6 +130,8 @@ export function AddItem() {
       location,
       expires_at: date,
       expiry_source: printed ? 'impressa' : expiresTouched ? 'manual' : 'estimada',
+      expiry_kind: expiresTouched && kind ? kind : null,
+      price: plausiblePrice(Number(price.replace(',', '.'))),
       quantity: quantity.trim() && Number.isFinite(amount) && amount > 0 ? amount : null,
       unit: quantity.trim() ? unit : null,
       ean,
@@ -244,10 +260,11 @@ export function AddItem() {
               onPhoto={(image) => {
                 setDateNote('A ler a data…');
                 readPrintedDate(image)
-                  .then(({ date }) => {
+                  .then(({ date, kind: read }) => {
                     setExpires(date);
                     setExpiresTouched(true);
                     setPrinted(true);
+                    setKind(kindFromReading(read) ?? '');
                     setDateNote(undefined);
                   })
                   .catch((err: unknown) =>
@@ -279,6 +296,32 @@ export function AddItem() {
           )}
         </div>
 
+        {expiresTouched && (
+          <fieldset className="field">
+            <legend>Na embalagem diz</legend>
+            <div className="segmented segmented-two">
+              {EXPIRY_KINDS.map((option) => (
+                <label key={option}>
+                  <input
+                    type="radio"
+                    name={`${ids}-kind`}
+                    checked={(kind || defaultKind(category || null)) === option}
+                    onChange={() => setKind(option)}
+                  />
+                  <span>{option === 'consumir_ate' ? 'Consumir até' : 'De preferência'}</span>
+                </label>
+              ))}
+            </div>
+            <p className="hint">
+              {(kind || defaultKind(category || null)) === 'consumir_de_preferencia'
+                ? 'Data de qualidade: depois dela, olha, cheira e prova antes de deitar fora.'
+                : (kind || defaultKind(category || null)) === 'consumir_ate'
+                  ? `${EXPIRY_KIND_LABELS.consumir_ate}: data de segurança, depois dela não se come.`
+                  : 'Escolhe o que diz a embalagem: muda o aviso depois da data.'}
+            </p>
+          </fieldset>
+        )}
+
         <fieldset className="field">
           <legend>
             Quantidade <span className="optional">(opcional)</span>
@@ -307,6 +350,19 @@ export function AddItem() {
             </datalist>
           </div>
         </fieldset>
+
+        <label className="field">
+          <span>
+            Preço <span className="optional">(opcional, para contar o desperdício em euros)</span>
+          </span>
+          <input
+            className="quantity"
+            inputMode="decimal"
+            value={price}
+            onChange={(event) => setPrice(event.target.value)}
+            placeholder="1,29 €"
+          />
+        </label>
 
         <div className="form-actions">
           <button type="submit" className="primary">

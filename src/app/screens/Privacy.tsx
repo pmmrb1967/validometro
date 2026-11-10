@@ -27,7 +27,10 @@ export function Privacy() {
         <p>Ficam guardados no servidor (Cloudflare, na União Europeia):</p>
         <ul>
           <li>o teu email e a palavra-passe, esta só em forma cifrada (nunca a original);</li>
-          <li>os alimentos e a lista de compras da tua casa, visíveis só para quem lá está;</li>
+          <li>
+            os alimentos (com o preço, se o talão o tiver ou o escreveres) e a lista de compras da
+            tua casa, visíveis só para quem lá está;
+          </li>
           <li>os endereços de notificação dos telemóveis onde ligaste o alerta diário;</li>
           <li>a tua chave de IA, se a guardares na conta, cifrada;</li>
           <li>o último dia em que abriste a app, só para contar quantas pessoas a usam;</li>

@@ -34,6 +34,14 @@ const WAYS = [
 
 const MORE = [
   {
+    title: '“Consumir até” não é “de preferência”',
+    body: 'Depois de “consumir até”, não se arrisca. Depois de “de preferência antes de”, a app diz para olhar, cheirar e provar: quase sempre ainda está bom.',
+  },
+  {
+    title: 'Congela a tempo',
+    body: 'Carne, peixe ou pão que não vais usar? Nos últimos dias, um toque em “Congelei” passa-o para o congelador, com a nova validade.',
+  },
+  {
     title: 'Aberto não é fechado',
     body: 'Leite UHT fechado dura meses; aberto, três ou quatro dias. Um toque em “Abri isto” e a validade muda.',
   },
@@ -47,7 +55,11 @@ const MORE = [
   },
   {
     title: 'O que cozinhar hoje?',
-    body: 'Duas ou três receitas simples com o que está a acabar. E, ao fim do mês, quanto foi aproveitado.',
+    body: 'Duas ou três receitas simples com o que está a acabar. Ou oferece-o à família ou a um vizinho, com uma mensagem pronta.',
+  },
+  {
+    title: 'Quanto custa o desperdício',
+    body: 'Os preços vêm do talão: ao fim do mês vês quantos euros foram para o lixo e quantos foram aproveitados.',
   },
 ];
 
@@ -86,12 +98,12 @@ export function Landing() {
       <section className="landing-hero" aria-labelledby="landing-title">
         <div className="landing-copy">
           <h1 id="landing-title" className="landing-title">
-            O que está no frigorífico, por ordem de usar.
+            Os alimentos lá de casa, por ordem de usar.
           </h1>
           <p className="landing-lead">
-            O Validómetro guarda as validades dos alimentos lá de casa e avisa o que usar primeiro,
-            para deitar menos comida fora. Registar uma compra leva segundos; responder ao alerta,
-            um toque.
+            Do frigorífico, do congelador e da despensa: o Validómetro guarda as validades e avisa o
+            que usar primeiro, para deitar menos comida fora. Registar uma compra leva segundos;
+            responder ao alerta, um toque.
           </p>
           <Actions className="landing-actions" />
           <p className="hint">

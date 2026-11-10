@@ -5,7 +5,14 @@ import { app } from './app';
 import { runMonitor } from './monitor';
 
 export default {
-  fetch: app.fetch,
+  fetch(request, env, ctx) {
+    // A share that reached the server: the service worker (public/push-sw.js) was not there
+    // to take it, so the add screen explains instead.
+    if (new URL(request.url).pathname === '/partilhar') {
+      return Response.redirect(new URL('/adicionar?partilha=sem-app', request.url).href, 303);
+    }
+    return app.fetch(request, env, ctx);
+  },
   /** Every hour: the free-plan watch, and at 09:00 in Lisbon the daily alert (alerts.ts). */
   scheduled(controller, env, ctx) {
     const now = new Date(controller.scheduledTime);

@@ -45,6 +45,20 @@ describe('sync', () => {
     expect(next.cursor).toBeGreaterThan(first.cursor);
   });
 
+  it('keeps the kind of date and the price, and takes items without them', async () => {
+    const priced = { ...newItem('Iogurtes'), expiry_kind: 'consumir_de_preferencia', price: 1.29 };
+    const pulled = await phone.json<Pulled>('POST', '/api/sync', {
+      changes: [priced, newItem('Sem preço')],
+      cursor: 0,
+    });
+    const byName = new Map(pulled.items.map((i) => [i.name, i]));
+    expect(byName.get('Iogurtes')).toMatchObject({
+      expiry_kind: 'consumir_de_preferencia',
+      price: 1.29,
+    });
+    expect(byName.get('Sem preço')).toMatchObject({ expiry_kind: null, price: null });
+  });
+
   it('keeps the latest change of an item (last write wins)', async () => {
     const item = newItem('Fiambre', { updated_at: '2026-11-09T10:00:00.000Z' });
     await phone.request('POST', '/api/sync', { changes: [item], cursor: 0 });
@@ -105,6 +119,18 @@ describe('daily alert', () => {
     expect(alert?.items[1]?.title).toBe('Iogurtes: expira hoje');
     expect(alert?.items[3]?.body).toBe('É o último por hoje.');
     expect(buildAlert([], '2026-11-09')).toBeNull();
+  });
+
+  it('does not sound the alarm past a "de preferência" date', () => {
+    const alert = buildAlert(
+      [{ id: 'a', name: 'Iogurtes', expires_at: '2026-11-07', category: 'iogurtes' }],
+      '2026-11-09',
+    );
+    expect(alert?.items[0]).toEqual({
+      id: 'a',
+      title: 'Iogurtes: passou da data de preferência',
+      body: 'Olha, cheira, prova: costuma estar bom. É o último por hoje.',
+    });
   });
 
   it('sends one alert per household at 09:00 in Lisbon, and only once', async () => {

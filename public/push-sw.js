@@ -110,3 +110,40 @@ self.addEventListener('notificationclick', (event) => {
       ),
   );
 });
+
+// "Partilhar com o Validómetro" (manifest share_target, vite.config.ts): a receipt photo or
+// screenshot shared from another app (the supermarket's digital receipt, the gallery). The
+// image waits in this phone's cache only until the add screen reads it (QuickEntry.tsx),
+// which deletes it at once; it never goes anywhere but the one reading request.
+const SHARE_CACHE = 'validometro-partilha';
+
+function shareRedirect(result) {
+  return Response.redirect(
+    new URL(`/adicionar?partilha=${result}`, self.location.origin).href,
+    303,
+  );
+}
+
+self.addEventListener('fetch', (event) => {
+  const url = new URL(event.request.url);
+  if (event.request.method !== 'POST' || url.pathname !== '/partilhar') return;
+  event.respondWith(
+    (async () => {
+      try {
+        const form = await event.request.formData();
+        const file = form
+          .getAll('talao')
+          .find((entry) => typeof entry !== 'string' && entry.type.startsWith('image/'));
+        if (!file) return shareRedirect('vazia');
+        const cache = await caches.open(SHARE_CACHE);
+        await cache.put(
+          '/partilha/talao',
+          new Response(file, { headers: { 'content-type': file.type } }),
+        );
+        return shareRedirect('talao');
+      } catch {
+        return shareRedirect('erro');
+      }
+    })(),
+  );
+});

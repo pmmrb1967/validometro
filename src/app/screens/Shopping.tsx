@@ -7,10 +7,22 @@
  */
 import { useLiveQuery } from 'dexie-react-hooks';
 import { useMemo, useState, type FormEvent } from 'react';
-import { lisbonDate } from '../../domain/dates';
-import { recentlyWasted, sameName, shoppingOrder, type ShoppingEntry } from '../../domain/shopping';
+import { formatShortDate, lisbonDate } from '../../domain/dates';
+import {
+  atHome,
+  recentlyWasted,
+  sameName,
+  shoppingOrder,
+  wasteHabits,
+  type ShoppingEntry,
+} from '../../domain/shopping';
 import { db } from '../store/items';
 import { addToList, clearBought, setShoppingState, shoppingList } from '../store/shopping';
+
+/** "Ainda tens Leite meio-gordo em casa, até 14/11." */
+function homeText(name: string, expires: string | null): string {
+  return `Ainda tens ${name} em casa${expires ? `, até ${formatShortDate(expires).replace(/\.$/, '')}` : ''}.`;
+}
 
 export function Shopping() {
   const list = useLiveQuery(() => shoppingList(), []);
@@ -22,6 +34,15 @@ export function Shopping() {
       ),
     [],
   );
+  const habits = useLiveQuery(
+    async () =>
+      wasteHabits(
+        await db.items.where('status').notEqual('ativo').toArray(),
+        lisbonDate(new Date()),
+      ),
+    [],
+  );
+  const active = useLiveQuery(() => db.items.where('status').equals('ativo').toArray(), []);
   const [name, setName] = useState('');
 
   const sorted = useMemo(() => [...(list ?? [])].sort(shoppingOrder), [list]);
@@ -36,10 +57,26 @@ export function Shopping() {
     setName('');
   };
 
-  const warn = (entry: ShoppingEntry) =>
-    wasted?.has(sameName(entry.name)) ? (
-      <small className="waste-note">Deitaste fora há pouco tempo. Compraste demais?</small>
-    ) : null;
+  /** Before buying more: what is still at home, and what tends to end in the bin. */
+  const warn = (entry: ShoppingEntry) => {
+    const home = entry.state !== 'comprado' ? atHome(entry.name, active ?? []) : undefined;
+    const habit = habits?.get(sameName(entry.name));
+    return (
+      <>
+        {home && <small className="home-note">{homeText(home.name, home.expires_at)}</small>}
+        {habit ? (
+          <small className="waste-note">
+            Deitaste fora {habit.wasted} das últimas {habit.ended} vezes: compra menos, ou a
+            embalagem pequena.
+          </small>
+        ) : (
+          wasted?.has(sameName(entry.name)) && (
+            <small className="waste-note">Deitaste fora há pouco tempo. Compraste demais?</small>
+          )
+        )}
+      </>
+    );
+  };
 
   return (
     <div className="shopping">
