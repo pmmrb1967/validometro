@@ -1671,3 +1671,14 @@ button.topbar-link {
     outline: 2px solid var(--on-brand);
   }
 }
+
+/* The answer to a test or a save: green when it worked, red when not (with ✓ / ✗, not by colour alone) */
+.hint.status-ok {
+  color: var(--fresh-text);
+  font-weight: 600;
+}
+
+.hint.status-error {
+  color: var(--expired-text);
+  font-weight: 600;
+}

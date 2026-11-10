@@ -30,10 +30,21 @@ const OPTIONS: { id: AiProviderChoice; label: string; hint: string }[] = [
   },
 ];
 
+/** What "Testar ligação" or "Guardar na conta" said: green when it worked, red when not. */
+interface Status {
+  kind: 'ok' | 'error' | 'busy';
+  text: string;
+}
+
+const failure = (err: unknown, fallback: string): Status => ({
+  kind: 'error',
+  text: err instanceof ApiError ? err.message : fallback,
+});
+
 export function AiSection() {
   const ids = useId();
   const settings = useAiSettings();
-  const [status, setStatus] = useState<string>();
+  const [status, setStatus] = useState<Status>();
   const [testing, setTesting] = useState(false);
   const provider = settings.provider;
   const needsKey = provider !== 'workers-ai';
@@ -54,20 +65,23 @@ export function AiSection() {
         // The account has it now: no copy needed on this phone.
         saveAiSettings({ ...settings, keys: { ...settings.keys, [provider]: '' } });
       }
-      setStatus(forget ? 'Chave apagada da conta.' : 'Guardada na conta, cifrada.');
+      setStatus({
+        kind: 'ok',
+        text: forget ? 'Chave apagada da conta.' : 'Guardada na conta, cifrada.',
+      });
     } catch (err) {
-      setStatus(err instanceof ApiError ? err.message : 'Não foi possível guardar.');
+      setStatus(failure(err, 'Não foi possível guardar.'));
     }
   };
 
   const test = async () => {
     setTesting(true);
-    setStatus('A testar…');
+    setStatus({ kind: 'busy', text: 'A testar…' });
     try {
       await testAi();
-      setStatus('Ligação a funcionar.');
+      setStatus({ kind: 'ok', text: 'Ligação a funcionar.' });
     } catch (err) {
-      setStatus(err instanceof ApiError ? err.message : 'A ligação falhou.');
+      setStatus(failure(err, 'A ligação falhou.'));
     } finally {
       setTesting(false);
     }
@@ -107,7 +121,11 @@ export function AiSection() {
           spellCheck={false}
           value={localKey ?? ''}
           placeholder={
-            savedKey ? 'Guardada na conta' : provider === 'anthropic' ? 'sk-ant-…' : 'AIza…'
+            savedKey
+              ? (me?.ai.keyHint ?? 'Guardada na conta')
+              : provider === 'anthropic'
+                ? 'sk-ant-…'
+                : 'AIza…'
           }
           onChange={(event) => {
             saveAiSettings({
@@ -155,9 +173,17 @@ export function AiSection() {
           </button>
         )}
       </div>
+      {savedKey && !localKey && me?.ai.keyHint && (
+        <p className="hint">Chave guardada na conta, terminada em {me.ai.keyHint.slice(-4)}.</p>
+      )}
       {status && (
-        <p className="hint" role="status">
-          {status}
+        <p
+          className={`hint status-${status.kind}`}
+          role={status.kind === 'error' ? 'alert' : 'status'}
+        >
+          {status.kind === 'ok' && '✓ '}
+          {status.kind === 'error' && '✗ '}
+          {status.text}
         </p>
       )}
       <p className="hint">

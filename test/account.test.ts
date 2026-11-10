@@ -98,11 +98,12 @@ describe('accounts', () => {
     expect(row?.ai_provider).toBe('gemini');
     expect(row?.ai_key_encrypted).toMatch(/^v1\./);
     expect(row?.ai_key_encrypted).not.toContain('segredo');
-    const me = await browser.json<{ user: { ai: { provider: string; hasKey: boolean } } }>(
-      'GET',
-      '/api/auth/me',
-    );
-    expect(me.user.ai).toMatchObject({ provider: 'gemini', hasKey: true });
+    const me = await browser.json<{
+      user: { ai: { provider: string; hasKey: boolean; keyHint: string } };
+    }>('GET', '/api/auth/me');
+    // Shown back as its prefix and last 4 characters only.
+    expect(me.user.ai).toMatchObject({ provider: 'gemini', hasKey: true, keyHint: 'AIza…redo' });
+    expect(JSON.stringify(me)).not.toContain('segredo');
   });
 
   it('exports everything kept about the user, without the password or the key', async () => {

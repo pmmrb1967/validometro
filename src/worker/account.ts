@@ -87,9 +87,29 @@ export async function storedAi(
   return { provider, key, model: row?.ai_model ?? null };
 }
 
+/**
+ * How the saved key is shown back: its prefix and last 4 characters ("sk-ant-…0gAA"), enough
+ * to tell which key it is, never enough to use it.
+ */
+export function keyHint(key: string): string {
+  const prefix = ['sk-ant-', 'AIza'].find((start) => key.startsWith(start)) ?? '';
+  return `${prefix}…${key.slice(-4)}`;
+}
+
+async function savedKeyHint(env: Env, user: User, sealed: string | null | undefined) {
+  if (!sealed || !env.KEY_ENCRYPTION_SECRET) return null;
+  try {
+    const key = await open(env.KEY_ENCRYPTION_SECRET, sealed, user.id);
+    return key && key.length > 8 ? keyHint(key) : null;
+  } catch {
+    return null;
+  }
+}
+
 async function me(c: Context<AppEnv>, user: User) {
   const household = await householdInfo(c.env.DB, user);
   const ai = await aiRow(c.env.DB, user);
+  const hint = await savedKeyHint(c.env, user, ai?.ai_key_encrypted);
   return {
     email: user.email,
     household: household && { id: household.id, name: household.name },
@@ -98,6 +118,7 @@ async function me(c: Context<AppEnv>, user: User) {
       provider: FROM_DB[ai?.ai_provider ?? 'workers_ai'],
       model: ai?.ai_model ?? null,
       hasKey: Boolean(ai?.ai_key_encrypted),
+      keyHint: hint,
     },
   };
 }

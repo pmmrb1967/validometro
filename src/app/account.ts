@@ -12,7 +12,13 @@ export interface Me {
   email: string;
   household: { id: string; name: string } | null;
   admin: boolean;
-  ai: { provider: 'workers-ai' | 'gemini' | 'anthropic'; model: string | null; hasKey: boolean };
+  ai: {
+    provider: 'workers-ai' | 'gemini' | 'anthropic';
+    model: string | null;
+    hasKey: boolean;
+    /** The saved key's prefix and last 4 characters, "sk-ant-…0gAA". */
+    keyHint?: string | null;
+  };
 }
 
 export interface HouseholdInfo {
