@@ -25,7 +25,7 @@ async function addItem(page: Page, name: string): Promise<void> {
 async function createAccount(page: Page, address: string): Promise<void> {
   await page.goto('/criar-conta');
   await page.getByLabel('Email').fill(address);
-  await page.getByLabel('Palavra-passe').fill(PASSWORD);
+  await page.getByLabel('Palavra-passe', { exact: true }).fill(PASSWORD);
   await page.locator('form').getByRole('button', { name: 'Criar conta' }).click();
   await expect(page).toHaveURL('/');
   await expect(page.getByRole('link', { name: 'Definições' })).toBeVisible();
@@ -60,6 +60,15 @@ test('sem conta: da página inicial ao semáforo, e o que foi comido volta à li
   await expect(page.getByRole('heading', { name: 'Acabou. Voltar a comprar?' })).toBeVisible();
   await expect(page.getByText('Natas')).toBeVisible();
 
+  // "Sair" without an account: back to the landing page, even after reopening.
+  await page.getByRole('banner').getByRole('button', { name: 'Sair' }).click();
+  await expect(page.getByRole('button', { name: 'Começar sem conta' }).first()).toBeVisible();
+  await page.reload();
+  await expect(page.getByRole('button', { name: 'Começar sem conta' }).first()).toBeVisible();
+  await page.getByRole('button', { name: 'Começar sem conta' }).first().click();
+  await expect(page).toHaveURL('/');
+  await expect(page.getByRole('heading', { name: 'Ainda não há nada registado' })).toBeVisible();
+
   // The presentation stays at hand.
   await page.goto('/definicoes');
   await page.getByRole('link', { name: 'Ver a apresentação' }).click();
@@ -78,22 +87,33 @@ test('conta: o que estava no telemóvel passa para a conta, sair leva à página
   await createAccount(page, address);
   await expect(page.getByText('Iogurtes naturais')).toBeVisible();
 
-  await page.goto('/definicoes');
-  await page.getByRole('button', { name: 'Sair' }).click();
+  // "Sair" is in the top bar, on every screen of the app.
+  await page.goto('/compras');
+  await page.getByRole('banner').getByRole('button', { name: 'Sair' }).click();
   await expect(page).toHaveURL('/');
   await expect(page.getByRole('button', { name: 'Começar sem conta' }).first()).toBeVisible();
 
   // Back in, the items come from the server.
   await page.getByRole('link', { name: 'Entrar' }).first().click();
   await page.getByLabel('Email').fill(address);
-  await page.getByLabel('Palavra-passe').fill(PASSWORD);
+  await page.getByLabel('Palavra-passe', { exact: true }).fill(PASSWORD);
   await page.locator('form').getByRole('button', { name: 'Entrar' }).click();
   await expect(page).toHaveURL('/');
   await expect(page.getByText('Iogurtes naturais')).toBeVisible();
 });
 
-test('entrar: as duas opções cabem numa linha', async ({ page }) => {
+test('entrar: as duas opções cabem numa linha, e o olho mostra a palavra-passe', async ({
+  page,
+}) => {
   await page.goto('/entrar');
+  const password = page.getByLabel('Palavra-passe', { exact: true });
+  await password.fill(PASSWORD);
+  await expect(password).toHaveAttribute('type', 'password');
+  await page.getByRole('button', { name: 'Mostrar a palavra-passe' }).click();
+  await expect(password).toHaveAttribute('type', 'text');
+  await expect(password).toHaveValue(PASSWORD);
+  await page.getByRole('button', { name: 'Esconder a palavra-passe' }).click();
+  await expect(password).toHaveAttribute('type', 'password');
   for (const name of ['Já tenho conta', 'Criar conta']) {
     const box = await page.locator('.account-mode span', { hasText: name }).boundingBox();
     expect(box?.height).toBeLessThanOrEqual(48);
@@ -107,13 +127,13 @@ test('painel: só para quem administra', async ({ page }) => {
   await page.goto('/definicoes');
   await expect(page.getByRole('heading', { name: 'Administração' })).toHaveCount(0);
 
-  await page.getByRole('button', { name: 'Sair' }).click();
+  await page.getByRole('main').getByRole('button', { name: 'Sair' }).click();
   await expect(page.getByRole('button', { name: 'Começar sem conta' }).first()).toBeVisible();
   // scripts/e2e-server.mjs: ADMIN_EMAILS = admin@e2e.test. Sign up, or in if another
   // project got there first.
   await page.goto('/criar-conta');
   await page.getByLabel('Email').fill('admin@e2e.test');
-  await page.getByLabel('Palavra-passe').fill(PASSWORD);
+  await page.getByLabel('Palavra-passe', { exact: true }).fill(PASSWORD);
   await page.locator('form').getByRole('button', { name: 'Criar conta' }).click();
   const exists = page.getByRole('alert').filter({ hasText: 'Já existe uma conta' });
   await expect(page.getByRole('link', { name: 'Definições' }).or(exists)).toBeVisible();

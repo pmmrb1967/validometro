@@ -71,7 +71,7 @@ function Actions({ className }: { className: string }) {
           <Link className="button secondary" to="/criar-conta">
             Criar conta
           </Link>
-          <Link className="button ghost" to="/entrar">
+          <Link className="button secondary" to="/entrar">
             Já tenho conta
           </Link>
         </>

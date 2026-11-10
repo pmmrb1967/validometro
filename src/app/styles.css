@@ -1503,3 +1503,57 @@ textarea {
   color: var(--muted);
   font-variant-numeric: tabular-nums;
 }
+
+/* Password with an eye button (components/PasswordField.tsx) */
+.password-input {
+  position: relative;
+}
+
+.field .password-input input {
+  padding-right: 52px;
+}
+
+.password-toggle {
+  position: absolute;
+  top: 1px;
+  right: 1px;
+  bottom: 1px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 48px;
+  padding: 0;
+  border: 0;
+  border-radius: 0 11px 11px 0;
+  background: none;
+  color: var(--muted);
+}
+
+.password-toggle[aria-pressed='true'] {
+  color: var(--text);
+}
+
+.password-toggle:focus-visible {
+  outline: 2px solid var(--brand);
+  outline-offset: -2px;
+}
+
+/* "Sair" in the top bar: a button that reads as the links beside it */
+button.topbar-link {
+  border: 0;
+  background: none;
+  font: inherit;
+  font-weight: 600;
+  cursor: pointer;
+}
+
+.topbar button:focus-visible {
+  outline: 2px solid var(--on-brand);
+  outline-offset: 3px;
+}
+
+@media (max-width: 440px) {
+  .topbar.crowded .wordmark {
+    display: none;
+  }
+}

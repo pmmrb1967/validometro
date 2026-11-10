@@ -1,14 +1,21 @@
 // SPDX-License-Identifier: AGPL-3.0-or-later
-import { Link, Outlet, useLocation } from 'react-router';
+import { useState } from 'react';
+import { Link, Outlet, useLocation, useNavigate } from 'react-router';
 import { APP_COMMIT, APP_VERSION, LICENSE_URL, SOURCE_URL } from './build-info';
-import { useAccount } from './account';
+import { signOut, useAccount } from './account';
+import { ApiError } from './api';
 import { feedbackLink } from './feedback';
 import { useShowLanding } from './landing-state';
 import { t } from './i18n/pt-PT';
 import { LogoMark } from './Logo';
 import { applyUpdate, useUpdateAvailable } from './pwa';
+import { forgetStarted } from './started';
 
-/** Top bar (brand, back or settings), the new-version bar, the current screen and the footer. */
+/**
+ * Top bar (brand, back or settings, "Sair"), the new-version bar, the current screen and the
+ * footer. "Sair" ends on the landing page: signing out with an account; without one, the items
+ * stay on this phone and "Começar sem conta" opens them again.
+ */
 export function AppShell() {
   const { pathname } = useLocation();
   const updateAvailable = useUpdateAvailable();
@@ -19,9 +26,29 @@ export function AppShell() {
   // Before starting there is nothing to set: the landing page offers only "Entrar".
   const showLanding = useShowLanding();
   const landing = home && showLanding !== false;
+  const navigate = useNavigate();
+  const [leaving, setLeaving] = useState(false);
+  const signedIn = account.status === 'ready' && Boolean(account.me);
+  const canLeave = !landing && !onSignIn && pathname !== '/sobre' && account.status === 'ready';
+  const leave = async () => {
+    setLeaving(true);
+    try {
+      if (signedIn) await signOut();
+      else forgetStarted();
+      void navigate('/', { replace: true });
+    } catch (err) {
+      // Offline, say: the session stays, and "Sair" can be tried again.
+      window.alert(
+        err instanceof ApiError ? err.message : 'Não foi possível sair. Tenta outra vez.',
+      );
+    } finally {
+      setLeaving(false);
+    }
+  };
   return (
     <>
-      <header className="topbar">
+      {/* Three links do not fit beside the wordmark on a phone: the logo stays alone. */}
+      <header className={`topbar${signedOut && !onSignIn && canLeave ? ' crowded' : ''}`}>
         <Link to="/" className="brand" aria-label="Validómetro, início">
           <LogoMark size={46} />
           <span className="wordmark">Validómetro</span>
@@ -42,6 +69,16 @@ export function AppShell() {
             <Link to="/" className="topbar-link">
               Voltar
             </Link>
+          )}
+          {canLeave && (
+            <button
+              type="button"
+              className="topbar-link"
+              disabled={leaving}
+              onClick={() => void leave()}
+            >
+              Sair
+            </button>
           )}
         </nav>
       </header>

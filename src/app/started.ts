@@ -1,51 +1,59 @@
 // SPDX-License-Identifier: AGPL-3.0-or-later
 // Copyright (C) 2026 Paulo Barbosa
 /**
- * "Começar sem conta": remembered on this phone, so the landing page shows only to someone
- * who has not started yet (no account, nothing registered, never chose to start).
+ * "Começar sem conta" and "Sair": remembered on this phone, so the landing page shows to
+ * someone who has not started yet, and again to whoever chose "Sair" (with or without an
+ * account). Before this was kept, starting was inferred from having something registered:
+ * with nothing stored, that is still the answer (landing-state.ts).
  */
 import { useSyncExternalStore } from 'react';
 
 const KEY = 'validometro.started';
 const listeners = new Set<() => void>();
 
-function read(): boolean {
+/** 'started' after "Começar sem conta", 'left' after "Sair", null if never chosen. */
+export type StartChoice = 'started' | 'left' | null;
+
+function read(): StartChoice {
   try {
-    return localStorage.getItem(KEY) === '1';
+    const value = localStorage.getItem(KEY);
+    return value === '1' ? 'started' : value === '0' ? 'left' : null;
   } catch {
-    return false;
+    return null;
   }
 }
 
-let started = read();
+let choice = read();
 
-export function markStarted(): void {
+function remember(next: Exclude<StartChoice, null>): void {
   try {
-    localStorage.setItem(KEY, '1');
+    localStorage.setItem(KEY, next === 'started' ? '1' : '0');
   } catch {
     // Private mode: it lasts for this visit.
   }
-  started = true;
+  choice = next;
   for (const listener of listeners) listener();
 }
 
-/** After signing out: back to the landing page, as someone new on this phone. */
+export function markStarted(): void {
+  remember('started');
+}
+
+/** "Sair" (signing out, or leaving without an account): back to the landing page. */
 export function forgetStarted(): void {
-  try {
-    localStorage.removeItem(KEY);
-  } catch {
-    // Private mode: nothing was kept.
-  }
-  started = false;
-  for (const listener of listeners) listener();
+  remember('left');
 }
 
-export function useStarted(): boolean {
+export function useStartChoice(): StartChoice {
   return useSyncExternalStore(
     (listener) => {
       listeners.add(listener);
       return () => listeners.delete(listener);
     },
-    () => started,
+    () => choice,
   );
+}
+
+export function useStarted(): boolean {
+  return useStartChoice() === 'started';
 }

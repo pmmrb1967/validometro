@@ -27,6 +27,7 @@ import {
   pushSupported,
   testAlert,
 } from '../push';
+import { PasswordField } from './PasswordField';
 
 const message = (err: unknown) => (err instanceof ApiError ? err.message : 'Algo correu mal.');
 
@@ -123,28 +124,23 @@ function AccountSection({ me }: { me: Me }) {
               Não dá para desfazer.
             </p>
           )}
-          <label className="field">
-            <span>{open === 'password' ? 'Palavra-passe atual' : 'Palavra-passe'}</span>
-            <input
-              type="password"
-              autoComplete="current-password"
-              value={current}
-              onChange={(event) => setCurrent(event.target.value)}
+          <PasswordField
+            label={open === 'password' ? 'Palavra-passe atual' : 'Palavra-passe'}
+            autoComplete="current-password"
+            value={current}
+            onChange={(event) => setCurrent(event.target.value)}
+            required
+          />
+          {open === 'password' && (
+            <PasswordField
+              label="Nova palavra-passe"
+              what="a nova palavra-passe"
+              autoComplete="new-password"
+              minLength={12}
+              value={next}
+              onChange={(event) => setNext(event.target.value)}
               required
             />
-          </label>
-          {open === 'password' && (
-            <label className="field">
-              <span>Nova palavra-passe</span>
-              <input
-                type="password"
-                autoComplete="new-password"
-                minLength={12}
-                value={next}
-                onChange={(event) => setNext(event.target.value)}
-                required
-              />
-            </label>
           )}
           <button type="submit" className={open === 'delete' ? 'secondary danger' : 'primary'}>
             {open === 'password' ? 'Mudar palavra-passe' : 'Apagar conta'}

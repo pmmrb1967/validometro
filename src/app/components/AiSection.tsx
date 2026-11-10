@@ -10,6 +10,7 @@ import {
   useAiSettings,
   type AiProviderChoice,
 } from '../ai-settings';
+import { PasswordField } from './PasswordField';
 
 const OPTIONS: { id: AiProviderChoice; label: string; hint: string }[] = [
   {
@@ -99,25 +100,23 @@ export function AiSection() {
       </fieldset>
 
       {needsKey && (
-        <label className="field">
-          <span>Chave da API</span>
-          <input
-            type="password"
-            autoComplete="off"
-            spellCheck={false}
-            value={localKey ?? ''}
-            placeholder={
-              savedKey ? 'Guardada na conta' : provider === 'anthropic' ? 'sk-ant-…' : 'AIza…'
-            }
-            onChange={(event) => {
-              saveAiSettings({
-                ...settings,
-                keys: { ...settings.keys, [provider]: event.target.value.trim() },
-              });
-              setStatus(undefined);
-            }}
-          />
-        </label>
+        <PasswordField
+          label="Chave da API"
+          what="a chave"
+          autoComplete="off"
+          spellCheck={false}
+          value={localKey ?? ''}
+          placeholder={
+            savedKey ? 'Guardada na conta' : provider === 'anthropic' ? 'sk-ant-…' : 'AIza…'
+          }
+          onChange={(event) => {
+            saveAiSettings({
+              ...settings,
+              keys: { ...settings.keys, [provider]: event.target.value.trim() },
+            });
+            setStatus(undefined);
+          }}
+        />
       )}
 
       {provider === 'anthropic' && (

@@ -8,6 +8,7 @@ import { useEffect, useState, type FormEvent } from 'react';
 import { Link, useNavigate, useSearchParams } from 'react-router';
 import { joinHousehold, register, signIn, useAccount } from '../account';
 import { ApiError } from '../api';
+import { PasswordField } from '../components/PasswordField';
 
 const MIN_PASSWORD = 12;
 
@@ -122,20 +123,19 @@ export function Account({ initialMode }: { initialMode?: 'entrar' | 'criar' }) {
             required
           />
         </label>
-        <label className="field">
-          <span>Palavra-passe</span>
-          <input
-            type="password"
-            autoComplete={mode === 'criar' ? 'new-password' : 'current-password'}
-            minLength={mode === 'criar' ? MIN_PASSWORD : undefined}
-            value={password}
-            onChange={(event) => setPassword(event.target.value)}
-            required
-          />
-          {mode === 'criar' && (
-            <small className="hint">Pelo menos {MIN_PASSWORD} caracteres. Uma frase serve.</small>
-          )}
-        </label>
+        <PasswordField
+          label="Palavra-passe"
+          autoComplete={mode === 'criar' ? 'new-password' : 'current-password'}
+          minLength={mode === 'criar' ? MIN_PASSWORD : undefined}
+          value={password}
+          onChange={(event) => setPassword(event.target.value)}
+          required
+          hint={
+            mode === 'criar' && (
+              <small className="hint">Pelo menos {MIN_PASSWORD} caracteres. Uma frase serve.</small>
+            )
+          }
+        />
         <div className="form-actions">
           <button type="submit" className="primary" disabled={busy}>
             {mode === 'criar' ? 'Criar conta' : 'Entrar'}
