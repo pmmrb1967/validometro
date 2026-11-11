@@ -2518,7 +2518,13 @@ button.topbar-link {
 @media (min-width: 720px) {
   .kitchen {
     grid-template-columns: repeat(2, minmax(0, 1fr));
+    grid-auto-flow: row dense;
     align-items: stretch;
+  }
+
+  /* Under its own appliance; the one beside it keeps its place and its height. */
+  .kitchen-card-slot {
+    grid-column: var(--column);
   }
 
   .appliance {
@@ -2539,4 +2545,9 @@ button.topbar-link {
   .pantry .rack ul {
     height: 100%;
   }
+}
+
+/* The tapped item's card under its appliance: one card, the column's whole width. */
+.home .items.kitchen-card {
+  grid-template-columns: minmax(0, 1fr);
 }

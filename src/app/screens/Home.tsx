@@ -395,7 +395,7 @@ function KitchenSide({
 }) {
   const chosen = entries.find((entry) => entry.item.id === picked);
   const cardRef = useRef<HTMLUListElement>(null);
-  // The card is under the drawing: bring it into sight when an item is tapped.
+  // The card is under the item's appliance: bring it into sight when an item is tapped.
   useEffect(() => {
     if (!picked) return;
     const still = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
@@ -409,12 +409,15 @@ function KitchenSide({
         place={place}
         selected={chosen?.item.id}
         onSelect={onPick}
+        card={
+          chosen && (
+            <ul className="items kitchen-card" aria-live="polite" ref={cardRef}>
+              {card(chosen)}
+            </ul>
+          )
+        }
       />
-      {chosen ? (
-        <ul className="items kitchen-card" aria-live="polite" ref={cardRef}>
-          {card(chosen)}
-        </ul>
-      ) : (
+      {!chosen && (
         <p className="hint kitchen-hint">
           Toca num alimento para o marcar como comido, deitado fora ou aberto. O que acaba primeiro
           está na prateleira de cima. <Link to="/definicoes#cozinha">Mudar o frigorífico</Link>.

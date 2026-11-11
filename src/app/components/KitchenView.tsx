@@ -6,7 +6,7 @@
  * opens its usual card under the drawing, with the one-tap answers. The list stays the
  * quickest way to act; this is the nicer way to look.
  */
-import { useState } from 'react';
+import { Fragment, useState, type CSSProperties, type ReactNode } from 'react';
 import { arrangeKitchen, iconFor, SHELF_SHOWN, type KitchenLayout } from '../../domain/kitchen';
 import { daysLabel, type LitItem } from '../../domain/traffic-light';
 import type { Location } from '../../domain/types';
@@ -189,6 +189,7 @@ export function KitchenView({
   place,
   selected,
   onSelect,
+  card,
 }: {
   /** Sorted, soonest first. */
   entries: readonly LitItem[];
@@ -197,6 +198,8 @@ export function KitchenView({
   place: Location | 'tudo';
   selected?: string;
   onSelect: (id: string) => void;
+  /** The tapped item's card: drawn right under the appliance it is in. */
+  card?: ReactNode;
 }) {
   const kitchen = arrangeKitchen(entries);
   const parts = { kitchen, selected, onSelect };
@@ -204,12 +207,16 @@ export function KitchenView({
   const freezer = place === 'tudo' || place === 'congelador';
   const pantry = place === 'tudo' || place === 'despensa';
   const frozenCount = kitchen.freezer.drawers.flat().length;
+  const where = entries.find((entry) => entry.item.id === selected)?.item.location;
 
   // One body for the combined fridges; apart for a chest freezer (or none).
   const together = layout !== 'separados' && layout !== 'so-frigorifico';
-  return (
-    <div className={`kitchen kitchen-${layout}`}>
-      {together && (fridge || freezer) && (
+  const appliances: { key: string; holds: Location[]; node: ReactNode }[] = [];
+  if (together && (fridge || freezer))
+    appliances.push({
+      key: 'fridge',
+      holds: ['frigorifico', 'congelador'],
+      node: (
         <section
           className="appliance fridge"
           aria-label={
@@ -226,24 +233,53 @@ export function KitchenView({
             {layout === 'combinado-baixo' && freezer && <FreezerCompartment {...parts} />}
           </div>
         </section>
-      )}
-      {!together && fridge && (
+      ),
+    });
+  if (!together && fridge)
+    appliances.push({
+      key: 'fridge',
+      holds: ['frigorifico'],
+      node: (
         <section className="appliance fridge" aria-label="Frigorífico">
           <h3 className="appliance-name">Frigorífico</h3>
           <div className="appliance-body">
             <FridgeCompartment {...parts} />
           </div>
         </section>
-      )}
-      {!together && freezer && (layout === 'separados' || frozenCount > 0) && (
+      ),
+    });
+  if (!together && freezer && (layout === 'separados' || frozenCount > 0))
+    appliances.push({
+      key: 'chest',
+      holds: ['congelador'],
+      node: (
         <section className="appliance chest" aria-label="Arca congeladora">
           <h3 className="appliance-name">{layout === 'separados' ? 'Arca' : 'Congelador'}</h3>
           <div className="appliance-body">
             <FreezerCompartment {...parts} drawers={false} />
           </div>
         </section>
-      )}
-      {pantry && <Pantry {...parts} />}
+      ),
+    });
+  if (pantry) appliances.push({ key: 'pantry', holds: ['despensa'], node: <Pantry {...parts} /> });
+
+  const holder = where ? appliances.findIndex((one) => one.holds.includes(where)) : -1;
+  return (
+    <div className={`kitchen kitchen-${layout}`}>
+      {appliances.map((one, index) => (
+        <Fragment key={one.key}>
+          {one.node}
+          {index === holder && card && (
+            // Side by side, it keeps to its appliance's column (styles.css, --column).
+            <div
+              className="kitchen-card-slot"
+              style={{ '--column': (index % 2) + 1 } as CSSProperties}
+            >
+              {card}
+            </div>
+          )}
+        </Fragment>
+      ))}
     </div>
   );
 }
