@@ -464,3 +464,62 @@ test('mudar de sítio: a cerveja da despensa para o frigorífico, e "Anular"', a
   await page.getByRole('button', { name: 'Anular' }).click();
   await expect(card.getByRole('button', { name: 'Frigorífico. Mudar de sítio' })).toBeVisible();
 });
+
+test('receitas: só pede à IA quando se carrega no botão', async ({ page }) => {
+  let asked = 0;
+  await page.route('**/api/ai/recipes', (route) => {
+    asked++;
+    return route.fulfill({
+      json: {
+        recipes: [
+          {
+            title: 'frango grelhado',
+            minutes: 20,
+            usa: ['Peito de frango'],
+            falta: [],
+            steps: ['Grelhar.'],
+          },
+        ],
+      },
+    });
+  });
+  await page.goto('/');
+  await page.getByRole('button', { name: 'Começar sem conta' }).first().click();
+  await addItem(page, 'Peito de frango');
+
+  await page.goto('/receitas');
+  await expect(page.getByRole('button', { name: 'Sugerir receitas' })).toBeVisible();
+  expect(asked).toBe(0);
+  await page.getByRole('button', { name: 'Sugerir receitas' }).click();
+  await expect(page.getByRole('heading', { name: 'Frango grelhado' })).toBeVisible();
+  expect(asked).toBe(1);
+  // Back again in this session: shown from the session, not asked again.
+  await page.goto('/');
+  await page.goto('/receitas');
+  await expect(page.getByRole('heading', { name: 'Frango grelhado' })).toBeVisible();
+  expect(asked).toBe(1);
+});
+
+test('no computador, os cartões da mesma linha têm a mesma altura', async ({ page }) => {
+  test.skip(test.info().project.name !== 'computador', 'columns only on a computer');
+  await page.goto('/');
+  await page.getByRole('button', { name: 'Começar sem conta' }).first().click();
+  // Both in "Usar já": the chicken has "Congelei" and its note, the lettuce neither.
+  await addItem(page, 'Peito de frango');
+  await addItem(page, 'Alface');
+  const lettuce = page.getByRole('listitem').filter({ hasText: 'Alface' });
+  await lettuce.getByRole('button', { name: /Editar data/ }).click();
+  const tomorrow = new Date(Date.now() + 86_400_000).toISOString().slice(0, 10);
+  await lettuce.getByLabel('Nova data').fill(tomorrow);
+  await lettuce.getByRole('button', { name: 'Guardar data' }).click();
+  const cards = page.locator('.home .items > .item');
+  await expect(cards).toHaveCount(2);
+  const [a, b] = [await cards.nth(0).boundingBox(), await cards.nth(1).boundingBox()];
+  expect(a?.y).toBe(b?.y);
+  expect(a?.height).toBe(b?.height);
+  // "Ainda vais a tempo de congelar." always under the buttons, never beside them.
+  const chicken = page.getByRole('listitem').filter({ hasText: 'Peito de frango' });
+  const freeze = await chicken.getByRole('button', { name: /Congelei/ }).boundingBox();
+  const note = await chicken.getByText('Ainda vais a tempo de congelar.').boundingBox();
+  expect(note!.y).toBeGreaterThanOrEqual(freeze!.y + freeze!.height);
+});

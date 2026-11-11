@@ -2,10 +2,11 @@
 // Copyright (C) 2026 Paulo Barbosa
 /**
  * "O que cozinhar hoje?": the red and amber items go to the AI, 2–3 simple recipes come back.
- * Kept for the session only, so going back and forth does not ask (and spend) again.
+ * Only when asked (a tap on the tab must not spend the AI); kept for the session, so going
+ * back and forth shows them again without asking.
  */
 import { useLiveQuery } from 'dexie-react-hooks';
-import { useEffect, useMemo, useState } from 'react';
+import { useMemo, useState } from 'react';
 import { Link } from 'react-router';
 import { lisbonDate } from '../../domain/dates';
 import { bySoonest, light } from '../../domain/traffic-light';
@@ -61,25 +62,8 @@ export function Recipes() {
   const failed = (err: unknown) =>
     err instanceof ApiError ? err.message : 'Não foi possível pensar em receitas.';
 
-  // First visit with these items: ask once.
-  useEffect(() => {
-    if (items === undefined || due.length === 0 || shown || error) return;
-    let live = true;
-    suggestRecipes(due)
-      .then((answer) => {
-        writeCache(key, answer.recipes);
-        if (live) setRecipes(answer.recipes);
-      })
-      .catch((err: unknown) => {
-        if (live) setError(failed(err));
-      });
-    return () => {
-      live = false;
-    };
-  }, [items, due, key, shown, error]);
-
-  /** "Outras ideias" / "Tentar outra vez". */
-  const askAgain = async () => {
+  /** "Sugerir receitas" / "Outras ideias" / "Tentar outra vez": only on a tap. */
+  const ask = async () => {
     setBusy(true);
     setError(undefined);
     try {
@@ -113,7 +97,7 @@ export function Recipes() {
           <p className="hint">
             Ideias com o que acaba primeiro: {due.map((item) => item.name).join(', ')}.
           </p>
-          {!shown && !error && (busy || due.length > 0) && (
+          {busy && (
             <p className="hint" role="status">
               A pensar em receitas…
             </p>
@@ -140,11 +124,11 @@ export function Recipes() {
           <div className="form-actions">
             <button
               type="button"
-              className="secondary"
+              className={shown ? 'secondary' : undefined}
               disabled={busy}
-              onClick={() => void askAgain()}
+              onClick={() => void ask()}
             >
-              {shown ? 'Outras ideias' : 'Tentar outra vez'}
+              {shown ? 'Outras ideias' : error ? 'Tentar outra vez' : 'Sugerir receitas'}
             </button>
           </div>
           <p className="hint">

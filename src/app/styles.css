@@ -452,9 +452,22 @@ button,
     max-width: 62rem;
   }
 
+  /* Cards in a row are as tall as the tallest, with their buttons along the bottom. */
   .home .items {
     grid-template-columns: repeat(2, minmax(0, 1fr));
-    align-items: start;
+  }
+
+  .home .item {
+    display: flex;
+    flex-direction: column;
+  }
+
+  .home .item > .item-actions {
+    margin-top: auto;
+  }
+
+  .home .item > :has(+ .item-actions) {
+    margin-bottom: 10px;
   }
 
   .home .dinner-call {
@@ -651,7 +664,9 @@ button,
   font-weight: 600;
 }
 
+/* Always on its own line, under the buttons: the same place on every card. */
 .extra-hint {
+  flex-basis: 100%;
   color: var(--muted);
   font-size: 0.8rem;
 }
