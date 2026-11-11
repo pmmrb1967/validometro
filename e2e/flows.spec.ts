@@ -165,6 +165,45 @@ test('painel: só para quem administra', async ({ page }) => {
   await expect(page.getByRole('heading', { name: 'Quem usa' })).toBeVisible();
   await page.getByRole('button', { name: 'Verificar limites agora' }).click();
   await expect(page.getByText('Nenhum limite novo ultrapassado.')).toBeVisible();
+
+  // Full tables (big numbers, long names) still fit the phone: no sideways page scroll.
+  const days = Array.from({ length: 14 }, (_, i) => `2026-11-${String(14 - i).padStart(2, '0')}`);
+  await page.route('**/api/admin/overview', (route) =>
+    route.fulfill({
+      json: {
+        date: '2026-11-14',
+        analytics: false,
+        analyticsError: null,
+        metrics: [{ id: 'users', label: 'Contas', unit: 'count', value: 12 }],
+        history: days.flatMap((date) =>
+          ['workers_requests', 'd1_rows_read', 'd1_rows_written', 'ai_neurons'].map((metric) => ({
+            date,
+            metric,
+            value: 4_999_999,
+          })),
+        ),
+        ai: ['workers-ai', 'gemini', 'anthropic'].map((provider) => ({
+          provider,
+          operation: 'receipt',
+          calls: 12_345,
+          failures: 1_234,
+          units: 123_456,
+        })),
+        alerts: [],
+        adminPhones: 1,
+      },
+    }),
+  );
+  await page.reload();
+  await expect(page.getByRole('heading', { name: 'Últimos 14 dias' })).toBeVisible();
+  const overflow = await page.evaluate(
+    'document.documentElement.scrollWidth - document.documentElement.clientWidth',
+  );
+  expect(overflow).toBeLessThanOrEqual(0);
+  for (const table of await page.locator('.table-wrap').all()) {
+    const fits = await table.evaluate((el) => el.scrollWidth <= el.clientWidth);
+    expect(fits).toBe(true);
+  }
 });
 
 test('dados: descarregar tudo, e apagar o que está no telemóvel', async ({ page }) => {

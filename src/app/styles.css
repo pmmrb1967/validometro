@@ -1674,7 +1674,13 @@ textarea {
 /* Admin panel: the free-plan meters, the people, the AI and the history */
 .admin {
   display: grid;
+  /* minmax(0, …): a grid item would otherwise grow to its widest table and push past the screen */
+  grid-template-columns: minmax(0, 1fr);
   gap: 16px;
+}
+
+.admin code {
+  overflow-wrap: anywhere;
 }
 
 .notice {
@@ -1801,6 +1807,32 @@ textarea {
 .admin-table thead th {
   color: var(--muted);
   font-weight: 600;
+}
+
+/* On a phone the tables fit the card: tighter cells, and the names may wrap. */
+@media (max-width: 560px) {
+  .admin-table {
+    font-size: 0.82rem;
+  }
+
+  .admin-table th,
+  .admin-table td {
+    padding: 6px 4px;
+  }
+
+  .admin-table th:first-child,
+  .admin-table td:first-child {
+    padding-left: 0;
+  }
+
+  .admin-table td:first-child,
+  .admin-table td:nth-child(2) {
+    white-space: normal;
+  }
+
+  .admin-table thead th {
+    white-space: normal;
+  }
 }
 
 .admin-alerts {
