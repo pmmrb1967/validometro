@@ -34,6 +34,26 @@ function recognitionClass(): RecognitionClass | undefined {
 
 export const speechSupported = (): boolean => recognitionClass() !== undefined;
 
+const plain = (text: string) => text.toLocaleLowerCase('pt-PT').replace(/\s+/g, ' ').trim();
+
+/**
+ * What was said so far, from every result of the session. Chrome on Android repeats the
+ * whole phrase in each new result ("azeite", "azeite virgem", "azeite virgem e sal"), the
+ * computer gives only the new part: a result that starts with the one before replaces it,
+ * one already inside the one before is dropped.
+ */
+export function joinTranscripts(transcripts: readonly string[]): string {
+  const parts: string[] = [];
+  for (const raw of transcripts) {
+    const text = raw.trim();
+    if (!text) continue;
+    const last = parts.at(-1);
+    if (last !== undefined && plain(text).startsWith(plain(last))) parts[parts.length - 1] = text;
+    else if (last === undefined || !plain(last).startsWith(plain(text))) parts.push(text);
+  }
+  return parts.join(' ');
+}
+
 const ERRORS: Record<string, string> = {
   'not-allowed': 'O microfone não está autorizado. Permite-o nas definições do browser.',
   'service-not-allowed': 'O ditado não está disponível neste browser. Escreve a lista.',
@@ -46,7 +66,8 @@ export function useDictation() {
   const [text, setText] = useState('');
   const [error, setError] = useState<string>();
   const recognition = useRef<Recognition | null>(null);
-  const finalText = useRef('');
+  /** What was in the box when this dictation started: what is said goes after it. */
+  const before = useRef('');
 
   const stop = useCallback(() => recognition.current?.stop(), []);
 
@@ -57,16 +78,11 @@ export function useDictation() {
     rec.lang = 'pt-PT';
     rec.continuous = true;
     rec.interimResults = true;
-    finalText.current = text ? `${text.trim()} ` : '';
+    before.current = text ? `${text.trim()} ` : '';
     rec.onresult = (event) => {
-      let interim = '';
-      for (let i = event.resultIndex; i < event.results.length; i++) {
-        const result = event.results[i]!;
-        const chunk = result[0]?.transcript ?? '';
-        if (result.isFinal) finalText.current += `${chunk.trim()} `;
-        else interim += chunk;
-      }
-      setText(`${finalText.current}${interim}`.trimStart());
+      // All of the session each time (not from resultIndex): see joinTranscripts.
+      const said = Array.from(event.results, (result) => result[0]?.transcript ?? '');
+      setText(`${before.current}${joinTranscripts(said)}`.trimStart());
     };
     rec.onerror = (event) => {
       if (event.error !== 'aborted')
