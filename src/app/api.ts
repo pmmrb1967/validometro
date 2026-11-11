@@ -2,6 +2,7 @@
 import type { DraftItem } from '../domain/drafts';
 import type { Location } from '../domain/types';
 import { aiHeaders } from './ai-settings';
+import { refreshEstimate } from './ai-cost';
 
 export interface Product {
   ean: string;
@@ -53,6 +54,8 @@ async function postJson<T>(path: string, body: unknown, fallback: string): Promi
   } catch {
     throw new ApiError('Sem ligação à internet. Tenta mais tarde ou escreve à mão.');
   }
+  // Spent or not, today's Neurons may have moved: the cost notes ask again.
+  refreshEstimate();
   if (!res.ok) throw new ApiError(await errorMessage(res, fallback));
   return (await res.json()) as T;
 }

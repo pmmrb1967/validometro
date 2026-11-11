@@ -4,6 +4,7 @@ import { Hono } from 'hono';
 import { z } from 'zod';
 import { isValidGtin } from '../domain/barcode';
 import { account } from './account';
+import { aiCosts } from './ai-costs';
 import { admin } from './admin';
 import { alerts } from './alerts';
 import { ingest } from './ingest';
@@ -67,6 +68,7 @@ app.get('/products/:ean', async (c) => {
 });
 
 app.route('/', ingest);
+app.route('/', aiCosts);
 app.route('/', account);
 app.route('/', sync);
 app.route('/', alerts);

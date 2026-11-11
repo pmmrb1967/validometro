@@ -4,9 +4,15 @@
  * Ask, parse, check: the answer must be JSON and pass the Zod schema. One retry when it
  * does not (CLAUDE.md, AI pipeline step 3); then a friendly error. Every call is counted.
  */
-import { AiError, type AiProvider, type AiResult, type StructuredRequest } from './types';
+import {
+  AiError,
+  type AiProvider,
+  type AiResult,
+  type AiUsage,
+  type StructuredRequest,
+} from './types';
 
-export type UsageRecorder = (units: number, ok: boolean) => Promise<void>;
+export type UsageRecorder = (usage: AiUsage, ok: boolean) => Promise<void>;
 
 function parse<T>(request: StructuredRequest<T>, result: AiResult): T | undefined {
   let value: unknown;
@@ -30,11 +36,11 @@ export async function structured<T>(
     try {
       result = await provider.generate(request);
     } catch (err) {
-      await record(0, false);
+      await record({ units: 0 }, false);
       throw err;
     }
     const value = parse(request, result);
-    await record(result.units, value !== undefined);
+    await record(result, value !== undefined);
     if (value !== undefined) return value;
   }
   throw new AiError('invalid_output', `${request.operation} did not match the schema`);

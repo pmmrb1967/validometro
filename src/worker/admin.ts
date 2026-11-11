@@ -34,18 +34,25 @@ admin.get('/admin/overview', async (c) => {
       .all<{ date: string; metric: string; value: number }>(),
     db
       .prepare(
-        `SELECT provider, operation, COUNT(*) AS calls, SUM(1 - ok) AS failures,
-                COALESCE(SUM(units), 0) AS units
-         FROM ai_usage WHERE date >= ? GROUP BY provider, operation
+        `SELECT provider, model, operation, COUNT(*) AS calls, SUM(1 - ok) AS failures,
+                COALESCE(SUM(units), 0) AS units,
+                COALESCE(SUM(input_tokens), 0) AS input, COALESCE(SUM(output_tokens), 0) AS output,
+                SUM(CASE WHEN input_tokens IS NULL AND ok = 1 THEN 1 ELSE 0 END) AS unpriced
+         FROM ai_usage WHERE date >= ?
+         GROUP BY provider, CASE WHEN provider = 'workers-ai' THEN '' ELSE model END, operation
          ORDER BY provider, calls DESC`,
       )
       .bind(addDays(today, -(AI_DAYS - 1)))
       .all<{
         provider: string;
+        model: string | null;
         operation: string;
         calls: number;
         failures: number;
         units: number;
+        input: number;
+        output: number;
+        unpriced: number;
       }>(),
     db
       .prepare(

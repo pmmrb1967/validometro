@@ -19,7 +19,7 @@ const ENDPOINT = 'https://generativelanguage.googleapis.com/v1beta/models';
 interface GeminiResponse {
   candidates?: { content?: { parts?: { text?: string }[] }; finishReason?: string }[];
   promptFeedback?: { blockReason?: string };
-  usageMetadata?: { totalTokenCount?: number };
+  usageMetadata?: { promptTokenCount?: number; totalTokenCount?: number };
 }
 
 async function failure(res: Response): Promise<AiError> {
@@ -73,7 +73,17 @@ export function gemini(apiKey: string, fetcher: typeof fetch = fetch): AiProvide
       if (candidate?.finishReason === 'SAFETY') throw new AiError('refused', 'gemini safety');
       const text = candidate?.content?.parts?.map((part) => part.text ?? '').join('');
       if (!text) throw new AiError('invalid_output', 'gemini empty');
-      return { text, units: body.usageMetadata?.totalTokenCount ?? 0 };
+      const usage = body.usageMetadata;
+      const inputTokens = usage?.promptTokenCount ?? 0;
+      const total = usage?.totalTokenCount ?? 0;
+      return {
+        text,
+        units: total,
+        model: GEMINI_MODEL,
+        inputTokens,
+        // Thinking tokens are billed as output: everything that is not the prompt.
+        outputTokens: Math.max(0, total - inputTokens),
+      };
     },
   };
 }

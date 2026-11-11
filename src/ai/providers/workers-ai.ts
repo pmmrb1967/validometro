@@ -80,9 +80,14 @@ export function workersAi(ai: Ai): AiProvider {
       }
       const text = output.choices?.[0]?.message?.content;
       if (!text) throw new AiError('invalid_output', 'empty answer');
+      const inputTokens = output.usage?.prompt_tokens ?? 0;
+      const outputTokens = output.usage?.completion_tokens ?? 0;
       return {
         text,
-        units: neuronsFor(output.usage?.prompt_tokens ?? 0, output.usage?.completion_tokens ?? 0),
+        units: neuronsFor(inputTokens, outputTokens),
+        model: WORKERS_AI_MODEL,
+        inputTokens,
+        outputTokens,
       };
     },
   };

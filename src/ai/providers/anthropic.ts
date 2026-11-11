@@ -68,7 +68,14 @@ export function anthropic(apiKey: string, model: ClaudeModel = DEFAULT_CLAUDE_MO
         .map((block) => (block.type === 'text' ? block.text : ''))
         .join('');
       if (!text) throw new AiError('invalid_output', 'claude empty');
-      return { text, units: message.usage.input_tokens + message.usage.output_tokens };
+      return {
+        text,
+        units: message.usage.input_tokens + message.usage.output_tokens,
+        // A refusal fallback may have answered on another model: priced as the one asked.
+        model,
+        inputTokens: message.usage.input_tokens,
+        outputTokens: message.usage.output_tokens,
+      };
     },
   };
 }

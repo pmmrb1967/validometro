@@ -14,6 +14,7 @@ import { hasCamera } from '../image';
 import { markTracked, setPendingReview } from '../store/review';
 import { BusyNote } from './BusyNote';
 import { PhotoButton } from './PhotoButton';
+import { AiCostNote } from './AiCostNote';
 
 /** The first button: "Fotografar o frigorífico" on a phone, "Foto do frigorífico" elsewhere. */
 const FIRST: Record<Location, [camera: string, file: string]> = {
@@ -130,6 +131,7 @@ export function ShelfEntry() {
           </button>
         )}
       </div>
+      <AiCostNote operation="shelf" photos={Math.max(1, photos.length)} />
 
       {busy && (
         <BusyNote detail="Pode demorar até um minuto: a app está a ver cada prateleira.">

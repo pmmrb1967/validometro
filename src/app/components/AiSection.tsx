@@ -1,8 +1,9 @@
 // SPDX-License-Identifier: AGPL-3.0-or-later
 // Copyright (C) 2026 Paulo Barbosa
 /** Settings: who reads receipts, printed dates and dictated lists. */
-import { useId, useState } from 'react';
-import { saveAccountAi, useAccount } from '../account';
+import { useEffect, useId, useState } from 'react';
+import { costUsd, formatUsd } from '../../domain/ai-cost';
+import { call, saveAccountAi, useAccount } from '../account';
 import { ApiError, testAi } from '../api';
 import {
   CLAUDE_MODEL_OPTIONS,
@@ -10,6 +11,7 @@ import {
   useAiSettings,
   type AiProviderChoice,
 } from '../ai-settings';
+import { AiCostNote } from './AiCostNote';
 import { PasswordField } from './PasswordField';
 
 const OPTIONS: { id: AiProviderChoice; label: string; hint: string }[] = [
@@ -40,6 +42,51 @@ const failure = (err: unknown, fallback: string): Status => ({
   kind: 'error',
   text: err instanceof ApiError ? err.message : fallback,
 });
+
+interface MyUsage {
+  days: number;
+  rows: {
+    provider: string;
+    model: string | null;
+    calls: number;
+    input: number;
+    output: number;
+    unpriced: number;
+  }[];
+}
+
+/** Signed in: what this person's own key spent lately (counted by the app, not a bill). */
+function MyKeyUsage() {
+  const [usage, setUsage] = useState<MyUsage>();
+  useEffect(() => {
+    let live = true;
+    call<MyUsage>('GET', '/api/ai/my-usage')
+      .then((next) => live && setUsage(next))
+      .catch(() => undefined);
+    return () => {
+      live = false;
+    };
+  }, []);
+  if (!usage) return null;
+  const own = usage.rows.filter((row) => row.provider !== 'workers-ai');
+  const calls = own.reduce((sum, row) => sum + row.calls, 0);
+  if (calls === 0) {
+    return <p className="hint">Nos últimos {usage.days} dias não usaste a tua chave.</p>;
+  }
+  const usd = own.reduce(
+    (sum, row) => sum + (costUsd(row.model, { input: row.input, output: row.output }) ?? 0),
+    0,
+  );
+  const unpriced = own.some((row) => row.unpriced > 0);
+  return (
+    <p className="hint">
+      Nos últimos {usage.days} dias, com a tua chave: {calls} {calls === 1 ? 'pedido' : 'pedidos'},
+      ≈ <strong>{formatUsd(usd)}</strong>
+      {unpriced && ' (sem contar os mais antigos, de antes desta contagem)'}. É uma estimativa pelos
+      preços de tabela; o valor certo está na tua conta do fornecedor.
+    </p>
+  );
+}
 
 export function AiSection() {
   const ids = useId();
@@ -173,6 +220,16 @@ export function AiSection() {
           </button>
         )}
       </div>
+      <AiCostNote operation="receipt" />
+      {needsKey &&
+        (me ? (
+          <MyKeyUsage />
+        ) : (
+          <p className="hint">
+            Sem conta, a app não sabe de quem é cada pedido: o gasto da chave vê-se na conta do
+            fornecedor.
+          </p>
+        ))}
       {savedKey && !localKey && me?.ai.keyHint && (
         <p className="hint">Chave guardada na conta, terminada em {me.ai.keyHint.slice(-4)}.</p>
       )}

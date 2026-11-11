@@ -5,9 +5,10 @@
  * free allocation is per account and per UTC day, so reading stops a little before the end
  * and the user is pointed to their own key or to typing.
  */
-import type { Operation, ProviderId } from '../ai/types';
+import type { AiUsage, Operation, ProviderId } from '../ai/types';
+import { FREE_NEURONS_PER_DAY } from '../domain/ai-cost';
 
-export const FREE_NEURONS_PER_DAY = 10_000;
+export { FREE_NEURONS_PER_DAY };
 /** Left aside for the end of the day: one more receipt should not fail halfway. */
 export const NEURON_RESERVE = 1_000;
 
@@ -19,16 +20,30 @@ export async function recordUsage(
   db: D1Database,
   provider: ProviderId,
   operation: Operation,
-  units: number,
+  usage: AiUsage | number,
   ok: boolean,
   userId: string | null = null,
   now = new Date(),
 ): Promise<void> {
+  const call = typeof usage === 'number' ? { units: usage } : usage;
+  const count = (value: number | undefined) =>
+    value === undefined ? null : Math.max(0, Math.round(value));
   await db
     .prepare(
-      'INSERT INTO ai_usage (date, user_id, provider, operation, units, ok) VALUES (?, ?, ?, ?, ?, ?)',
+      `INSERT INTO ai_usage (date, user_id, provider, operation, units, ok, model, input_tokens, output_tokens)
+       VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)`,
     )
-    .bind(utcDay(now), userId, provider, operation, Math.max(0, Math.round(units)), ok ? 1 : 0)
+    .bind(
+      utcDay(now),
+      userId,
+      provider,
+      operation,
+      count(call.units) ?? 0,
+      ok ? 1 : 0,
+      call.model ?? null,
+      count(call.inputTokens),
+      count(call.outputTokens),
+    )
     .run();
 }
 

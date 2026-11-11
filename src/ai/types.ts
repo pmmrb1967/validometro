@@ -41,7 +41,14 @@ export interface AiResult {
   text: string;
   /** For `ai_usage`: estimated Neurons on Workers AI, tokens elsewhere. */
   units: number;
+  /** The model that answered and its tokens, to price the call (src/domain/ai-cost.ts). */
+  model?: string;
+  inputTokens?: number;
+  outputTokens?: number;
 }
+
+/** What `ai_usage` keeps of a call: no text, no image, no key. */
+export type AiUsage = Pick<AiResult, 'units' | 'model' | 'inputTokens' | 'outputTokens'>;
 
 export interface AiProvider {
   id: ProviderId;

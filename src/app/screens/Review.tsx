@@ -27,6 +27,7 @@ import { StatusNote } from '../components/BusyNote';
 import { hasCamera } from '../image';
 import { addItem } from '../store/items';
 import { clearPendingReview, getPendingReview } from '../store/review';
+import { AiCostNote } from '../components/AiCostNote';
 
 interface Row extends DraftItem {
   include: boolean;
@@ -149,6 +150,7 @@ export function Review() {
             : 'Do que disseste. '}
         Confirma os nomes e as datas. Se a embalagem tiver data, escreve-a ou fotografa-a.
       </p>
+      <AiCostNote operation="date" />
 
       <ul className="review-list">
         {rows.map((row) => (

@@ -14,7 +14,17 @@ const ADMIN = 'admin@example.pt';
 interface Overview {
   analytics: boolean;
   metrics: { id: string; value: number | null; limit?: number }[];
-  ai: { provider: string; operation: string; calls: number; failures: number; units: number }[];
+  ai: {
+    provider: string;
+    model: string | null;
+    operation: string;
+    calls: number;
+    failures: number;
+    units: number;
+    input: number;
+    output: number;
+    unpriced: number;
+  }[];
   alerts: { metric: string; threshold: number }[];
   adminPhones: number;
 }
@@ -90,6 +100,9 @@ describe('admin panel', () => {
     await recordUsage(env.DB, 'workers-ai', 'receipt', 120, true);
     await recordUsage(env.DB, 'workers-ai', 'receipt', 0, false);
     await recordUsage(env.DB, 'gemini', 'voice', 0, true);
+    const tokens = { model: 'claude-haiku-5-5', inputTokens: 4_000, outputTokens: 1_000 };
+    await recordUsage(env.DB, 'anthropic', 'receipt', { units: 5_000, ...tokens }, true);
+    await recordUsage(env.DB, 'anthropic', 'receipt', { units: 5_000, ...tokens }, true);
 
     const overview = await admin.json<Overview>('GET', '/api/admin/overview');
     expect(overview.analytics).toBe(false);
@@ -97,17 +110,31 @@ describe('admin panel', () => {
     expect(value(overview, 'households')).toBe(2);
     expect(value(overview, 'active_users')).toBe(1);
     expect(value(overview, 'ai_neurons')).toBe(120);
-    expect(value(overview, 'ai_calls')).toBe(3);
+    expect(value(overview, 'ai_calls')).toBe(5);
     expect(value(overview, 'd1_size')).toBeGreaterThan(0);
     // Without the token, the analytics metrics are unknown, not zero.
     expect(value(overview, 'workers_requests')).toBeNull();
-    expect(overview.ai).toContainEqual({
-      provider: 'workers-ai',
-      operation: 'receipt',
-      calls: 2,
-      failures: 1,
-      units: 120,
-    });
+    expect(overview.ai).toContainEqual(
+      expect.objectContaining({
+        provider: 'workers-ai',
+        operation: 'receipt',
+        calls: 2,
+        failures: 1,
+        units: 120,
+      }),
+    );
+    // Own keys by model, with the tokens to price them (input and output apart).
+    expect(overview.ai).toContainEqual(
+      expect.objectContaining({
+        provider: 'anthropic',
+        model: 'claude-haiku-5-5',
+        operation: 'receipt',
+        calls: 2,
+        input: 8_000,
+        output: 2_000,
+        unpriced: 0,
+      }),
+    );
     expect(overview.adminPhones).toBe(0);
   });
 });

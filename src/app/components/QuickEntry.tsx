@@ -20,6 +20,7 @@ import { speechSupported, useDictation } from '../speech';
 import { markTracked, setPendingReview, type ReadingSource } from '../store/review';
 import { BusyNote } from './BusyNote';
 import { PhotoButton } from './PhotoButton';
+import { AiCostNote } from './AiCostNote';
 
 /** Where public/push-sw.js leaves a shared receipt until it is read. */
 const SHARE_CACHE = 'validometro-partilha';
@@ -216,6 +217,7 @@ export function QuickEntry() {
           {canDictate ? 'Ditar compras' : 'Escrever lista'}
         </button>
       </div>
+      {parts.length === 0 && <AiCostNote operation="receipt" />}
 
       {parts.length > 0 && (
         <div className="receipt-parts" role="group" aria-label="Fotos do talão">
@@ -236,6 +238,7 @@ export function QuickEntry() {
               ? 'Talão comprido? Fotografa a parte seguinte, de cima para baixo, repetindo uma ou duas linhas da anterior.'
               : `Chegaste às ${MAX_RECEIPT_PARTS} partes: lê o talão.`}
           </p>
+          <AiCostNote operation="receipt" photos={parts.length} />
           <div className="receipt-parts-actions">
             <button
               type="button"
@@ -302,6 +305,7 @@ export function QuickEntry() {
               Rever lista
             </button>
           </div>
+          <AiCostNote operation="voice" />
           {dictation.error && <p className="note">{dictation.error}</p>}
         </div>
       )}

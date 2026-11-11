@@ -7,6 +7,7 @@
  */
 import { useCallback, useEffect, useState } from 'react';
 import { Link } from 'react-router';
+import { costUsd, formatCount, formatUsd, MODEL_LABELS } from '../../domain/ai-cost';
 import { call, useAccount } from '../account';
 
 interface Metric {
@@ -25,7 +26,18 @@ interface Overview {
   analyticsError: string | null;
   metrics: Metric[];
   history: { date: string; metric: string; value: number }[];
-  ai: { provider: string; operation: string; calls: number; failures: number; units: number }[];
+  ai: {
+    provider: string;
+    model: string | null;
+    operation: string;
+    calls: number;
+    failures: number;
+    units: number;
+    input: number;
+    output: number;
+    /** Calls from before the tokens were kept apart (0.10): counted, not priced. */
+    unpriced: number;
+  }[];
   alerts: { date: string; metric: string; threshold: number; value: number; sent_at: number }[];
   adminPhones: number;
 }
@@ -45,6 +57,26 @@ const PROVIDERS: Record<string, string> = {
   gemini: 'Gemini (chave própria)',
   anthropic: 'Claude (chave própria)',
 };
+
+type AiRow = Overview['ai'][number];
+
+function providerLabel(row: AiRow): string {
+  if (row.provider === 'workers-ai' || !row.model) return PROVIDERS[row.provider] ?? row.provider;
+  return `${MODEL_LABELS[row.model] ?? row.model} (chave própria)`;
+}
+
+/** US$ of the priced calls, or null when none could be priced. */
+function rowCost(row: AiRow): number | null {
+  if (row.provider === 'workers-ai' || row.input + row.output === 0) return null;
+  return costUsd(row.model, { input: row.input, output: row.output });
+}
+
+function spentText(row: AiRow): string {
+  if (row.provider === 'workers-ai') return `${NUMBER.format(row.units)} neurons`;
+  const usd = rowCost(row);
+  if (usd === null) return '—';
+  return `≈ ${formatUsd(usd)}${row.unpriced ? '*' : ''}`;
+}
 
 const OPERATIONS: Record<string, string> = {
   receipt: 'Talões',
@@ -186,6 +218,8 @@ export function Admin() {
     ['users', 'households', 'active_users'].includes(metric.id),
   );
   const labels = new Map(overview?.metrics.map((metric) => [metric.id, metric.label]));
+  const neurons = overview?.metrics.find((metric) => metric.id === 'ai_neurons');
+  const keyCost = (overview?.ai ?? []).reduce((sum, row) => sum + (rowCost(row) ?? 0), 0);
   const days = [...new Set(overview?.history.map((row) => row.date))].reverse();
   const historyValue = (date: string, metric: string) =>
     overview?.history.find((row) => row.date === date && row.metric === metric)?.value;
@@ -273,24 +307,48 @@ export function Admin() {
                       <th scope="col">Uso</th>
                       <th scope="col">Pedidos</th>
                       <th scope="col">Falhas</th>
-                      <th scope="col">Neurons</th>
+                      <th scope="col">Gasto</th>
                     </tr>
                   </thead>
                   <tbody>
                     {overview.ai.map((row) => (
-                      <tr key={`${row.provider}-${row.operation}`}>
-                        <td>{PROVIDERS[row.provider] ?? row.provider}</td>
+                      <tr key={`${row.provider}-${row.model}-${row.operation}`}>
+                        <td>{providerLabel(row)}</td>
                         <td>{OPERATIONS[row.operation] ?? row.operation}</td>
                         <td>{NUMBER.format(row.calls)}</td>
                         <td>{NUMBER.format(row.failures)}</td>
-                        <td>{row.provider === 'workers-ai' ? NUMBER.format(row.units) : '—'}</td>
+                        <td>{spentText(row)}</td>
                       </tr>
                     ))}
                   </tbody>
                 </table>
               </div>
             )}
-            <p className="hint">Os Neurons são estimados pela app; a quota é de toda a conta.</p>
+            {keyCost > 0 && (
+              <p className="admin-total">
+                Chaves próprias, 7 dias: <strong>≈ {formatUsd(keyCost)}</strong>, pagos por quem tem
+                a chave.
+              </p>
+            )}
+            {neurons && neurons.value !== null && neurons.limit && (
+              <p className="admin-total">
+                Workers AI hoje: restam{' '}
+                <strong>
+                  ≈ {formatCount(Math.max(0, neurons.limit - neurons.value))} de{' '}
+                  {formatCount(neurons.limit)} neurons
+                </strong>
+                .
+              </p>
+            )}
+            <p className="hint">
+              Os 10 000 neurons diários são a parte gratuita da conta Cloudflare (a mesma no plano
+              Free e no pago; acima disso só se paga no plano pago, a 0,011 US$ por 1000), e
+              recomeçam às 00:00 UTC. A app conta-os ela própria, pelos tokens de cada pedido. Os
+              custos em US$ são estimativas pelos preços de tabela
+              {overview.ai.some((row) => row.unpriced > 0) &&
+                '; * há pedidos antigos sem o detalhe dos tokens, que não entram no custo'}
+              .
+            </p>
           </section>
 
           <section className="card">

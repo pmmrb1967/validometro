@@ -29,6 +29,7 @@ import { QuickEntry } from '../components/QuickEntry';
 import { ShelfEntry } from '../components/ShelfEntry';
 import { Scanner } from '../components/Scanner';
 import { addItem } from '../store/items';
+import { AiCostNote } from '../components/AiCostNote';
 
 export function AddItem() {
   const navigate = useNavigate();
@@ -295,6 +296,7 @@ export function AddItem() {
               : a app lê-a, e também se é “consumir até” ou “de preferência”.
             </p>
           )}
+          {!printed && <AiCostNote operation="date" />}
           <StatusNote text={dateNote} />
         </div>
 

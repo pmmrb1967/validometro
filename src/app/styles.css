@@ -1686,6 +1686,14 @@ textarea {
   max-width: 68rem;
 }
 
+/* About what an AI button spends (components/AiCostNote.tsx): beside it, never in the way. */
+.ai-cost {
+  margin: 6px 0 0;
+  color: var(--muted);
+  font-size: 0.8rem;
+  font-variant-numeric: tabular-nums;
+}
+
 /* Admin panel: the free-plan meters, the people, the AI and the history */
 .admin {
   display: grid;
@@ -1848,6 +1856,11 @@ textarea {
   .admin-table thead th {
     white-space: normal;
   }
+}
+
+.admin-total {
+  margin: 8px 0 0;
+  font-variant-numeric: tabular-nums;
 }
 
 .admin-alerts {

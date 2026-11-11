@@ -40,7 +40,14 @@ import {
 } from '../ai/schemas';
 import { placeDraft } from '../domain/shelf';
 import { structured } from '../ai/structured';
-import { AiError, PROVIDERS, type AiErrorCode, type AiProvider, type Operation } from '../ai/types';
+import {
+  AiError,
+  PROVIDERS,
+  type AiErrorCode,
+  type AiProvider,
+  type AiUsage,
+  type Operation,
+} from '../ai/types';
 import { lookupAliases, saveAliases } from './aliases';
 import { storedAi } from './account';
 import type { AppEnv } from './session';
@@ -114,8 +121,8 @@ async function providerFor(c: Context<AppEnv>): Promise<AiProvider> {
 }
 
 function recorder(c: Context<AppEnv>, provider: AiProvider, operation: Operation) {
-  return (units: number, ok: boolean) =>
-    recordUsage(c.env.DB, provider.id, operation, units, ok, c.get('user')?.id).catch(
+  return (usage: AiUsage, ok: boolean) =>
+    recordUsage(c.env.DB, provider.id, operation, usage, ok, c.get('user')?.id).catch(
       () => undefined,
     );
 }

@@ -12,6 +12,7 @@ import { lisbonDate } from '../../domain/dates';
 import { bySoonest, light } from '../../domain/traffic-light';
 import { ApiError, suggestRecipes, type Recipe } from '../api';
 import { activeItems } from '../store/items';
+import { AiCostNote } from '../components/AiCostNote';
 
 const CACHE = 'validometro.recipes';
 const MAX_ITEMS = 12;
@@ -121,6 +122,7 @@ export function Recipes() {
               </ol>
             </article>
           ))}
+          <AiCostNote operation="recipes" />
           <div className="form-actions">
             <button
               type="button"
