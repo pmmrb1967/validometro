@@ -9,7 +9,8 @@ export const LOCATIONS = ['frigorifico', 'congelador', 'despensa'] as const;
 export type Location = (typeof LOCATIONS)[number];
 
 export type OpenState = 'fechado' | 'aberto';
-export type ItemStatus = 'ativo' | 'consumido' | 'deitado_fora';
+/** 'apagado': registado por engano (twice, or never bought). Not eaten nor thrown away. */
+export type ItemStatus = 'ativo' | 'consumido' | 'deitado_fora' | 'apagado';
 export type ExpirySource = 'impressa' | 'estimada' | 'manual';
 /** What the package says before the date: safety ("até") or quality ("de preferência"). */
 export const EXPIRY_KINDS = ['consumir_ate', 'consumir_de_preferencia'] as const;

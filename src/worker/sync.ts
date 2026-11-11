@@ -43,7 +43,7 @@ export const itemSchema = z.object({
   // Absent from phones still on an older version.
   expiry_kind: z.enum(EXPIRY_KINDS).nullable().default(null),
   price: z.number().min(0).max(10_000).nullable().default(null),
-  status: z.enum(['ativo', 'consumido', 'deitado_fora']),
+  status: z.enum(['ativo', 'consumido', 'deitado_fora', 'apagado']),
   resolved_at: instant.nullable(),
   created_at: instant,
   updated_at: instant,

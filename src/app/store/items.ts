@@ -204,7 +204,15 @@ export async function resolveItem(
   });
 }
 
-/** Undo of a resolve, from the snackbar. */
+/**
+ * "Registado por engano? Apagar": out of the inventory, not eaten nor thrown away, nothing on
+ * the shopping list. The row stays as 'apagado' so the other phones of the house drop it too.
+ */
+export async function deleteItem(id: string, now = new Date(), store = db): Promise<void> {
+  await update(store, id, { status: 'apagado', resolved_at: now.toISOString() }, now);
+}
+
+/** Undo of a resolve (or of a deletion), from the snackbar. */
 export async function reactivateItem(id: string, now = new Date(), store = db): Promise<void> {
   await store.transaction('rw', store.items, store.shopping, store.outbox, async () => {
     await update(store, id, { status: 'ativo', resolved_at: null }, now);

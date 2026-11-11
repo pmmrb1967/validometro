@@ -27,6 +27,7 @@ import {
   activeItems,
   freeze,
   markOpened,
+  deleteItem,
   reactivateItem,
   resolveItem,
   restoreItem,
@@ -177,6 +178,13 @@ export function Home() {
       actions={{
         onEaten: () => resolve(entry.item, 'consumido'),
         onThrownAway: () => resolve(entry.item, 'deitado_fora'),
+        onDelete: () => {
+          void deleteItem(entry.item.id);
+          setUndo({
+            id: entry.item.id,
+            text: `${entry.item.name}: apagado. Não conta como gasto nem como desperdício.`,
+          });
+        },
         onOpened: () => {
           const before = entry.item;
           void markOpened(before.id).then((after) => {

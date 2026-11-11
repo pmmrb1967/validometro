@@ -56,7 +56,8 @@ export function wasteStats(items: Item[], today: string, monthCount = 6): WasteS
   let eatenEuros = 0;
   let priced = 0;
   for (const item of items) {
-    if (item.status === 'ativo' || !item.resolved_at) continue;
+    // Deleted (saved by mistake): it never happened.
+    if (item.status === 'ativo' || item.status === 'apagado' || !item.resolved_at) continue;
     const entry = byMonth.get(lisbonDate(new Date(item.resolved_at)).slice(0, 7));
     if (!entry) continue;
     const price = item.price != null && item.price > 0 ? item.price : null;

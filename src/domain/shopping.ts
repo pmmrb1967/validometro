@@ -109,7 +109,12 @@ export function wasteHabits(items: Item[], today: IsoDate): Map<string, WasteHab
   const since = addDays(today, -HABIT_DAYS);
   const counts = new Map<string, WasteHabit>();
   for (const item of items) {
-    if (item.status === 'ativo' || !item.resolved_at || item.resolved_at.slice(0, 10) < since) {
+    if (
+      item.status === 'ativo' ||
+      item.status === 'apagado' ||
+      !item.resolved_at ||
+      item.resolved_at.slice(0, 10) < since
+    ) {
       continue;
     }
     const key = sameName(item.name);

@@ -806,3 +806,23 @@ test('talão repetido sem código QR: avisa ao rever, pelas linhas', async ({ pa
   await review();
   await expect(page.locator('.seen-receipt')).toContainText('3 de 3 linhas iguais');
 });
+
+test('registado por engano: apagar o leite repetido, e "Anular"', async ({ page }) => {
+  await page.goto('/');
+  await page.getByRole('button', { name: 'Começar sem conta' }).first().click();
+  await page.goto('/adicionar');
+  await page.getByLabel('Nome').fill('Leite meio-gordo');
+  await page.getByRole('button', { name: 'Guardar', exact: true }).click();
+  await expect(page).toHaveURL('/');
+  const card = page.getByRole('listitem').filter({ hasText: 'Leite meio-gordo' });
+  // Not among the card's buttons: only where the date is corrected.
+  await expect(card.getByRole('button', { name: 'Apagar' })).toHaveCount(0);
+  await card.getByRole('button', { name: /Editar data/ }).click();
+  await card.getByRole('button', { name: 'Apagar' }).click();
+  await expect(page.getByRole('status').filter({ hasText: 'apagado' })).toContainText(
+    'Não conta como gasto nem como desperdício',
+  );
+  await expect(card).toHaveCount(0);
+  await page.getByRole('button', { name: 'Anular' }).click();
+  await expect(card).toHaveCount(1);
+});

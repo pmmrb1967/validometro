@@ -36,6 +36,8 @@ export interface ItemActions {
   onThrownAway: () => void;
   onOpened: () => void;
   onDate: (date: string, kind: ExpiryKind | null) => void;
+  /** Saved by mistake (twice, never bought): out, without counting. */
+  onDelete: () => void;
   onFreeze: () => void;
   onOffer: () => void;
   /** "Comi 1" / "Bebi 1": one less of several. */
@@ -269,6 +271,20 @@ export function ItemCard({
           <button type="button" className="ghost" onClick={() => setEditingDate(false)}>
             Cancelar
           </button>
+          {/* Out of the way: only here, where what was saved wrong is already being fixed. */}
+          <p className="item-delete">
+            Registado por engano?{' '}
+            <button
+              type="button"
+              className="link"
+              onClick={() => {
+                setEditingDate(false);
+                actions.onDelete();
+              }}
+            >
+              Apagar
+            </button>
+          </p>
         </form>
       ) : (
         <>

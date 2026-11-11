@@ -4,6 +4,7 @@ import { afterEach, beforeEach, describe, expect, it } from 'vitest';
 import {
   activeItems,
   addItem,
+  deleteItem,
   InventoryDb,
   LOCAL_HOUSEHOLD,
   markOpened,
@@ -81,6 +82,32 @@ describe('local inventory', () => {
       status: 'consumido',
       resolved_at: now.toISOString(),
     });
+    await reactivateItem(milk.id, new Date(), store);
+    expect((await activeItems(store)).map((item) => item.id)).toEqual([milk.id]);
+  });
+
+  it('"Apagar" (saved by mistake): out, counted nowhere, nothing on the list, undone', async () => {
+    const milk = await addItem(
+      {
+        name: 'Leite pasteurizado',
+        category: 'leite_fresco',
+        location: 'frigorifico',
+        expires_at: '2026-11-14',
+        expiry_source: 'estimada',
+        price: 1.08,
+      },
+      now,
+      store,
+    );
+    await deleteItem(milk.id, now, store);
+    expect(await activeItems(store)).toEqual([]);
+    expect(await store.items.get(milk.id)).toMatchObject({ status: 'apagado' });
+    // Not "bebido": no suggestion to buy it again. Queued, so the other phones drop it too.
+    expect(await store.shopping.count()).toBe(0);
+    expect(await store.outbox.get(milk.id)).toBeDefined();
+    const { wasteStats } = await import('../../domain/stats');
+    const stats = wasteStats([(await store.items.get(milk.id))!], '2026-11-11');
+    expect(stats.months.every((month) => month.eaten === 0 && month.wasted === 0)).toBe(true);
     await reactivateItem(milk.id, new Date(), store);
     expect((await activeItems(store)).map((item) => item.id)).toEqual([milk.id]);
   });
