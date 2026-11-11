@@ -9,6 +9,7 @@ import { lisbonDate } from '../../domain/dates';
 import { freezeItem } from '../../domain/freeze';
 import { moveItem } from '../../domain/move';
 import type { SavedRecipe } from '../../domain/recipes';
+import type { SeenReceipt } from '../../domain/receipts';
 import { estimatedUnder, shifted } from '../../domain/reestimate';
 import { openItem } from '../../domain/shelf-life';
 import { restockSuggestion, type ShoppingEntry } from '../../domain/shopping';
@@ -22,7 +23,7 @@ export const LOCAL_HOUSEHOLD = 'local';
 export interface PendingChange {
   id: string;
   /** Which table: items (absent, as before), the shopping list or the saved recipes. */
-  kind?: 'shopping' | 'recipe';
+  kind?: 'shopping' | 'recipe' | 'receipt';
   /** The item's updated_at when queued: a later change re-queues it. */
   updated_at: string;
 }
@@ -38,6 +39,7 @@ export class InventoryDb extends Dexie {
   outbox!: Table<PendingChange, string>;
   meta!: Table<Meta, string>;
   recipes!: Table<SavedRecipe, string>;
+  receipts!: Table<SeenReceipt, string>;
 
   constructor(name = 'validometro') {
     super(name);
@@ -51,6 +53,8 @@ export class InventoryDb extends Dexie {
     this.version(3).stores({ shopping: 'id, state' });
     // Saved recipes (0.12).
     this.version(4).stores({ recipes: 'id, state' });
+    // Receipts already saved, to tell the same one read twice (0.16).
+    this.version(5).stores({ receipts: 'id, qr_hash' });
   }
 }
 
@@ -76,6 +80,15 @@ export async function writeRecipe(store: InventoryDb, recipe: SavedRecipe): Prom
   await store.transaction('rw', store.recipes, store.outbox, async () => {
     await store.recipes.put(recipe);
     await store.outbox.put({ id: recipe.id, updated_at: recipe.updated_at, kind: 'recipe' });
+  });
+  changed();
+}
+
+/** The same for the note of a receipt saved. */
+export async function writeReceipt(store: InventoryDb, receipt: SeenReceipt): Promise<void> {
+  await store.transaction('rw', store.receipts, store.outbox, async () => {
+    await store.receipts.put(receipt);
+    await store.outbox.put({ id: receipt.id, updated_at: receipt.updated_at, kind: 'receipt' });
   });
   changed();
 }

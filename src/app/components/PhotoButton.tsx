@@ -11,7 +11,8 @@ interface Props {
   className?: string;
   disabled?: boolean;
   children: ReactNode;
-  onPhoto: (base64: string) => void;
+  /** The small copy, and the photo as taken (only to look for a QR code, never kept). */
+  onPhoto: (base64: string, original: Blob) => void;
   onError: (message: string) => void;
 }
 
@@ -44,7 +45,7 @@ export function PhotoButton({
           event.target.value = '';
           if (!file) return;
           const small = await shrinkPhoto(file);
-          if (small) onPhoto(small);
+          if (small) onPhoto(small, file);
           else onError('Não consegui abrir essa foto. Tenta outra.');
         }}
       />

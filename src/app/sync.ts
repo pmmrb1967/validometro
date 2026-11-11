@@ -12,6 +12,7 @@
  */
 import type { RuleOverride } from '../domain/shelf-life';
 import type { SavedRecipe } from '../domain/recipes';
+import type { SeenReceipt } from '../domain/receipts';
 import type { ShoppingEntry } from '../domain/shopping';
 import type { Item } from '../domain/types';
 import { accountListeners, currentUser, type Me } from './account';
@@ -26,6 +27,7 @@ interface SyncResponse {
   items: Item[];
   shopping: ShoppingEntry[];
   recipes?: SavedRecipe[];
+  receipts?: SeenReceipt[];
   cursor: number;
   more: boolean;
   /** The household's own shelf-life days (rules.ts). */
@@ -45,7 +47,7 @@ async function setMeta(store: InventoryDb, key: string, value: string | number):
 
 /** Everything here, queued for the server (first sign-in on this phone). */
 async function queueEverything(store: InventoryDb): Promise<void> {
-  const tables = [store.items, store.shopping, store.recipes, store.outbox];
+  const tables = [store.items, store.shopping, store.recipes, store.receipts, store.outbox];
   await store.transaction('rw', tables, async () => {
     const items = await store.items.toArray();
     await store.outbox.bulkPut(
@@ -67,14 +69,30 @@ async function queueEverything(store: InventoryDb): Promise<void> {
         kind: 'recipe' as const,
       })),
     );
+    const receipts = await store.receipts.toArray();
+    await store.outbox.bulkPut(
+      receipts.map((receipt) => ({
+        id: receipt.id,
+        updated_at: receipt.updated_at,
+        kind: 'receipt' as const,
+      })),
+    );
   });
 }
 
 /** Empties this device's copy (sign-out, household change, "Apagar os dados deste telemóvel"). */
 export async function clearCopy(store: InventoryDb): Promise<void> {
-  const tables = [store.items, store.shopping, store.recipes, store.outbox, store.meta];
+  const tables = [
+    store.items,
+    store.shopping,
+    store.recipes,
+    store.receipts,
+    store.outbox,
+    store.meta,
+  ];
   await store.transaction('rw', tables, async () => {
     await store.items.clear();
+    await store.receipts.clear();
     await store.shopping.clear();
     await store.recipes.clear();
     await store.outbox.clear();
@@ -93,6 +111,12 @@ function toChange(item: Item) {
 
 function toRecipeChange(recipe: SavedRecipe) {
   const change: Partial<SavedRecipe> = { ...recipe };
+  delete change.household_id;
+  return change;
+}
+
+function toReceiptChange(receipt: SeenReceipt) {
+  const change: Partial<SeenReceipt> = { ...receipt };
   delete change.household_id;
   return change;
 }
@@ -135,6 +159,10 @@ async function round(store: InventoryDb, me: Me): Promise<void> {
     const recipes = (await store.recipes.bulkGet(recipeIds)).filter(
       (recipe): recipe is SavedRecipe => recipe !== undefined,
     );
+    const receiptIds = pending.filter((entry) => entry.kind === 'receipt').map((entry) => entry.id);
+    const receipts = (await store.receipts.bulkGet(receiptIds)).filter(
+      (receipt): receipt is SeenReceipt => receipt !== undefined,
+    );
     const cursor = (await meta<number>(store, 'cursor')) ?? 0;
     const res = await fetch('/api/sync', {
       method: 'POST',
@@ -143,6 +171,7 @@ async function round(store: InventoryDb, me: Me): Promise<void> {
         changes: items.map(toChange),
         shopping: shopping.map(toShoppingChange),
         recipes: recipes.map(toRecipeChange),
+        receipts: receipts.map(toReceiptChange),
         cursor,
       }),
     });
@@ -151,7 +180,14 @@ async function round(store: InventoryDb, me: Me): Promise<void> {
     // Signed out (or someone else signed in) while waiting: this answer is not for this copy,
     // which was cleared meanwhile.
     if (currentUser()?.email !== me.email) return;
-    const tables = [store.items, store.shopping, store.recipes, store.outbox, store.meta];
+    const tables = [
+      store.items,
+      store.shopping,
+      store.recipes,
+      store.receipts,
+      store.outbox,
+      store.meta,
+    ];
     await store.transaction('rw', tables, async () => {
       // Sent and not changed again meanwhile: no longer pending.
       for (const entry of pending) {
@@ -173,6 +209,11 @@ async function round(store: InventoryDb, me: Me): Promise<void> {
         const queued = await store.outbox.get(recipe.id);
         if (queued && queued.updated_at > recipe.updated_at) continue;
         await store.recipes.put(recipe);
+      }
+      for (const receipt of answer.receipts ?? []) {
+        const queued = await store.outbox.get(receipt.id);
+        if (queued && queued.updated_at > receipt.updated_at) continue;
+        await store.receipts.put(receipt);
       }
       await setMeta(store, 'cursor', answer.cursor);
     });

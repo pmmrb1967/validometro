@@ -25,10 +25,11 @@ function save(text: string): void {
 
 /** This phone's data, as the server's file would have it (no account, nothing on the server). */
 async function localExport(): Promise<string> {
-  const [items, shopping, recipes] = await Promise.all([
+  const [items, shopping, recipes, receipts] = await Promise.all([
     db.items.toArray(),
     db.shopping.toArray(),
     db.recipes.toArray(),
+    db.receipts.toArray(),
   ]);
   return JSON.stringify(
     {
@@ -43,6 +44,7 @@ async function localExport(): Promise<string> {
       }),
       shopping_list: shopping.filter((entry) => entry.state !== 'removido'),
       recipes: recipes.filter((recipe) => recipe.state !== 'removida'),
+      receipts,
     },
     null,
     2,

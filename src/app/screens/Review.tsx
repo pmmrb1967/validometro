@@ -5,7 +5,8 @@
  * field editable. Long-life lines start unticked (principle 1). Confirming saves the items and
  * teaches the shared dictionary what each receipt line meant.
  */
-import { useState } from 'react';
+import { useLiveQuery } from 'dexie-react-hooks';
+import { useMemo, useState } from 'react';
 import { Link, useNavigate } from 'react-router';
 import { CATEGORIES, categoryById } from '../../domain/categories';
 import { formatShortDate, isIsoDate, lisbonDate } from '../../domain/dates';
@@ -25,7 +26,9 @@ import { ApiError, readPrintedDate, teachAliases } from '../api';
 import { PhotoButton } from '../components/PhotoButton';
 import { StatusNote } from '../components/BusyNote';
 import { hasCamera } from '../image';
+import { receiptLines, resembling } from '../../domain/receipts';
 import { addItem } from '../store/items';
+import { rememberReceipt, seenReceipts } from '../store/receipts';
 import { clearPendingReview, getPendingReview } from '../store/review';
 import { AiCostNote } from '../components/AiCostNote';
 
@@ -73,6 +76,19 @@ export function Review() {
       })) ?? [],
   );
   const [saving, setSaving] = useState(false);
+  // No QR code: a receipt saved before that this one looks like (most lines, the same day).
+  const seen = useLiveQuery(() => seenReceipts(), []);
+  const lookalike = useMemo(() => {
+    if (!pending || pending.source !== 'receipt' || pending.qr || !seen) return undefined;
+    return resembling(
+      {
+        store: pending.store,
+        date: pending.date && isIsoDate(pending.date) ? pending.date : null,
+        lines: receiptLines(pending.drafts.map((draft) => draft.raw)),
+      },
+      seen,
+    );
+  }, [pending, seen]);
   const [note, setNote] = useState<string>();
   const today = lisbonDate(new Date());
 
@@ -135,6 +151,17 @@ export function Review() {
           : [],
       ),
     );
+    if (pending.source === 'receipt') {
+      // Known next time, by its QR code or by its lines (never the receipt itself).
+      const day = pending.qr?.date ?? pending.date;
+      await rememberReceipt({
+        qrHash: pending.qr?.hash ?? null,
+        store: pending.store,
+        date: day && isIsoDate(day) ? day : null,
+        raws: pending.drafts.map((draft) => draft.raw),
+        items: chosen.length,
+      });
+    }
     clearPendingReview();
     navigate('/', { replace: true });
   };
@@ -178,6 +205,16 @@ export function Review() {
             receitas sugeridas.
           </p>
         </div>
+      )}
+
+      {lookalike && (
+        <p className="note seen-receipt" role="alert">
+          Parece um talão já registado
+          {lookalike.receipt.date
+            ? ` (compra de ${formatShortDate(lookalike.receipt.date)})`
+            : ''}: {lookalike.shared} de {lookalike.of} linhas iguais. Se for o mesmo, usa
+          “Descartar tudo” para não repetir o que já está em casa.
+        </p>
       )}
 
       <ul className="review-list">

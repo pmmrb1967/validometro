@@ -6,6 +6,7 @@
  * is sent as lines (cheaper and more exact than a photo); a scanned one has none, and its
  * first page goes as an image instead. The file itself never leaves the phone.
  */
+import type { ReceiptQr } from '../domain/receipts';
 import { shrinkPhoto } from './image';
 
 /** Enough for a long receipt; more pages would be a statement, not a receipt. */
@@ -13,7 +14,8 @@ const MAX_PAGES = 6;
 /** Less text than this is a scanned PDF (or an empty one). */
 const MIN_TEXT = 40;
 
-export type PdfReceipt = { text: string } | { image: string } | null;
+/** With the receipt's QR code when the PDF has one (domain/receipts.ts). */
+export type PdfReceipt = (({ text: string } | { image: string }) & { qr: ReceiptQr | null }) | null;
 
 interface TextPiece {
   str: string;
@@ -85,22 +87,35 @@ export async function readPdfReceipt(file: Blob): Promise<PdfReceipt> {
       lines.push(...piecesToLines(pieces));
     }
     const text = receiptTextForAi(lines).join('\n').trim();
-    if (text.length >= MIN_TEXT) return { text: text.slice(0, 30_000) };
+
+    // The QR code is at the end: the last page, drawn large enough to read it.
+    const { receiptQrIn } = await import('./receipt-qr');
+    const drawn = async (number: number, side: number) => {
+      const page = await pdf.getPage(number);
+      const base = page.getViewport({ scale: 1 });
+      const viewport = page.getViewport({ scale: side / Math.max(base.width, base.height) });
+      const canvas = document.createElement('canvas');
+      canvas.width = Math.round(viewport.width);
+      canvas.height = Math.round(viewport.height);
+      await page.render({ canvas, viewport }).promise;
+      return canvas;
+    };
+    const last = Math.min(pdf.numPages, MAX_PAGES);
+    let qr: ReceiptQr | null = null;
+    try {
+      qr = await receiptQrIn(await drawn(last, 2400));
+    } catch {
+      qr = null;
+    }
+    if (text.length >= MIN_TEXT) return { text: text.slice(0, 30_000), qr };
 
     // Scanned: the first page as a photo, made small like any other.
-    const page = await pdf.getPage(1);
-    const base = page.getViewport({ scale: 1 });
-    const scale = 1600 / Math.max(base.width, base.height);
-    const viewport = page.getViewport({ scale });
-    const canvas = document.createElement('canvas');
-    canvas.width = Math.round(viewport.width);
-    canvas.height = Math.round(viewport.height);
-    await page.render({ canvas, viewport }).promise;
+    const canvas = await drawn(1, 1600);
     const blob = await new Promise<Blob | null>((resolve) =>
       canvas.toBlob(resolve, 'image/jpeg', 0.85),
     );
     const image = blob ? await shrinkPhoto(blob) : null;
-    return image ? { image } : null;
+    return image ? { image, qr } : null;
   } finally {
     void task.destroy();
   }

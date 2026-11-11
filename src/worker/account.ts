@@ -293,7 +293,7 @@ account.delete('/account', requireUser, async (c) => {
 account.get('/account/export', requireUser, async (c) => {
   const user = userOf(c);
   const db = c.env.DB;
-  const [profile, household, items, shopping, devices, usage, overrides, recipes] =
+  const [profile, household, items, shopping, devices, usage, overrides, recipes, receipts] =
     await Promise.all([
       db
         .prepare(
@@ -341,6 +341,13 @@ account.get('/account/export', requireUser, async (c) => {
         .all<
           Record<string, unknown> & { usa: string; falta: string; steps: string; starred: number }
         >(),
+      db
+        .prepare(
+          `SELECT qr_hash, store, date, lines, items, created_at FROM receipts
+         WHERE household_id = ? ORDER BY created_at`,
+        )
+        .bind(user.householdId)
+        .all<Record<string, unknown> & { lines: string }>(),
     ]);
   const exported = {
     exported_at: new Date().toISOString(),
@@ -368,6 +375,11 @@ account.get('/account/export', requireUser, async (c) => {
       falta: JSON.parse(row.falta) as string[],
       steps: JSON.parse(row.steps) as string[],
       starred: row.starred === 1,
+    })),
+    // Notes of the receipts saved (hashes, never the receipt): to tell one read twice.
+    receipts: receipts.results.map((row) => ({
+      ...row,
+      lines: JSON.parse(row.lines) as string[],
     })),
     // The push service only: the address itself works as a credential for that phone.
     alert_devices: devices.results.map((row) => ({

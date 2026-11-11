@@ -688,3 +688,121 @@ test('sem data: um alimento desconhecido não fica escondido', async ({ page }) 
   await expect(page.locator('.group-undated')).toHaveCount(0);
   await expect(page.getByRole('heading', { name: /Esta semana/ })).toBeVisible();
 });
+
+test('talão repetido: o código QR diz que já foi registado, antes de gastar a IA', async ({
+  page,
+}) => {
+  // The AT's QR code of the receipt, as the phone's BarcodeDetector would read it.
+  await page.addInitScript(() => {
+    class FakeDetector {
+      static async getSupportedFormats() {
+        return ['qr_code', 'ean_13'];
+      }
+      async detect() {
+        return [
+          {
+            rawValue:
+              'A:500123456*B:999999990*C:PT*D:FS*E:N*F:20261111*G:FS 0123/45678*O:12.92*Q:ab1C*R:1234',
+          },
+        ];
+      }
+    }
+    (globalThis as unknown as { BarcodeDetector: unknown }).BarcodeDetector = FakeDetector;
+  });
+  let reads = 0;
+  await page.route('**/api/ingest/receipt', async (route) => {
+    reads++;
+    await route.fulfill({
+      json: {
+        store: 'Continente',
+        date: '2026-11-11',
+        drafts: [
+          {
+            key: 'a',
+            raw: 'PEITO FRANGO',
+            name: 'Peito de frango',
+            category: 'carne_fresca',
+            location: 'frigorifico',
+            quantity: null,
+            unit: null,
+            perishable: true,
+            expires_at: null,
+            expiry_source: null,
+            known: false,
+            price: null,
+          },
+        ],
+      },
+    });
+  });
+  await page.goto('/');
+  await page.getByRole('button', { name: 'Começar sem conta' }).first().click();
+  const photograph = async () => {
+    await page.goto('/adicionar');
+    await page
+      .locator('.quick-entry input[type=file][capture]')
+      .first()
+      .setInputFiles({ name: 'talao.png', mimeType: 'image/png', buffer: PHOTO });
+    await page.getByRole('button', { name: 'Ler talão' }).click();
+  };
+
+  await photograph();
+  await page.getByRole('button', { name: 'Guardar 1 alimento' }).click();
+  await expect(page).toHaveURL('/');
+  expect(reads).toBe(1);
+
+  // Someone reads it again: known by its code, the AI is not asked.
+  await photograph();
+  const seen = page.locator('.seen-receipt');
+  await expect(seen).toContainText('Este talão já foi registado (compra de 11 nov.');
+  await seen.getByRole('button', { name: 'Não ler' }).click();
+  await expect(page.locator('.seen-receipt')).toHaveCount(0);
+  expect(reads).toBe(1);
+
+  // A purchase really repeated: read anyway.
+  await photograph();
+  await page.locator('.seen-receipt').getByRole('button', { name: 'Ler na mesma' }).click();
+  await expect(page.getByRole('button', { name: 'Guardar 1 alimento' })).toBeVisible();
+  expect(reads).toBe(2);
+});
+
+test('talão repetido sem código QR: avisa ao rever, pelas linhas', async ({ page }) => {
+  await page.goto('/');
+  await page.getByRole('button', { name: 'Começar sem conta' }).first().click();
+  const line = (raw: string, name: string) => ({
+    key: raw,
+    raw,
+    name,
+    category: 'iogurtes',
+    location: 'frigorifico',
+    quantity: null,
+    unit: null,
+    perishable: true,
+    expires_at: null,
+    expiry_source: null,
+    known: false,
+    price: null,
+  });
+  const review = async () => {
+    await page.evaluate(
+      (drafts) => {
+        sessionStorage.setItem(
+          'validometro.review',
+          JSON.stringify({ source: 'receipt', store: 'Continente', date: '2026-11-11', drafts }),
+        );
+      },
+      [
+        line('IOG NAT 4X', 'Iogurte natural'),
+        line('IOG MORANGO', 'Iogurte de morango'),
+        line('NATAS 200ML', 'Natas'),
+      ],
+    );
+    await page.goto('/rever');
+  };
+  await review();
+  await expect(page.locator('.seen-receipt')).toHaveCount(0);
+  await page.getByRole('button', { name: 'Guardar 3 alimentos' }).click();
+  await expect(page).toHaveURL('/');
+  await review();
+  await expect(page.locator('.seen-receipt')).toContainText('3 de 3 linhas iguais');
+});

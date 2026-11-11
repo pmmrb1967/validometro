@@ -122,6 +122,32 @@ describe('sync', () => {
     expect(theirs.recipes).toEqual([]);
   });
 
+  it('shares the notes of the receipts saved, hashes only, never with another household', async () => {
+    const at = new Date().toISOString();
+    const receipt = {
+      id: crypto.randomUUID(),
+      qr_hash: 'a'.repeat(64),
+      store: 'Continente',
+      date: '2026-11-11',
+      lines: ['0a1b2c3d', '11223344'],
+      items: 2,
+      created_at: at,
+      updated_at: at,
+    };
+    const sent = await phone.json<{ receipts: unknown[] }>('POST', '/api/sync', {
+      changes: [],
+      // A line that is not a short hash (the receipt's text) is refused.
+      receipts: [receipt, { ...receipt, id: crypto.randomUUID(), lines: ['IOG NAT 4X'] }],
+      cursor: 0,
+    });
+    expect(sent.receipts).toEqual([expect.objectContaining(receipt)]);
+    const theirs = await other.json<{ receipts: unknown[] }>('POST', '/api/sync', {
+      changes: [],
+      cursor: 0,
+    });
+    expect(theirs.receipts).toEqual([]);
+  });
+
   it('marks an item from the notification, once', async () => {
     const item = newItem('Frango');
     await phone.request('POST', '/api/sync', { changes: [item], cursor: 0 });

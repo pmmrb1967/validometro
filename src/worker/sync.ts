@@ -78,6 +78,25 @@ export const recipeSchema = z.object({
 });
 export type SyncedRecipe = z.infer<typeof recipeSchema>;
 
+/** The note of a receipt saved (domain/receipts.ts): hashes, the shop's name and the day. */
+export const receiptSchema = z.object({
+  id: z.string().uuid(),
+  qr_hash: z
+    .string()
+    .regex(/^[0-9a-f]{64}$/)
+    .nullable(),
+  store: z.string().trim().max(120).nullable(),
+  date: z
+    .string()
+    .regex(/^\d{4}-\d{2}-\d{2}$/)
+    .nullable(),
+  lines: z.array(z.string().regex(/^[0-9a-f]{8}$/)).max(300),
+  items: z.number().int().min(0).max(1000),
+  created_at: instant,
+  updated_at: instant,
+});
+export type SyncedReceipt = z.infer<typeof receiptSchema>;
+
 export const MAX_CHANGES = 200;
 export const PAGE = 500;
 
@@ -86,6 +105,7 @@ const SyncBody = z.object({
   changes: z.array(z.unknown()).max(MAX_CHANGES),
   shopping: z.array(z.unknown()).max(MAX_CHANGES).default([]),
   recipes: z.array(z.unknown()).max(MAX_CHANGES).default([]),
+  receipts: z.array(z.unknown()).max(MAX_CHANGES).default([]),
   cursor: z.number().int().min(0),
 });
 
@@ -140,6 +160,19 @@ const RECIPE_COLUMNS = [
   'updated_at',
 ] as const;
 
+const RECEIPT_COLUMNS = [
+  'id',
+  'household_id',
+  'created_by',
+  'qr_hash',
+  'store',
+  'date',
+  'lines',
+  'items',
+  'created_at',
+  'updated_at',
+] as const;
+
 const FIXED = ['id', 'household_id', 'created_by', 'created_at'];
 const nextSeq = "(SELECT value FROM counters WHERE name = 'items')";
 const bump = (db: D1Database) =>
@@ -151,7 +184,7 @@ const bump = (db: D1Database) =>
  */
 function upsert(
   db: D1Database,
-  table: 'items' | 'shopping_list' | 'recipes',
+  table: 'items' | 'shopping_list' | 'recipes' | 'receipts',
   columns: readonly string[],
   row: Record<string, unknown>,
 ) {
@@ -207,6 +240,34 @@ function recipeOut(row: RecipeRow) {
   };
 }
 
+type ReceiptRow = Omit<SyncedReceipt, 'lines'> & {
+  lines: string;
+  household_id: string;
+  created_by: string | null;
+  server_seq: number;
+};
+
+function receiptOut(row: ReceiptRow) {
+  let lines: string[] = [];
+  try {
+    const value: unknown = JSON.parse(row.lines);
+    if (Array.isArray(value)) lines = value.filter((entry) => typeof entry === 'string');
+  } catch {
+    // Unreadable: compared as if it had no lines.
+  }
+  return {
+    id: row.id,
+    household_id: row.household_id,
+    qr_hash: row.qr_hash,
+    store: row.store,
+    date: row.date,
+    lines,
+    items: row.items,
+    created_at: row.created_at,
+    updated_at: row.updated_at,
+  };
+}
+
 function valid<T>(schema: z.ZodType<T>, list: unknown[]): T[] {
   return list.flatMap((change) => {
     const parsed = schema.safeParse(change);
@@ -223,7 +284,8 @@ sync.post('/sync', requireUser, async (c) => {
   const items = valid(itemSchema, parsed.data.changes);
   const shopping = valid(shoppingSchema, parsed.data.shopping);
   const recipes = valid(recipeSchema, parsed.data.recipes);
-  if (items.length || shopping.length || recipes.length) {
+  const receipts = valid(receiptSchema, parsed.data.receipts);
+  if (items.length || shopping.length || recipes.length || receipts.length) {
     await db.batch([
       ...items.flatMap((item) =>
         upsert(db, 'items', ITEM_COLUMNS, {
@@ -251,10 +313,18 @@ sync.post('/sync', requireUser, async (c) => {
           starred: recipe.starred ? 1 : 0,
         }),
       ),
+      ...receipts.flatMap((receipt) =>
+        upsert(db, 'receipts', RECEIPT_COLUMNS, {
+          ...receipt,
+          household_id: user.householdId,
+          created_by: user.id,
+          lines: JSON.stringify(receipt.lines),
+        }),
+      ),
     ]);
   }
 
-  const [itemRows, shoppingRows, recipeRows, overrides] = await Promise.all([
+  const [itemRows, shoppingRows, recipeRows, receiptRows, overrides] = await Promise.all([
     db
       .prepare(
         'SELECT * FROM items WHERE household_id = ? AND server_seq > ? ORDER BY server_seq LIMIT ?',
@@ -274,17 +344,24 @@ sync.post('/sync', requireUser, async (c) => {
       )
       .bind(user.householdId, cursor, PAGE)
       .all<RecipeRow>(),
+    db
+      .prepare(
+        'SELECT * FROM receipts WHERE household_id = ? AND server_seq > ? ORDER BY server_seq LIMIT ?',
+      )
+      .bind(user.householdId, cursor, PAGE)
+      .all<ReceiptRow>(),
     householdOverrides(db, user.householdId),
   ]);
   // One cursor for both: a full page of either stops both at its last number, or rows of
   // the other table beyond it would be skipped.
-  const cuts = [itemRows.results, shoppingRows.results, recipeRows.results]
+  const cuts = [itemRows.results, shoppingRows.results, recipeRows.results, receiptRows.results]
     .filter((rows) => rows.length === PAGE)
     .map((rows) => rows.at(-1)!.server_seq);
   const cut = cuts.length ? Math.min(...cuts) : Infinity;
   const pickedItems = itemRows.results.filter((row) => row.server_seq <= cut);
   const pickedShopping = shoppingRows.results.filter((row) => row.server_seq <= cut);
   const pickedRecipes = recipeRows.results.filter((row) => row.server_seq <= cut);
+  const pickedReceipts = receiptRows.results.filter((row) => row.server_seq <= cut);
 
   const outItems = pickedItems.map((row) => {
     const item: Partial<ItemRow> = { ...row, updated_at: row.updated_at ?? row.created_at };
@@ -297,12 +374,15 @@ sync.post('/sync', requireUser, async (c) => {
     delete entry.done;
     return entry;
   });
-  const seqs = [...pickedItems, ...pickedShopping, ...pickedRecipes].map((row) => row.server_seq);
+  const seqs = [...pickedItems, ...pickedShopping, ...pickedRecipes, ...pickedReceipts].map(
+    (row) => row.server_seq,
+  );
   const last = Number.isFinite(cut) ? cut : Math.max(cursor, ...seqs);
   return c.json({
     items: outItems,
     shopping: outShopping,
     recipes: pickedRecipes.map(recipeOut),
+    receipts: pickedReceipts.map(receiptOut),
     cursor: last,
     more: Number.isFinite(cut),
     rules: overrides,

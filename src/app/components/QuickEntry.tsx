@@ -15,7 +15,11 @@ import {
   readSpoken,
   type ReadingResult,
 } from '../api';
+import { formatShortDate } from '../../domain/dates';
+import { receiptQrHash, type ReceiptQr, type SeenReceipt } from '../../domain/receipts';
 import { hasCamera, shrinkPhoto } from '../image';
+import { receiptQrInPhotos } from '../receipt-qr';
+import { receiptWithQr } from '../store/receipts';
 import { speechSupported, useDictation } from '../speech';
 import { markTracked, setPendingReview, type ReadingSource } from '../store/review';
 import { BusyNote } from './BusyNote';
@@ -62,10 +66,25 @@ export function QuickEntry() {
    * the pages of an invoice in Faturómetro). Read in one request, as one receipt.
    */
   const [parts, setParts] = useState<string[]>([]);
-  const addParts = (images: string[]) =>
+  /** The same photos as taken, only to look for the QR code; gone with the page. */
+  const originals = useRef<Blob[]>([]);
+  const addParts = (images: string[], taken: Blob[]) => {
     setParts((current) => [...current, ...images].slice(0, MAX_RECEIPT_PARTS));
+    originals.current = [...originals.current, ...taken].slice(0, MAX_RECEIPT_PARTS);
+  };
+  const clearParts = () => {
+    setParts([]);
+    originals.current = [];
+  };
+  /** This receipt was saved before (its QR code): read again only if asked. */
+  const [seen, setSeen] = useState<{ receipt: SeenReceipt; again: () => void }>();
 
-  const run = async (label: string, source: ReadingSource, read: () => Promise<ReadingResult>) => {
+  const run = async (
+    label: string,
+    source: ReadingSource,
+    read: () => Promise<ReadingResult>,
+    qr?: { hash: string; date: string | null },
+  ) => {
     setBusy(label);
     setError(undefined);
     try {
@@ -78,10 +97,45 @@ export function QuickEntry() {
         );
         return;
       }
-      setPendingReview({ ...result, drafts: await markTracked(result.drafts), source });
+      setPendingReview({
+        ...result,
+        drafts: await markTracked(result.drafts),
+        source,
+        ...(qr ? { qr } : {}),
+      });
       navigate('/rever');
     } catch (err) {
       setError(err instanceof ApiError ? err.message : 'Algo correu mal. Tenta outra vez.');
+    } finally {
+      setBusy(undefined);
+    }
+  };
+
+  /**
+   * A receipt about to be read: with its QR code, known at once if it was saved before, and
+   * then the AI is not asked unless the user says so (domain/receipts.ts).
+   */
+  const readReceiptOnce = async (
+    label: string,
+    qr: ReceiptQr | null,
+    read: () => Promise<ReadingResult>,
+  ) => {
+    setSeen(undefined);
+    const hash = qr ? await receiptQrHash(qr) : null;
+    const known = hash ? await receiptWithQr(hash) : undefined;
+    const go = () =>
+      void run(label, 'receipt', read, hash ? { hash, date: qr?.date ?? null } : undefined);
+    if (known) setSeen({ receipt: known, again: go });
+    else go();
+  };
+
+  /** The QR code in the photos as taken (none, or unreadable: null). */
+  const qrOf = async (photos: Blob[]) => {
+    setBusy('A procurar o código QR do talão…');
+    try {
+      return await receiptQrInPhotos(photos);
+    } catch {
+      return null;
     } finally {
       setBusy(undefined);
     }
@@ -109,10 +163,11 @@ export function QuickEntry() {
       return;
     }
     if (now && small.length === 1 && !parts.length) {
-      await run('A ler o talão…', 'receipt', () => readReceipt(small));
+      const qr = await qrOf(images);
+      await readReceiptOnce('A ler o talão…', qr, () => readReceipt(small));
       return;
     }
-    addParts(small);
+    addParts(small, images);
   };
 
   /** A PDF receipt: as text when it has one; else its first page as a picture. */
@@ -133,19 +188,21 @@ export function QuickEntry() {
         return;
       }
       const reading = pdf;
-      await run('A ler o talão…', 'receipt', () =>
+      await readReceiptOnce('A ler o talão…', reading.qr, () =>
         'text' in reading ? readReceiptText(reading.text) : readReceipt(reading.image),
       );
       return;
     }
   };
 
-  const readParts = () =>
-    void run(
+  const readParts = async () => {
+    const qr = await qrOf(originals.current);
+    await readReceiptOnce(
       parts.length > 1 ? `A ler as ${parts.length} partes do talão…` : 'A ler o talão…',
-      'receipt',
+      qr,
       () => readReceipt(parts),
     );
+  };
 
   // A receipt shared from another app (public/push-sw.js): read it as if just photographed.
   useEffect(() => {
@@ -176,7 +233,7 @@ export function QuickEntry() {
         <PhotoButton
           className="primary"
           disabled={busy !== undefined || parts.length > 0}
-          onPhoto={(image) => addParts([image])}
+          onPhoto={(image, original) => addParts([image], [original])}
           onError={setError}
         >
           {camera ? 'Fotografar talão' : 'Foto do talão'}
@@ -219,6 +276,42 @@ export function QuickEntry() {
       </div>
       {parts.length === 0 && <AiCostNote operation="receipt" />}
 
+      {seen && (
+        <div className="note seen-receipt" role="alert">
+          <p>
+            Este talão já foi registado
+            {seen.receipt.date ? ` (compra de ${formatShortDate(seen.receipt.date)}` : ' ('}
+            {seen.receipt.store ? `${seen.receipt.date ? ', ' : ''}${seen.receipt.store}` : ''}
+            {seen.receipt.date || seen.receipt.store ? ', ' : ''}
+            {seen.receipt.items === 1 ? '1 alimento' : `${seen.receipt.items} alimentos`}). Lê-lo
+            outra vez repetia o que já está em casa.
+          </p>
+          <div className="row wrap">
+            <button
+              type="button"
+              className="primary"
+              onClick={() => {
+                setSeen(undefined);
+                clearParts();
+              }}
+            >
+              Não ler
+            </button>
+            <button
+              type="button"
+              className="ghost"
+              onClick={() => {
+                const again = seen.again;
+                setSeen(undefined);
+                again();
+              }}
+            >
+              Ler na mesma
+            </button>
+          </div>
+        </div>
+      )}
+
       {parts.length > 0 && (
         <div className="receipt-parts" role="group" aria-label="Fotos do talão">
           <p className="receipt-parts-title" role="status">
@@ -244,7 +337,7 @@ export function QuickEntry() {
               type="button"
               className="primary"
               disabled={busy !== undefined}
-              onClick={readParts}
+              onClick={() => void readParts()}
             >
               Ler talão
             </button>
@@ -252,7 +345,7 @@ export function QuickEntry() {
               <PhotoButton
                 className="secondary"
                 disabled={busy !== undefined}
-                onPhoto={(image) => addParts([image])}
+                onPhoto={(image, original) => addParts([image], [original])}
                 onError={setError}
               >
                 {camera ? 'Fotografar a parte seguinte' : 'Juntar a parte seguinte'}
@@ -262,7 +355,7 @@ export function QuickEntry() {
               type="button"
               className="ghost"
               disabled={busy !== undefined}
-              onClick={() => setParts([])}
+              onClick={clearParts}
             >
               Recomeçar
             </button>

@@ -2606,3 +2606,14 @@ button.topbar-link {
 .undated-kind {
   margin: 4px 0 10px;
 }
+
+/* The same receipt read again: before reading (QR code) or on the review (lines). */
+.seen-receipt {
+  display: grid;
+  gap: 8px;
+  margin: 10px 0;
+}
+
+.seen-receipt p {
+  margin: 0;
+}
