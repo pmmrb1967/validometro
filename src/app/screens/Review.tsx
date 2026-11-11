@@ -343,7 +343,7 @@ export function Review() {
           {chosen.length === 1 ? 'Guardar 1 alimento' : `Guardar ${chosen.length} alimentos`}
         </button>
         <button type="button" className="ghost" disabled={saving} onClick={discard}>
-          Descartar
+          Descartar tudo
         </button>
       </div>
     </div>

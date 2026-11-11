@@ -637,24 +637,34 @@ test('talão: marcar todos, a longa duração fica no stock e entra nas receitas
     known: false,
     price: null,
   });
-  await page.evaluate(
-    (drafts) => {
-      sessionStorage.setItem(
-        'validometro.review',
-        JSON.stringify({ source: 'receipt', store: 'Loja', date: null, drafts }),
-      );
+  const saved = [
+    {
+      ...draft('Peito de frango', true, 'carne_fresca', 'frigorifico'),
+      expires_at: new Date(Date.now() + 86_400_000).toISOString().slice(0, 10),
+      expiry_source: 'estimada',
     },
-    [
-      {
-        ...draft('Peito de frango', true, 'carne_fresca', 'frigorifico'),
-        expires_at: new Date(Date.now() + 86_400_000).toISOString().slice(0, 10),
-        expiry_source: 'estimada',
-      },
-      draft('Grão-de-bico', false, 'longa_duracao', 'despensa'),
-    ],
-  );
+    draft('Grão-de-bico', false, 'longa_duracao', 'despensa'),
+  ];
+  await page.evaluate((drafts) => {
+    sessionStorage.setItem(
+      'validometro.review',
+      JSON.stringify({ source: 'receipt', store: 'Loja', date: null, drafts }),
+    );
+  }, saved);
   await page.goto('/rever');
   await expect(page.getByRole('button', { name: 'Guardar 1 alimento' })).toBeVisible();
+  // "Descartar tudo": nothing at all is kept, ticked or not.
+  await page.getByRole('button', { name: 'Descartar tudo' }).click();
+  await expect(page).toHaveURL('/adicionar');
+  await page.goto('/');
+  await expect(page.getByText('Peito de frango')).toHaveCount(0);
+  await page.evaluate((drafts) => {
+    sessionStorage.setItem(
+      'validometro.review',
+      JSON.stringify({ source: 'receipt', store: 'Loja', date: null, drafts }),
+    );
+  }, saved);
+  await page.goto('/rever');
   await page.getByRole('button', { name: 'Marcar todos (1 de fora)' }).click();
   await page.getByRole('button', { name: 'Guardar 2 alimentos' }).click();
   await expect(page).toHaveURL('/');
