@@ -1822,8 +1822,7 @@ textarea {
 }
 
 .admin-table th:first-child,
-.admin-table td:first-child,
-.admin-table td:nth-child(2) {
+.admin-table td:first-child {
   text-align: left;
 }
 
@@ -1848,14 +1847,19 @@ textarea {
     padding-left: 0;
   }
 
-  .admin-table td:first-child,
-  .admin-table td:nth-child(2) {
+  /* Every cell may wrap between words ("123 456 / neurons"); numbers never break inside. */
+  .admin-table td {
     white-space: normal;
   }
 
   .admin-table thead th {
     white-space: normal;
   }
+}
+
+.admin-use {
+  display: block;
+  color: var(--muted);
 }
 
 .admin-total {

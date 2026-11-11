@@ -43,6 +43,9 @@ interface Overview {
 }
 
 const NUMBER = new Intl.NumberFormat('pt-PT');
+/** "4,9 M", "123 mil": seven digits in five columns do not fit a phone. */
+const COMPACT = new Intl.NumberFormat('pt-PT', { notation: 'compact', maximumFractionDigits: 1 });
+const short = (value: number) => (value >= 100_000 ? COMPACT.format(value) : NUMBER.format(value));
 const MB = 1024 * 1024;
 
 function format(unit: Metric['unit'], value: number): string {
@@ -72,7 +75,7 @@ function rowCost(row: AiRow): number | null {
 }
 
 function spentText(row: AiRow): string {
-  if (row.provider === 'workers-ai') return `${NUMBER.format(row.units)} neurons`;
+  if (row.provider === 'workers-ai') return `${short(row.units)} neurons`;
   const usd = rowCost(row);
   if (usd === null) return '—';
   return `≈ ${formatUsd(usd)}${row.unpriced ? '*' : ''}`;
@@ -303,8 +306,7 @@ export function Admin() {
                 <table className="admin-table">
                   <thead>
                     <tr>
-                      <th scope="col">Fornecedor</th>
-                      <th scope="col">Uso</th>
+                      <th scope="col">IA e uso</th>
                       <th scope="col">Pedidos</th>
                       <th scope="col">Falhas</th>
                       <th scope="col">Gasto</th>
@@ -313,8 +315,12 @@ export function Admin() {
                   <tbody>
                     {overview.ai.map((row) => (
                       <tr key={`${row.provider}-${row.model}-${row.operation}`}>
-                        <td>{providerLabel(row)}</td>
-                        <td>{OPERATIONS[row.operation] ?? row.operation}</td>
+                        <td>
+                          {providerLabel(row)}
+                          <small className="admin-use">
+                            {OPERATIONS[row.operation] ?? row.operation}
+                          </small>
+                        </td>
                         <td>{NUMBER.format(row.calls)}</td>
                         <td>{NUMBER.format(row.failures)}</td>
                         <td>{spentText(row)}</td>
@@ -375,7 +381,12 @@ export function Admin() {
                         {HISTORY.map((metric) => {
                           const value = historyValue(date, metric);
                           return (
-                            <td key={metric}>{value === undefined ? '—' : NUMBER.format(value)}</td>
+                            <td
+                              key={metric}
+                              title={value === undefined ? undefined : NUMBER.format(value)}
+                            >
+                              {value === undefined ? '—' : short(value)}
+                            </td>
                           );
                         })}
                       </tr>

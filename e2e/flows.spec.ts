@@ -194,6 +194,9 @@ test('painel: só para quem administra', async ({ page }) => {
       },
     }),
   );
+  // A small phone, with room to spare for wider fonts (the CI's are wider than Windows').
+  if (test.info().project.name === 'telemóvel')
+    await page.setViewportSize({ width: 340, height: 800 });
   await page.reload();
   await expect(page.getByRole('heading', { name: 'Últimos 14 dias' })).toBeVisible();
   const overflow = await page.evaluate(
