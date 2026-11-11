@@ -1,11 +1,11 @@
 // SPDX-License-Identifier: AGPL-3.0-or-later
 // Copyright (C) 2026 Paulo Barbosa
 /**
- * Sync of the household's items and shopping list. The server is the source of truth; each
+ * Sync of the household's items, shopping list and saved recipes. The server is the source of truth; each
  * phone keeps a copy (IndexedDB) and a queue of changes made offline.
  *
- *   POST /sync {changes: Item[], shopping?: ShoppingEntry[], cursor}
- *     → {items: Item[], shopping: ShoppingEntry[], cursor, more, rules: RuleOverride[]}
+ *   POST /sync {changes: Item[], shopping?: ShoppingEntry[], recipes?: SavedRecipe[], cursor}
+ *     → {items, shopping, recipes, cursor, more, rules: RuleOverride[]}
  *       (rules: all the household's own shelf-life days, a few rows at most)
  *
  * A change wins when its `updated_at` (the phone's clock at the change) is not older than
@@ -17,6 +17,7 @@
  */
 import { Hono } from 'hono';
 import { z } from 'zod';
+import { RECIPE_STATES } from '../domain/recipes';
 import { SHOPPING_STATES } from '../domain/shopping';
 import { EXPIRY_KINDS } from '../domain/types';
 import { requireUser, userOf, type AppEnv } from './session';
@@ -61,6 +62,22 @@ export const shoppingSchema = z.object({
 });
 export type SyncedShopping = z.infer<typeof shoppingSchema>;
 
+const words = z.array(z.string().trim().min(1).max(200)).max(40);
+export const recipeSchema = z.object({
+  id: z.string().uuid(),
+  title: z.string().trim().min(1).max(160),
+  minutes: z.number().int().min(0).max(1440),
+  usa: words,
+  falta: words,
+  steps: z.array(z.string().trim().min(1).max(1000)).max(30),
+  item_ids: z.array(z.string().uuid()).max(40),
+  starred: z.boolean(),
+  state: z.enum(RECIPE_STATES),
+  created_at: instant,
+  updated_at: instant,
+});
+export type SyncedRecipe = z.infer<typeof recipeSchema>;
+
 export const MAX_CHANGES = 200;
 export const PAGE = 500;
 
@@ -68,6 +85,7 @@ export const PAGE = 500;
 const SyncBody = z.object({
   changes: z.array(z.unknown()).max(MAX_CHANGES),
   shopping: z.array(z.unknown()).max(MAX_CHANGES).default([]),
+  recipes: z.array(z.unknown()).max(MAX_CHANGES).default([]),
   cursor: z.number().int().min(0),
 });
 
@@ -106,6 +124,22 @@ const SHOPPING_COLUMNS = [
   'done',
 ] as const;
 
+const RECIPE_COLUMNS = [
+  'id',
+  'household_id',
+  'created_by',
+  'title',
+  'minutes',
+  'usa',
+  'falta',
+  'steps',
+  'item_ids',
+  'starred',
+  'state',
+  'created_at',
+  'updated_at',
+] as const;
+
 const FIXED = ['id', 'household_id', 'created_by', 'created_at'];
 const nextSeq = "(SELECT value FROM counters WHERE name = 'items')";
 const bump = (db: D1Database) =>
@@ -117,7 +151,7 @@ const bump = (db: D1Database) =>
  */
 function upsert(
   db: D1Database,
-  table: 'items' | 'shopping_list',
+  table: 'items' | 'shopping_list' | 'recipes',
   columns: readonly string[],
   row: Record<string, unknown>,
 ) {
@@ -140,6 +174,38 @@ function upsert(
 
 type ItemRow = SyncedItem & { household_id: string; created_by: string | null; server_seq: number };
 type ShoppingRow = SyncedShopping & { household_id: string; done: number; server_seq: number };
+type RecipeRow = {
+  [K in keyof SyncedRecipe]: K extends 'usa' | 'falta' | 'steps' | 'item_ids'
+    ? string
+    : K extends 'starred'
+      ? number
+      : SyncedRecipe[K];
+} & { household_id: string; created_by: string | null; server_seq: number };
+
+function recipeOut(row: RecipeRow) {
+  const list = (text: string): string[] => {
+    try {
+      const value: unknown = JSON.parse(text);
+      return Array.isArray(value) ? value.filter((entry) => typeof entry === 'string') : [];
+    } catch {
+      return [];
+    }
+  };
+  return {
+    id: row.id,
+    household_id: row.household_id,
+    title: row.title,
+    minutes: row.minutes,
+    usa: list(row.usa),
+    falta: list(row.falta),
+    steps: list(row.steps),
+    item_ids: list(row.item_ids),
+    starred: row.starred === 1,
+    state: row.state,
+    created_at: row.created_at,
+    updated_at: row.updated_at,
+  };
+}
 
 function valid<T>(schema: z.ZodType<T>, list: unknown[]): T[] {
   return list.flatMap((change) => {
@@ -156,7 +222,8 @@ sync.post('/sync', requireUser, async (c) => {
   const { cursor } = parsed.data;
   const items = valid(itemSchema, parsed.data.changes);
   const shopping = valid(shoppingSchema, parsed.data.shopping);
-  if (items.length || shopping.length) {
+  const recipes = valid(recipeSchema, parsed.data.recipes);
+  if (items.length || shopping.length || recipes.length) {
     await db.batch([
       ...items.flatMap((item) =>
         upsert(db, 'items', ITEM_COLUMNS, {
@@ -172,10 +239,22 @@ sync.post('/sync', requireUser, async (c) => {
           done: entry.state === 'comprado' ? 1 : 0,
         }),
       ),
+      ...recipes.flatMap((recipe) =>
+        upsert(db, 'recipes', RECIPE_COLUMNS, {
+          ...recipe,
+          household_id: user.householdId,
+          created_by: user.id,
+          usa: JSON.stringify(recipe.usa),
+          falta: JSON.stringify(recipe.falta),
+          steps: JSON.stringify(recipe.steps),
+          item_ids: JSON.stringify(recipe.item_ids),
+          starred: recipe.starred ? 1 : 0,
+        }),
+      ),
     ]);
   }
 
-  const [itemRows, shoppingRows, overrides] = await Promise.all([
+  const [itemRows, shoppingRows, recipeRows, overrides] = await Promise.all([
     db
       .prepare(
         'SELECT * FROM items WHERE household_id = ? AND server_seq > ? ORDER BY server_seq LIMIT ?',
@@ -189,16 +268,23 @@ sync.post('/sync', requireUser, async (c) => {
       )
       .bind(user.householdId, cursor, PAGE)
       .all<ShoppingRow>(),
+    db
+      .prepare(
+        'SELECT * FROM recipes WHERE household_id = ? AND server_seq > ? ORDER BY server_seq LIMIT ?',
+      )
+      .bind(user.householdId, cursor, PAGE)
+      .all<RecipeRow>(),
     householdOverrides(db, user.householdId),
   ]);
   // One cursor for both: a full page of either stops both at its last number, or rows of
   // the other table beyond it would be skipped.
-  const cuts = [itemRows.results, shoppingRows.results]
+  const cuts = [itemRows.results, shoppingRows.results, recipeRows.results]
     .filter((rows) => rows.length === PAGE)
     .map((rows) => rows.at(-1)!.server_seq);
   const cut = cuts.length ? Math.min(...cuts) : Infinity;
   const pickedItems = itemRows.results.filter((row) => row.server_seq <= cut);
   const pickedShopping = shoppingRows.results.filter((row) => row.server_seq <= cut);
+  const pickedRecipes = recipeRows.results.filter((row) => row.server_seq <= cut);
 
   const outItems = pickedItems.map((row) => {
     const item: Partial<ItemRow> = { ...row, updated_at: row.updated_at ?? row.created_at };
@@ -211,11 +297,12 @@ sync.post('/sync', requireUser, async (c) => {
     delete entry.done;
     return entry;
   });
-  const seqs = [...pickedItems, ...pickedShopping].map((row) => row.server_seq);
+  const seqs = [...pickedItems, ...pickedShopping, ...pickedRecipes].map((row) => row.server_seq);
   const last = Number.isFinite(cut) ? cut : Math.max(cursor, ...seqs);
   return c.json({
     items: outItems,
     shopping: outShopping,
+    recipes: pickedRecipes.map(recipeOut),
     cursor: last,
     more: Number.isFinite(cut),
     rules: overrides,

@@ -85,6 +85,43 @@ describe('sync', () => {
     expect(theirs.items.find((i) => i.id === item.id)).toBeUndefined();
   });
 
+  it('shares saved recipes with the household, lists and all, never with another', async () => {
+    const at = new Date().toISOString();
+    const recipe = {
+      id: crypto.randomUUID(),
+      title: 'Frango grelhado',
+      minutes: 20,
+      usa: ['frango'],
+      falta: ['limão'],
+      steps: ['Temperar.', 'Grelhar.'],
+      item_ids: [crypto.randomUUID()],
+      starred: true,
+      state: 'nova',
+      created_at: at,
+      updated_at: at,
+    };
+    const sent = await phone.json<{ recipes: unknown[] }>('POST', '/api/sync', {
+      changes: [],
+      recipes: [recipe, { ...recipe, id: 'not-a-uuid' }],
+      cursor: 0,
+    });
+    expect(sent.recipes).toContainEqual(expect.objectContaining({ ...recipe }));
+    expect(sent.recipes).toHaveLength(1);
+    // A later "Fiz esta" wins; another household never sees it.
+    const later = new Date(Date.now() + 1000).toISOString();
+    const made = await phone.json<{ recipes: { state: string }[] }>('POST', '/api/sync', {
+      changes: [],
+      recipes: [{ ...recipe, state: 'feita', updated_at: later }],
+      cursor: 0,
+    });
+    expect(made.recipes).toEqual([expect.objectContaining({ id: recipe.id, state: 'feita' })]);
+    const theirs = await other.json<{ recipes: unknown[] }>('POST', '/api/sync', {
+      changes: [],
+      cursor: 0,
+    });
+    expect(theirs.recipes).toEqual([]);
+  });
+
   it('marks an item from the notification, once', async () => {
     const item = newItem('Frango');
     await phone.request('POST', '/api/sync', { changes: [item], cursor: 0 });

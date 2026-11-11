@@ -36,6 +36,8 @@ import {
   takeOne,
 } from '../store/items';
 import { addToList, finished, runningLow, shoppingList, takeOffList } from '../store/shopping';
+import { recipesPerItem } from '../../domain/recipes';
+import { savedRecipes } from '../store/recipes';
 
 type Filter = Location | 'tudo';
 
@@ -72,6 +74,7 @@ async function share(text: string): Promise<void> {
 /** The traffic light: what to use first, grouped by how soon it expires. */
 export function Home() {
   const items = useLiveQuery(() => activeItems(), []);
+  const recipeCounts = useLiveQuery(async () => recipesPerItem(await savedRecipes()), []);
   // What is waiting on the shopping list: a staple there already says "Na lista".
   const listed = useLiveQuery(
     async () =>
@@ -162,6 +165,7 @@ export function Home() {
       key={entry.item.id}
       lit={entry}
       onList={listed?.has(sameName(entry.item.name)) ?? false}
+      recipes={recipeCounts?.get(entry.item.id) ?? 0}
       actions={{
         onEaten: () => resolve(entry.item, 'consumido'),
         onThrownAway: () => resolve(entry.item, 'deitado_fora'),

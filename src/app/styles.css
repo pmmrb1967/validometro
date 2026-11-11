@@ -665,6 +665,44 @@ button,
 }
 
 /* Always on its own line, under the buttons: the same place on every card. */
+a.extra-action {
+  display: inline-flex;
+  align-items: center;
+  text-decoration: none;
+}
+
+.recipe-head {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 8px;
+}
+
+.recipe-head h3 {
+  margin: 0;
+  font-size: 1.05rem;
+}
+
+.recipe-star {
+  flex: none;
+  min-height: 36px;
+  padding: 0 10px;
+}
+
+.recipe-finish {
+  display: grid;
+  gap: 6px;
+  margin-top: 10px;
+}
+
+.recipe-finish p {
+  margin: 0;
+}
+
+.recipe-actions {
+  margin-top: 10px;
+}
+
 .extra-hint {
   flex-basis: 100%;
   color: var(--muted);

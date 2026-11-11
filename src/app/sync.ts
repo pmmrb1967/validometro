@@ -11,6 +11,7 @@
  * - Sign-out: the copy is cleared, so the next person on this phone does not see it.
  */
 import type { RuleOverride } from '../domain/shelf-life';
+import type { SavedRecipe } from '../domain/recipes';
 import type { ShoppingEntry } from '../domain/shopping';
 import type { Item } from '../domain/types';
 import { accountListeners, currentUser, type Me } from './account';
@@ -24,6 +25,7 @@ const EVERY_MS = 2 * 60_000;
 interface SyncResponse {
   items: Item[];
   shopping: ShoppingEntry[];
+  recipes?: SavedRecipe[];
   cursor: number;
   more: boolean;
   /** The household's own shelf-life days (rules.ts). */
@@ -43,7 +45,8 @@ async function setMeta(store: InventoryDb, key: string, value: string | number):
 
 /** Everything here, queued for the server (first sign-in on this phone). */
 async function queueEverything(store: InventoryDb): Promise<void> {
-  await store.transaction('rw', store.items, store.shopping, store.outbox, async () => {
+  const tables = [store.items, store.shopping, store.recipes, store.outbox];
+  await store.transaction('rw', tables, async () => {
     const items = await store.items.toArray();
     await store.outbox.bulkPut(
       items.map((item) => ({ id: item.id, updated_at: item.updated_at ?? item.created_at })),
@@ -56,14 +59,24 @@ async function queueEverything(store: InventoryDb): Promise<void> {
         kind: 'shopping' as const,
       })),
     );
+    const recipes = await store.recipes.toArray();
+    await store.outbox.bulkPut(
+      recipes.map((recipe) => ({
+        id: recipe.id,
+        updated_at: recipe.updated_at,
+        kind: 'recipe' as const,
+      })),
+    );
   });
 }
 
 /** Empties this device's copy (sign-out, household change, "Apagar os dados deste telemóvel"). */
 export async function clearCopy(store: InventoryDb): Promise<void> {
-  await store.transaction('rw', store.items, store.shopping, store.outbox, store.meta, async () => {
+  const tables = [store.items, store.shopping, store.recipes, store.outbox, store.meta];
+  await store.transaction('rw', tables, async () => {
     await store.items.clear();
     await store.shopping.clear();
+    await store.recipes.clear();
     await store.outbox.clear();
     await store.meta.clear();
     forgetRules();
@@ -75,6 +88,12 @@ function toChange(item: Item) {
   const change: Partial<Item> = { ...item, updated_at: item.updated_at ?? item.created_at };
   delete change.household_id;
   delete change.created_by;
+  return change;
+}
+
+function toRecipeChange(recipe: SavedRecipe) {
+  const change: Partial<SavedRecipe> = { ...recipe };
+  delete change.household_id;
   return change;
 }
 
@@ -102,7 +121,7 @@ async function round(store: InventoryDb, me: Me): Promise<void> {
 
   for (;;) {
     const pending = await store.outbox.limit(MAX_CHANGES).toArray();
-    const itemIds = pending.filter((entry) => entry.kind !== 'shopping').map((entry) => entry.id);
+    const itemIds = pending.filter((entry) => !entry.kind).map((entry) => entry.id);
     const shoppingIds = pending
       .filter((entry) => entry.kind === 'shopping')
       .map((entry) => entry.id);
@@ -112,6 +131,10 @@ async function round(store: InventoryDb, me: Me): Promise<void> {
     const shopping = (await store.shopping.bulkGet(shoppingIds)).filter(
       (entry): entry is ShoppingEntry => entry !== undefined,
     );
+    const recipeIds = pending.filter((entry) => entry.kind === 'recipe').map((entry) => entry.id);
+    const recipes = (await store.recipes.bulkGet(recipeIds)).filter(
+      (recipe): recipe is SavedRecipe => recipe !== undefined,
+    );
     const cursor = (await meta<number>(store, 'cursor')) ?? 0;
     const res = await fetch('/api/sync', {
       method: 'POST',
@@ -119,6 +142,7 @@ async function round(store: InventoryDb, me: Me): Promise<void> {
       body: JSON.stringify({
         changes: items.map(toChange),
         shopping: shopping.map(toShoppingChange),
+        recipes: recipes.map(toRecipeChange),
         cursor,
       }),
     });
@@ -127,7 +151,7 @@ async function round(store: InventoryDb, me: Me): Promise<void> {
     // Signed out (or someone else signed in) while waiting: this answer is not for this copy,
     // which was cleared meanwhile.
     if (currentUser()?.email !== me.email) return;
-    const tables = [store.items, store.shopping, store.outbox, store.meta];
+    const tables = [store.items, store.shopping, store.recipes, store.outbox, store.meta];
     await store.transaction('rw', tables, async () => {
       // Sent and not changed again meanwhile: no longer pending.
       for (const entry of pending) {
@@ -144,6 +168,11 @@ async function round(store: InventoryDb, me: Me): Promise<void> {
         const queued = await store.outbox.get(entry.id);
         if (queued && queued.updated_at > entry.updated_at) continue;
         await store.shopping.put(entry);
+      }
+      for (const recipe of answer.recipes ?? []) {
+        const queued = await store.outbox.get(recipe.id);
+        if (queued && queued.updated_at > recipe.updated_at) continue;
+        await store.recipes.put(recipe);
       }
       await setMeta(store, 'cursor', answer.cursor);
     });

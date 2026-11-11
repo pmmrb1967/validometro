@@ -495,11 +495,26 @@ test('receitas: só pede à IA quando se carrega no botão', async ({ page }) =>
   await page.getByRole('button', { name: 'Sugerir receitas' }).click();
   await expect(page.getByRole('heading', { name: 'Frango grelhado' })).toBeVisible();
   expect(asked).toBe(1);
-  // Back again in this session: shown from the session, not asked again.
-  await page.goto('/');
-  await page.goto('/receitas');
+  // Kept: after closing the app it is still there, without asking again.
+  await page.reload();
   await expect(page.getByRole('heading', { name: 'Frango grelhado' })).toBeVisible();
   expect(asked).toBe(1);
+
+  // The chicken's card leads to it.
+  await page.goto('/');
+  const chicken = page.getByRole('listitem').filter({ hasText: 'Peito de frango' });
+  await chicken.getByRole('link', { name: '1 receita' }).click();
+  await expect(page.getByText('Receitas com Peito de frango.')).toBeVisible();
+
+  // Made it: the chicken is eaten, and the recipe moves to "Anteriores", starred stays.
+  const recipe = page.getByRole('article', { name: 'Frango grelhado' });
+  await recipe.getByRole('button', { name: '☆ Guardar' }).click();
+  await recipe.getByRole('button', { name: 'Fiz esta' }).click();
+  await recipe.getByRole('button', { name: 'Feito: 1 comido' }).click();
+  await page.goto('/receitas');
+  await expect(page.getByRole('heading', { name: 'Guardadas' })).toBeVisible();
+  await page.goto('/');
+  await expect(page.getByText('Peito de frango')).toHaveCount(0);
 });
 
 test('no computador, os cartões da mesma linha têm a mesma altura', async ({ page }) => {

@@ -293,45 +293,55 @@ account.delete('/account', requireUser, async (c) => {
 account.get('/account/export', requireUser, async (c) => {
   const user = userOf(c);
   const db = c.env.DB;
-  const [profile, household, items, shopping, devices, usage, overrides] = await Promise.all([
-    db
-      .prepare(
-        'SELECT email, created_at, ai_provider, ai_model, ai_key_encrypted FROM users WHERE id = ?',
-      )
-      .bind(user.id)
-      .first<{
-        email: string;
-        created_at: string;
-        ai_provider: keyof typeof FROM_DB;
-        ai_model: string | null;
-        ai_key_encrypted: string | null;
-      }>(),
-    householdInfo(db, user),
-    db
-      .prepare(
-        `SELECT id, name, category, location, ean, quantity, unit, purchased_at, opened_at,
+  const [profile, household, items, shopping, devices, usage, overrides, recipes] =
+    await Promise.all([
+      db
+        .prepare(
+          'SELECT email, created_at, ai_provider, ai_model, ai_key_encrypted FROM users WHERE id = ?',
+        )
+        .bind(user.id)
+        .first<{
+          email: string;
+          created_at: string;
+          ai_provider: keyof typeof FROM_DB;
+          ai_model: string | null;
+          ai_key_encrypted: string | null;
+        }>(),
+      householdInfo(db, user),
+      db
+        .prepare(
+          `SELECT id, name, category, location, ean, quantity, unit, purchased_at, opened_at,
                 expires_at, expiry_source, status, resolved_at, created_at, updated_at
          FROM items WHERE household_id = ? ORDER BY created_at`,
-      )
-      .bind(user.householdId)
-      .all(),
-    db
-      .prepare(
-        `SELECT id, name, category, source, state, item_id, created_at, updated_at
+        )
+        .bind(user.householdId)
+        .all(),
+      db
+        .prepare(
+          `SELECT id, name, category, source, state, item_id, created_at, updated_at
          FROM shopping_list WHERE household_id = ? AND state <> 'removido' ORDER BY created_at`,
-      )
-      .bind(user.householdId)
-      .all(),
-    db
-      .prepare('SELECT endpoint, created_at FROM push_subscriptions WHERE user_id = ?')
-      .bind(user.id)
-      .all<{ endpoint: string; created_at: string }>(),
-    db
-      .prepare('SELECT date, provider, operation, ok FROM ai_usage WHERE user_id = ? ORDER BY id')
-      .bind(user.id)
-      .all<{ date: string; provider: string; operation: string; ok: number }>(),
-    householdOverrides(db, user.householdId),
-  ]);
+        )
+        .bind(user.householdId)
+        .all(),
+      db
+        .prepare('SELECT endpoint, created_at FROM push_subscriptions WHERE user_id = ?')
+        .bind(user.id)
+        .all<{ endpoint: string; created_at: string }>(),
+      db
+        .prepare('SELECT date, provider, operation, ok FROM ai_usage WHERE user_id = ? ORDER BY id')
+        .bind(user.id)
+        .all<{ date: string; provider: string; operation: string; ok: number }>(),
+      householdOverrides(db, user.householdId),
+      db
+        .prepare(
+          `SELECT id, title, minutes, usa, falta, steps, starred, state, created_at, updated_at
+         FROM recipes WHERE household_id = ? AND state <> 'removida' ORDER BY created_at`,
+        )
+        .bind(user.householdId)
+        .all<
+          Record<string, unknown> & { usa: string; falta: string; steps: string; starred: number }
+        >(),
+    ]);
   const exported = {
     exported_at: new Date().toISOString(),
     app: 'Validómetro (https://app.validometro.workers.dev)',
@@ -352,6 +362,13 @@ account.get('/account/export', requireUser, async (c) => {
     items: items.results,
     shopping_list: shopping.results,
     shelf_life_overrides: overrides,
+    recipes: recipes.results.map((row) => ({
+      ...row,
+      usa: JSON.parse(row.usa) as string[],
+      falta: JSON.parse(row.falta) as string[],
+      steps: JSON.parse(row.steps) as string[],
+      starred: row.starred === 1,
+    })),
     // The push service only: the address itself works as a credential for that phone.
     alert_devices: devices.results.map((row) => ({
       service: new URL(row.endpoint).host,

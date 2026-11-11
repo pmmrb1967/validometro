@@ -1,5 +1,6 @@
 // SPDX-License-Identifier: AGPL-3.0-or-later
 import { useState } from 'react';
+import { Link } from 'react-router';
 import {
   canEatPart,
   canTakeOne,
@@ -59,11 +60,14 @@ export function ItemCard({
   lit,
   actions,
   onList = false,
+  recipes = 0,
 }: {
   lit: LitItem;
   actions: ItemActions;
   /** Already on the shopping list (to buy): "Está a acabar" is done. */
   onList?: boolean;
+  /** Saved recipes still to make with it: "2 receitas" opens them. */
+  recipes?: number;
 }) {
   const { item, daysLeft, light, longLife } = lit;
   const one = canTakeOne(item);
@@ -298,7 +302,7 @@ export function ItemCard({
               )}
             </div>
           )}
-          {(freezable || offer || one || part) && (
+          {(freezable || offer || one || part || recipes > 0) && (
             <div className="item-extra">
               {part && (
                 <button type="button" className="extra-action" onClick={() => setEatingPart(true)}>
@@ -319,6 +323,11 @@ export function ItemCard({
                 <button type="button" className="extra-action" onClick={actions.onOffer}>
                   Oferecer
                 </button>
+              )}
+              {recipes > 0 && (
+                <Link className="extra-action" to={`/receitas?alimento=${item.id}`}>
+                  {recipes === 1 ? '1 receita' : `${recipes} receitas`}
+                </Link>
               )}
               {freezable && <span className="extra-hint">Ainda vais a tempo de congelar.</span>}
             </div>

@@ -8,6 +8,7 @@ import Dexie, { type Table } from 'dexie';
 import { lisbonDate } from '../../domain/dates';
 import { freezeItem } from '../../domain/freeze';
 import { moveItem } from '../../domain/move';
+import type { SavedRecipe } from '../../domain/recipes';
 import { estimatedUnder, shifted } from '../../domain/reestimate';
 import { openItem } from '../../domain/shelf-life';
 import { restockSuggestion, type ShoppingEntry } from '../../domain/shopping';
@@ -19,8 +20,8 @@ export const LOCAL_HOUSEHOLD = 'local';
 /** An item changed here and not yet confirmed by the server (sync.ts). */
 export interface PendingChange {
   id: string;
-  /** Which table: items (absent, as before) or the shopping list. */
-  kind?: 'shopping';
+  /** Which table: items (absent, as before), the shopping list or the saved recipes. */
+  kind?: 'shopping' | 'recipe';
   /** The item's updated_at when queued: a later change re-queues it. */
   updated_at: string;
 }
@@ -35,6 +36,7 @@ export class InventoryDb extends Dexie {
   shopping!: Table<ShoppingEntry, string>;
   outbox!: Table<PendingChange, string>;
   meta!: Table<Meta, string>;
+  recipes!: Table<SavedRecipe, string>;
 
   constructor(name = 'validometro') {
     super(name);
@@ -46,6 +48,8 @@ export class InventoryDb extends Dexie {
     this.version(2).stores({ outbox: 'id', meta: 'key' });
     // The shopping list (Phase 4).
     this.version(3).stores({ shopping: 'id, state' });
+    // Saved recipes (0.12).
+    this.version(4).stores({ recipes: 'id, state' });
   }
 }
 
@@ -62,6 +66,15 @@ async function write(store: InventoryDb, item: Item): Promise<void> {
   await store.transaction('rw', store.items, store.outbox, async () => {
     await store.items.put({ ...item, updated_at });
     await store.outbox.put({ id: item.id, updated_at });
+  });
+  changed();
+}
+
+/** The same for a saved recipe. */
+export async function writeRecipe(store: InventoryDb, recipe: SavedRecipe): Promise<void> {
+  await store.transaction('rw', store.recipes, store.outbox, async () => {
+    await store.recipes.put(recipe);
+    await store.outbox.put({ id: recipe.id, updated_at: recipe.updated_at, kind: 'recipe' });
   });
   changed();
 }
