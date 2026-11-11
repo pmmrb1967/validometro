@@ -109,7 +109,7 @@ O que nenhuma das apps concorrentes faz junto: distinguir os dois tipos de data,
 - [x] **Lista de compras que poupa**: "Ainda tens X em casa, até …" e "Deitaste fora 2 das últimas 3 vezes: compra menos, ou a embalagem pequena"
 - [x] Página inicial: "Os alimentos lá de casa, por ordem de usar." (frigorífico, congelador e despensa) e os novos pontos
 - [ ] Verificar com talões reais se o preço por linha é bem lido (Workers AI e Gemini), junto com o teste de 10–15 talões. Feito 1: PDF do Pingo Doce (10/11/2026) com Workers AI, 17/17 produtos e todos os preços certos, descontos incluídos (soma bate com o total pago). Feito 2: talão da Auchan em 2 fotos (11/11/2026) com Workers AI, 3/3 artigos
-- [ ] Verificar no Android a partilha a partir das apps Continente, Pingo Doce e Lidl Plus
+- [ ] Verificar no Android a partilha a partir das apps Continente, Pingo Doce e Lidl Plus. Feito: Pingo Doce (11/11/2026), com sucesso. Falta Continente e Lidl Plus (quando alguém da família as tiver)
 - [ ] **Alertas de recolha de produtos** (ASAE/DGAV/RASFF cruzados com os códigos de barras de casa). Em pausa: não se encontrou um feed ou API estruturado (a ASAE publica avisos em texto; o portal RASFF para consumidores não tem API pública documentada). Retomar se aparecer uma fonte estável; ler o HTML dos avisos seria frágil
 
 ## Backlog (depois da 1.0)
