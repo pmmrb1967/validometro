@@ -18,6 +18,7 @@ import { useAccount } from '../account';
 import { ApiError } from '../api';
 import { saveRule, useOverrides } from '../rules';
 import { countEstimatedUnder, reestimateItems } from '../store/items';
+import { here } from '../device';
 
 const STATE_LABEL = { fechado: 'Fechado', aberto: 'Aberto' } as const;
 
@@ -136,7 +137,7 @@ export function Rules() {
       <p className="hint">
         {signedIn
           ? 'As mudanças são da casa: servem para todos os que a partilham.'
-          : 'Sem conta, as mudanças ficam só neste telemóvel.'}
+          : `Sem conta, as mudanças ficam só ${here()}.`}
       </p>
 
       <div className="filters" role="group" aria-label="Onde">

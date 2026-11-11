@@ -23,6 +23,7 @@ import {
   savedRecipes,
   starRecipe,
 } from '../store/recipes';
+import { here } from '../device';
 
 const MAX_ITEMS = 12;
 const MAX_PANTRY = 40;
@@ -282,7 +283,7 @@ export function Recipes() {
       )}
 
       <p className="hint">
-        As receitas são sugeridas pela IA escolhida nas definições e ficam guardadas neste telemóvel
+        As receitas são sugeridas pela IA escolhida nas definições e ficam guardadas {here()}
         (com conta, para toda a casa). Confirma sempre o estado dos alimentos antes de cozinhar.
       </p>
     </div>

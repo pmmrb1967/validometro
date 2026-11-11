@@ -5,6 +5,7 @@
  * VAPID key, and register the subscription with the account (src/worker/alerts.ts).
  */
 import { ApiError } from './api';
+import { here } from './device';
 
 export function pushSupported(): boolean {
   return (
@@ -106,6 +107,6 @@ export async function disableAlerts(): Promise<void> {
 
 export async function testAlert(): Promise<void> {
   const subscription = await currentSubscription();
-  if (!subscription) throw new ApiError('Ativa primeiro os alertas neste telemóvel.');
+  if (!subscription) throw new ApiError(`Ativa primeiro os alertas ${here()}.`);
   await send('POST', '/api/push/test', { endpoint: subscription.endpoint });
 }

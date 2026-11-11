@@ -28,6 +28,7 @@ import {
   testAlert,
 } from '../push';
 import { PasswordField } from './PasswordField';
+import { here } from '../device';
 
 const message = (err: unknown) => (err instanceof ApiError ? err.message : 'Algo correu mal.');
 
@@ -352,9 +353,7 @@ function AlertsSection() {
                 type="button"
                 className="ghost"
                 disabled={busy}
-                onClick={() =>
-                  void run(disableAlerts, 'Alertas desligados neste telemóvel.', false)
-                }
+                onClick={() => void run(disableAlerts, `Alertas desligados ${here()}.`, false)}
               >
                 Desligar
               </button>
@@ -364,9 +363,9 @@ function AlertsSection() {
               type="button"
               className="primary"
               disabled={busy || on === undefined}
-              onClick={() => void run(enableAlerts, 'Alertas ligados neste telemóvel.', true)}
+              onClick={() => void run(enableAlerts, `Alertas ligados ${here()}.`, true)}
             >
-              Ligar alertas neste telemóvel
+              Ligar alertas
             </button>
           )}
         </div>

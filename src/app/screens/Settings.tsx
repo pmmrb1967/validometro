@@ -10,6 +10,7 @@ import { useOverrides } from '../rules';
 import { useHealth } from '../useHealth';
 import { KITCHEN_LAYOUT_LABELS, KITCHEN_LAYOUTS } from '../../domain/kitchen';
 import { setKitchenLayout, useKitchenLayout } from '../kitchen-layout';
+import { here } from '../device';
 
 export function Settings() {
   const health = useHealth();
@@ -59,7 +60,7 @@ export function Settings() {
         <h2>A tua cozinha</h2>
         <p className="hint">
           Como são o frigorífico e o congelador lá de casa, para o desenho em Alimentos → Cozinha se
-          parecer com os teus. Fica só neste telemóvel.
+          parecer com os teus. Fica só {here()}.
         </p>
         <fieldset className="kitchen-layouts">
           <legend className="visually-hidden">Frigorífico e congelador</legend>

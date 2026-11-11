@@ -13,6 +13,7 @@ import {
 } from '../ai-settings';
 import { AiCostNote } from './AiCostNote';
 import { PasswordField } from './PasswordField';
+import { here } from '../device';
 
 const OPTIONS: { id: AiProviderChoice; label: string; hint: string }[] = [
   {
@@ -246,7 +247,7 @@ export function AiSection() {
       <p className="hint">
         {me
           ? 'Guardada na conta, a chave fica cifrada no servidor e serve em todos os teus telemóveis. Se não a guardares, fica só neste e vai com cada leitura.'
-          : 'A chave fica só neste telemóvel e vai com cada leitura; o servidor usa-a nesse pedido e não a guarda.'}{' '}
+          : `A chave fica só ${here()} e vai com cada leitura; o servidor usa-a nesse pedido e não a guarda.`}{' '}
         As fotos são lidas e apagadas logo a seguir: nunca ficam guardadas.
       </p>
     </section>
