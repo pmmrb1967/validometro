@@ -48,6 +48,7 @@ function Rack({
   selected,
   onSelect,
   empty,
+  caption,
 }: {
   label: string;
   entries: LitItem[];
@@ -55,12 +56,19 @@ function Rack({
   selected?: string;
   onSelect: (id: string) => void;
   empty?: string;
+  /** Said on the drawing too ("Porta"): a row that is not a shelf. */
+  caption?: string;
 }) {
   const [all, setAll] = useState(false);
   const shown = all ? entries : entries.slice(0, SHELF_SHOWN);
   const more = entries.length - shown.length;
   return (
     <div className={`rack ${className}`} role="group" aria-label={`${label}: ${entries.length}`}>
+      {caption && (
+        <span className="rack-caption" aria-hidden="true">
+          {caption}
+        </span>
+      )}
       {entries.length === 0 && empty ? <span className="rack-empty">{empty}</span> : null}
       <ul>
         {shown.map((entry) => (
@@ -110,6 +118,14 @@ function FridgeCompartment({ kitchen, selected, onSelect }: Parts) {
           />
         ))}
         <Rack
+          label="Porta"
+          caption="Porta"
+          entries={door}
+          className="door"
+          selected={selected}
+          onSelect={onSelect}
+        />
+        <Rack
           label="Gaveta dos legumes"
           entries={drawer}
           className="crisper"
@@ -117,7 +133,6 @@ function FridgeCompartment({ kitchen, selected, onSelect }: Parts) {
           onSelect={onSelect}
         />
       </div>
-      <Rack label="Porta" entries={door} className="door" selected={selected} onSelect={onSelect} />
     </div>
   );
 }

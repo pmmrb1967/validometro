@@ -2271,15 +2271,14 @@ button.topbar-link {
   overflow: hidden;
 }
 
-/* The fridge: the cavity, and the door rack opened out on its right. */
+/* The fridge: shelves, the door's racks as one more row, the vegetable drawer. */
 .fridge-part {
-  display: grid;
-  grid-template-columns: minmax(0, 1fr) 76px;
-  gap: 6px;
+  display: flex;
+  flex-direction: column;
 }
 
-.kitchen-americano .fridge-part {
-  grid-template-columns: minmax(0, 1fr);
+.fridge-part .cavity {
+  flex: 1;
 }
 
 .cavity {
@@ -2319,24 +2318,29 @@ button.topbar-link {
   );
 }
 
-.door {
-  padding: 4px 4px 0;
-  border-radius: 10px;
-  background: var(--cavity);
+.cavity .door {
+  position: relative;
+  margin: 6px 0 0;
+  border-bottom: 0;
 }
 
+/* A door bin: a tray with its front lip, not a glass shelf. */
 .door ul {
-  flex-direction: column;
-  align-items: center;
-  flex-wrap: nowrap;
-  min-height: 100%;
-  background: linear-gradient(var(--glass), var(--glass)) bottom / 100% 3px no-repeat;
+  min-height: 64px;
+  padding-top: 18px;
+  border: 2px solid var(--glass);
+  border-top: 0;
+  border-radius: 0 0 10px 10px;
+  background: color-mix(in srgb, var(--glass) 18%, transparent);
+  padding-left: 4px;
 }
 
-.kitchen-americano .door ul {
-  flex-direction: row;
-  flex-wrap: wrap;
-  min-height: 74px;
+.rack-caption {
+  position: absolute;
+  top: 0;
+  left: 8px;
+  color: var(--muted);
+  font-size: 0.72rem;
 }
 
 /* Freezer drawers, each with its handle; one big door for the small top freezer and the chest. */
@@ -2510,9 +2514,29 @@ button.topbar-link {
   margin: 0;
 }
 
+/* Side by side on a wide screen: the same width and height, the pantry's shelves spread out. */
 @media (min-width: 720px) {
   .kitchen {
-    grid-template-columns: minmax(0, 3fr) minmax(0, 2fr);
-    align-items: start;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    align-items: stretch;
+  }
+
+  .appliance {
+    display: flex;
+    flex-direction: column;
+  }
+
+  .appliance-body {
+    flex: 1;
+  }
+
+  .pantry .cavity {
+    flex: 1;
+    grid-auto-rows: 1fr;
+    align-content: stretch;
+  }
+
+  .pantry .rack ul {
+    height: 100%;
   }
 }
