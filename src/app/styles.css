@@ -2551,3 +2551,14 @@ button.topbar-link {
 .home .items.kitchen-card {
   grid-template-columns: minmax(0, 1fr);
 }
+
+.review-all {
+  display: grid;
+  gap: 4px;
+  justify-items: start;
+  margin: 8px 0 12px;
+}
+
+.review-all .hint {
+  margin: 0;
+}

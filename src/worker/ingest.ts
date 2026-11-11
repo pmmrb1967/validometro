@@ -304,6 +304,8 @@ const recipesBody = z.object({
     )
     .min(1)
     .max(20),
+  /** The pantry's long-life stock, to cook with too (fewer things in "falta"). */
+  pantry: z.array(z.string().trim().min(1).max(120)).max(40).default([]),
 });
 
 /** "O que cozinhar hoje?": 2–3 simple recipes with what is about to go off. Nothing is stored. */
@@ -317,7 +319,7 @@ ingest.post('/ai/recipes', async (c) => {
       {
         operation: 'recipes',
         system: RECIPES_PROMPT.system,
-        prompt: RECIPES_PROMPT.prompt(body.data.items),
+        prompt: RECIPES_PROMPT.prompt(body.data.items, body.data.pantry),
         schema: recipesSchema,
         schemaName: 'recipes',
         maxTokens: 2500,

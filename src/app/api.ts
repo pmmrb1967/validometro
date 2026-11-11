@@ -122,6 +122,8 @@ export interface Recipe {
 /** "O que cozinhar hoje?": what is about to go off, never stored. */
 export function suggestRecipes(
   items: { name: string; days: number }[],
+  /** Long-life stock at home: used if it fits, so less is missing. */
+  pantry: readonly string[] = [],
 ): Promise<{ recipes: Recipe[] }> {
-  return postJson('/api/ai/recipes', { items }, 'Não foi possível pensar em receitas.');
+  return postJson('/api/ai/recipes', { items, pantry }, 'Não foi possível pensar em receitas.');
 }

@@ -164,6 +164,22 @@ export function Review() {
       </p>
       <AiCostNote operation="date" />
 
+      {rows.some((row) => !row.include) && (
+        <div className="review-all">
+          <button
+            type="button"
+            className="secondary"
+            onClick={() => setRows((current) => current.map((row) => ({ ...row, include: true })))}
+          >
+            Marcar todos ({rows.filter((row) => !row.include).length} de fora)
+          </button>
+          <p className="hint">
+            O que é de longa duração fica no stock da despensa, fora do semáforo, e entra nas
+            receitas sugeridas.
+          </p>
+        </div>
+      )}
+
       <ul className="review-list">
         {rows.map((row) => (
           <li key={row.key} className={row.include ? 'review-row' : 'review-row off'}>

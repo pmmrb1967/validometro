@@ -113,18 +113,26 @@ export const TEST_PROMPT = {
 };
 
 export const RECIPES_PROMPT = {
-  version: 'recipes.v3',
+  version: 'recipes.v4',
   system: `Sugeres receitas caseiras simples, à portuguesa, para aproveitar alimentos que estão a acabar a validade. Escreves em português europeu e devolves só JSON segundo o esquema dado.`,
   prompt: (
     items: { name: string; days: number }[],
+    pantry: readonly string[] = [],
   ) => `Alimentos a aproveitar (dias até acabar a validade; negativo = já passou):
 ${items.map((item) => `- ${item.name} (${item.days})`).join('\n')}
-
+${
+  pantry.length
+    ? `
+Também há em casa (despensa, longa duração; usa-os se fizerem sentido, sem obrigação):
+${pantry.map((name) => `- ${name}`).join('\n')}
+`
+    : ''
+}
 Sugere entre 2 e 3 receitas para uma refeição de hoje (almoço ou jantar).
-- Cada receita usa pelo menos um destes alimentos; dá prioridade aos que acabam primeiro.
+- Cada receita usa pelo menos um dos alimentos a aproveitar; dá prioridade aos que acabam primeiro.
 - Receitas simples, de casa, com no máximo 45 minutos.
-- Podes assumir que há em casa sal, pimenta, azeite, óleo, alho, cebola, água, farinha, açúcar, arroz e massa; põe em "falta" só o que não é isso nem está na lista (pouca coisa, ou nada).
-- "usa" tem os nomes dos alimentos da lista que a receita usa, escritos como na lista.
+- Podes assumir que há em casa sal, pimenta, azeite, óleo, alho, cebola, água, farinha, açúcar, arroz e massa; põe em "falta" só o que não é isso nem está nas listas (pouca coisa, ou nada).
+- "usa" tem os nomes dos alimentos das listas que a receita usa, escritos como nas listas.
 - Passos curtos (no máximo 6), cada um uma frase, tratando a pessoa por tu ("Corta", "Junta", "Tempera").
 - Títulos com maiúscula só na primeira letra ("Frango com espinafres").
 - Não sugiras usar algo que já passou muito da validade se for carne, peixe ou lacticínio (mais de 1 dia): nesse caso ignora esse alimento.`,

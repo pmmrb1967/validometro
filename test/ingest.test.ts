@@ -231,6 +231,43 @@ describe('POST /api/ingest/voice', () => {
   });
 });
 
+describe('POST /api/ai/recipes', () => {
+  it('cooks with what goes off first, and may use the pantry stock too', async () => {
+    const { ai, calls } = fakeAi(
+      JSON.stringify({
+        recipes: [
+          {
+            title: 'Atum com grão',
+            minutes: 15,
+            usa: ['Frango', 'Grão'],
+            falta: [],
+            steps: ['Junta.'],
+          },
+        ],
+      }),
+    );
+    const res = await post(
+      '/api/ai/recipes',
+      { items: [{ name: 'Frango', days: 1 }], pantry: ['Grão', 'Atum em lata'] },
+      ai,
+    );
+    expect(res.status).toBe(200);
+    const sent = JSON.stringify(calls[0]!.input);
+    expect(sent).toContain('Também há em casa');
+    expect(sent).toContain('Atum em lata');
+    // Without a pantry, as before.
+    const { ai: plain, calls: asked } = fakeAi(
+      JSON.stringify({
+        recipes: [{ title: 'Frango', minutes: 20, usa: [], falta: [], steps: ['Grelha.'] }],
+      }),
+    );
+    expect(
+      (await post('/api/ai/recipes', { items: [{ name: 'Frango', days: 1 }] }, plain)).status,
+    ).toBe(200);
+    expect(JSON.stringify(asked[0]!.input)).not.toContain('Também há em casa');
+  });
+});
+
 describe('POST /api/ingest/shelf', () => {
   it('lists what the photos show, in the place photographed', async () => {
     const seen = JSON.stringify({

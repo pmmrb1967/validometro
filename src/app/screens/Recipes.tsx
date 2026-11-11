@@ -25,6 +25,8 @@ import {
 } from '../store/recipes';
 
 const MAX_ITEMS = 12;
+const MAX_PANTRY = 40;
+const BASICS = 'sal, azeite, alho, cebola, arroz, massa, farinha';
 
 function RecipeCard({
   recipe,
@@ -146,6 +148,19 @@ export function Recipes() {
         .slice(0, MAX_ITEMS),
     [items, today],
   );
+  // The long-life stock (rice, tins, passata…): the AI may use it too, never has to.
+  const pantry = useMemo(
+    () =>
+      [
+        ...new Set(
+          (items ?? [])
+            .map((item) => light(item, today))
+            .filter((lit) => lit.longLife)
+            .map((lit) => lit.item.name.trim()),
+        ),
+      ].slice(0, MAX_PANTRY),
+    [items, today],
+  );
   const [error, setError] = useState<string>();
   const [busy, setBusy] = useState(false);
 
@@ -162,6 +177,7 @@ export function Recipes() {
     try {
       const answer = await suggestRecipes(
         due.map((lit) => ({ name: lit.item.name, days: lit.daysLeft ?? 0 })),
+        pantry,
       );
       await keepSuggestions(
         answer.recipes,
@@ -190,7 +206,10 @@ export function Recipes() {
       ) : (
         <>
           <p className="hint">
-            Ideias com o que acaba primeiro: {due.map((lit) => lit.item.name).join(', ')}.
+            Ideias com o que acaba primeiro: {due.map((lit) => lit.item.name).join(', ')}.{' '}
+            {pantry.length > 0
+              ? `Também contam com o que tens na despensa (${pantry.length === 1 ? '1 coisa' : `${pantry.length} coisas`}) e com o básico (${BASICS}).`
+              : `Contam com o básico (${BASICS}).`}
           </p>
           <AiCostNote operation="recipes" />
           <div className="form-actions">
@@ -217,6 +236,13 @@ export function Recipes() {
       {error && (
         <p className="note error" role="alert">
           {error}
+        </p>
+      )}
+
+      {recipes.length === 0 && due.length > 0 && !busy && (
+        <p className="hint">
+          As receitas que pedires ficam guardadas aqui: as que dão para o que tens agora, as que
+          guardares (☆) e as dos últimos {PAST_DAYS} dias.
         </p>
       )}
 

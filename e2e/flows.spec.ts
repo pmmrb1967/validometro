@@ -600,3 +600,70 @@ test('cozinha: o frigorífico desenhado, como o lá de casa', async ({ page }) =
   );
   await expect(page.locator('.kitchen-americano')).toBeVisible();
 });
+
+test('talão: marcar todos, a longa duração fica no stock e entra nas receitas', async ({
+  page,
+}) => {
+  let sent: { pantry?: string[] } = {};
+  await page.route('**/api/ai/recipes', (route) => {
+    sent = route.request().postDataJSON() as typeof sent;
+    return route.fulfill({
+      json: {
+        recipes: [
+          {
+            title: 'Frango com grão',
+            minutes: 25,
+            usa: ['Peito de frango', 'Grão-de-bico'],
+            falta: [],
+            steps: ['Junta.'],
+          },
+        ],
+      },
+    });
+  });
+  await page.goto('/');
+  await page.getByRole('button', { name: 'Começar sem conta' }).first().click();
+  const draft = (name: string, perishable: boolean, category: string, location: string) => ({
+    key: name,
+    raw: name.toUpperCase(),
+    name,
+    category,
+    location,
+    quantity: null,
+    unit: null,
+    perishable,
+    expires_at: null,
+    expiry_source: null,
+    known: false,
+    price: null,
+  });
+  await page.evaluate(
+    (drafts) => {
+      sessionStorage.setItem(
+        'validometro.review',
+        JSON.stringify({ source: 'receipt', store: 'Loja', date: null, drafts }),
+      );
+    },
+    [
+      {
+        ...draft('Peito de frango', true, 'carne_fresca', 'frigorifico'),
+        expires_at: new Date(Date.now() + 86_400_000).toISOString().slice(0, 10),
+        expiry_source: 'estimada',
+      },
+      draft('Grão-de-bico', false, 'longa_duracao', 'despensa'),
+    ],
+  );
+  await page.goto('/rever');
+  await expect(page.getByRole('button', { name: 'Guardar 1 alimento' })).toBeVisible();
+  await page.getByRole('button', { name: 'Marcar todos (1 de fora)' }).click();
+  await page.getByRole('button', { name: 'Guardar 2 alimentos' }).click();
+  await expect(page).toHaveURL('/');
+
+  await page.goto('/receitas');
+  await expect(
+    page.getByText(/Também contam com o que tens na despensa \(1 coisa\)/),
+  ).toBeVisible();
+  await page.getByRole('button', { name: 'Sugerir receitas' }).click();
+  await expect(page.getByRole('heading', { name: 'Frango com grão' })).toBeVisible();
+  expect(sent.pantry).toEqual(['Grão-de-bico']);
+});
