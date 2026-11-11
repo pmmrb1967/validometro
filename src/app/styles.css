@@ -1686,6 +1686,85 @@ textarea {
   max-width: 68rem;
 }
 
+/* Regras de validade (screens/Rules.tsx) */
+.rules {
+  display: grid;
+  gap: 12px;
+}
+
+.rule-list {
+  display: grid;
+  gap: 8px;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.rule {
+  padding: 10px 12px;
+  border-radius: 12px;
+  border: 1px solid var(--border);
+  background: var(--surface);
+}
+
+.rule-changed {
+  border-color: var(--brand-strong);
+}
+
+.rule-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  min-height: 36px;
+}
+
+.rule-name {
+  font-weight: 600;
+}
+
+.rule-reset {
+  min-height: 36px;
+  padding: 0 10px;
+}
+
+.rule-fields {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px 16px;
+  margin-top: 6px;
+}
+
+.rule-days {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  color: var(--muted);
+  font-size: 0.9rem;
+}
+
+.rule-days input {
+  width: 5.5em;
+  min-height: 40px;
+  padding: 0 8px;
+  border-radius: 10px;
+  border: 1px solid var(--border);
+  background: var(--bg);
+  color: var(--text);
+  font: inherit;
+  font-variant-numeric: tabular-nums;
+}
+
+.rule-note {
+  margin: 6px 0 0;
+  color: var(--muted);
+  font-size: 0.82rem;
+}
+
+.rules-offer p {
+  margin: 0 0 8px;
+}
+
 /* About what an AI button spends (components/AiCostNote.tsx): beside it, never in the way. */
 .ai-cost {
   margin: 6px 0 0;

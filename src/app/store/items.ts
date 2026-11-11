@@ -8,6 +8,7 @@ import Dexie, { type Table } from 'dexie';
 import { lisbonDate } from '../../domain/dates';
 import { freezeItem } from '../../domain/freeze';
 import { moveItem } from '../../domain/move';
+import { estimatedUnder, shifted } from '../../domain/reestimate';
 import { openItem } from '../../domain/shelf-life';
 import { restockSuggestion, type ShoppingEntry } from '../../domain/shopping';
 import type { ExpiryKind, ExpirySource, IsoDate, Item, Location } from '../../domain/types';
@@ -88,6 +89,30 @@ async function update(
 }
 
 export const db = new InventoryDb();
+
+/**
+ * A rule changed from `fromDays` to `toDays`: the items estimated with it move by the
+ * difference (domain/reestimate.ts). Returns how many moved.
+ */
+export async function reestimateItems(
+  key: string,
+  fromDays: number,
+  toDays: number,
+  now = new Date(),
+  store = db,
+): Promise<number> {
+  if (fromDays === toDays) return 0;
+  const items = estimatedUnder(await store.items.where('status').equals('ativo').toArray(), key);
+  for (const item of items) {
+    await update(store, item.id, { expires_at: shifted(item.expires_at!, fromDays, toDays) }, now);
+  }
+  return items.length;
+}
+
+/** How many items a change of this rule would move. */
+export async function countEstimatedUnder(key: string, store = db): Promise<number> {
+  return estimatedUnder(await store.items.where('status').equals('ativo').toArray(), key).length;
+}
 
 export interface NewItem {
   name: string;

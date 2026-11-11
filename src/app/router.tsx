@@ -9,6 +9,7 @@ import { Landing } from './screens/Landing';
 import { Privacy } from './screens/Privacy';
 import { Recipes } from './screens/Recipes';
 import { Review } from './screens/Review';
+import { Rules } from './screens/Rules';
 import { Settings } from './screens/Settings';
 import { Shopping } from './screens/Shopping';
 import { Stats } from './screens/Stats';
@@ -21,6 +22,7 @@ export const router = createBrowserRouter([
       { path: 'adicionar', element: <AddItem /> },
       { path: 'rever', element: <Review /> },
       { path: 'definicoes', element: <Settings /> },
+      { path: 'definicoes/validades', element: <Rules /> },
       { path: 'conta', element: <Account /> },
       { path: 'entrar', element: <Account initialMode="entrar" /> },
       { path: 'criar-conta', element: <Account initialMode="criar" /> },

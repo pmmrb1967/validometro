@@ -41,6 +41,7 @@ import {
   userOf,
   type AppEnv,
 } from './session';
+import { householdOverrides } from './rules';
 
 export const account = new Hono<AppEnv>();
 
@@ -292,7 +293,7 @@ account.delete('/account', requireUser, async (c) => {
 account.get('/account/export', requireUser, async (c) => {
   const user = userOf(c);
   const db = c.env.DB;
-  const [profile, household, items, shopping, devices, usage] = await Promise.all([
+  const [profile, household, items, shopping, devices, usage, overrides] = await Promise.all([
     db
       .prepare(
         'SELECT email, created_at, ai_provider, ai_model, ai_key_encrypted FROM users WHERE id = ?',
@@ -329,6 +330,7 @@ account.get('/account/export', requireUser, async (c) => {
       .prepare('SELECT date, provider, operation, ok FROM ai_usage WHERE user_id = ? ORDER BY id')
       .bind(user.id)
       .all<{ date: string; provider: string; operation: string; ok: number }>(),
+    householdOverrides(db, user.householdId),
   ]);
   const exported = {
     exported_at: new Date().toISOString(),
@@ -349,6 +351,7 @@ account.get('/account/export', requireUser, async (c) => {
     },
     items: items.results,
     shopping_list: shopping.results,
+    shelf_life_overrides: overrides,
     // The push service only: the address itself works as a credential for that phone.
     alert_devices: devices.results.map((row) => ({
       service: new URL(row.endpoint).host,

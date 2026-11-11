@@ -5,7 +5,8 @@
  * phone keeps a copy (IndexedDB) and a queue of changes made offline.
  *
  *   POST /sync {changes: Item[], shopping?: ShoppingEntry[], cursor}
- *     → {items: Item[], shopping: ShoppingEntry[], cursor, more}
+ *     → {items: Item[], shopping: ShoppingEntry[], cursor, more, rules: RuleOverride[]}
+ *       (rules: all the household's own shelf-life days, a few rows at most)
  *
  * A change wins when its `updated_at` (the phone's clock at the change) is not older than
  * the stored one: last write wins, per row. Every write takes the next number of a server
@@ -19,6 +20,7 @@ import { z } from 'zod';
 import { SHOPPING_STATES } from '../domain/shopping';
 import { EXPIRY_KINDS } from '../domain/types';
 import { requireUser, userOf, type AppEnv } from './session';
+import { householdOverrides } from './rules';
 
 export const sync = new Hono<AppEnv>();
 
@@ -173,7 +175,7 @@ sync.post('/sync', requireUser, async (c) => {
     ]);
   }
 
-  const [itemRows, shoppingRows] = await Promise.all([
+  const [itemRows, shoppingRows, overrides] = await Promise.all([
     db
       .prepare(
         'SELECT * FROM items WHERE household_id = ? AND server_seq > ? ORDER BY server_seq LIMIT ?',
@@ -187,6 +189,7 @@ sync.post('/sync', requireUser, async (c) => {
       )
       .bind(user.householdId, cursor, PAGE)
       .all<ShoppingRow>(),
+    householdOverrides(db, user.householdId),
   ]);
   // One cursor for both: a full page of either stops both at its last number, or rows of
   // the other table beyond it would be skipped.
@@ -215,6 +218,7 @@ sync.post('/sync', requireUser, async (c) => {
     shopping: outShopping,
     cursor: last,
     more: Number.isFinite(cut),
+    rules: overrides,
   });
 });
 

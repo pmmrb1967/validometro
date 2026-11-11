@@ -10,7 +10,7 @@ import { Link, useNavigate } from 'react-router';
 import { CATEGORIES, categoryById } from '../../domain/categories';
 import { formatShortDate, isIsoDate, lisbonDate } from '../../domain/dates';
 import { kindFromReading } from '../../domain/date-kind';
-import { plausiblePrice, type DraftItem } from '../../domain/drafts';
+import { plausiblePrice, purchaseDay, type DraftItem } from '../../domain/drafts';
 import { formatEuros } from '../../domain/stats';
 import { suggestExpiry } from '../../domain/shelf-life';
 import { parseQuantity, quantityInputText, UNITS } from '../../domain/units';
@@ -55,6 +55,18 @@ export function Review() {
     () =>
       pending?.drafts.map((draft) => ({
         ...draft,
+        // The server estimates with the default rules; this household may have its own.
+        ...(draft.expiry_source === 'estimada' && draft.category
+          ? {
+              expires_at:
+                suggestExpiry(
+                  draft.category,
+                  draft.location,
+                  'fechado',
+                  purchaseDay(pending.date, lisbonDate(new Date())),
+                ) ?? draft.expires_at,
+            }
+          : {}),
         include: draft.perishable || draft.tracked === true,
         priceText: priceText(draft.price ?? null),
         quantityText: quantityInputText(draft.quantity),

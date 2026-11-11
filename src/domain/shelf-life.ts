@@ -87,6 +87,58 @@ export const SHELF_LIFE_RULES: readonly ShelfLifeRule[] = [
 ];
 
 /**
+ * A household's own number of days for one rule ("o nosso leite dura 3 dias"), from the
+ * "Regras de validade" screen. Only rules with a number of days can change: long life stays
+ * long life. Kept in D1 per household (shelf_life_overrides) or, without an account, on the
+ * phone.
+ */
+export interface RuleOverride {
+  category: string;
+  location: Location;
+  state: OpenState;
+  days: number;
+}
+
+export const MAX_RULE_DAYS = 3650;
+
+export const ruleKey = (rule: Pick<ShelfLifeRule, 'category' | 'location' | 'state'>) =>
+  `${rule.category}|${rule.location}|${rule.state}`;
+
+/** The rule that a household may change (it has a number of days). */
+export function isEditableRule(
+  rule: Pick<ShelfLifeRule, 'category' | 'location' | 'state'>,
+): boolean {
+  return SHELF_LIFE_RULES.some(
+    (base) => ruleKey(base) === ruleKey(rule) && base.days_default !== null,
+  );
+}
+
+/** The table with a household's days in place of the default ones. */
+export function withOverrides(overrides: readonly RuleOverride[]): ShelfLifeRule[] {
+  const days = new Map(overrides.map((override) => [ruleKey(override), override.days]));
+  return SHELF_LIFE_RULES.map((rule) =>
+    rule.days_default !== null && days.has(ruleKey(rule))
+      ? { ...rule, days_default: days.get(ruleKey(rule))! }
+      : rule,
+  );
+}
+
+/**
+ * The table this app uses for its estimates. Only the phone sets it (one household per
+ * device); the Worker serves many households and always uses the defaults, the phone
+ * re-estimating what it reviews.
+ */
+let active: readonly ShelfLifeRule[] = SHELF_LIFE_RULES;
+
+export function setRuleOverrides(overrides: readonly RuleOverride[]): void {
+  active = overrides.length ? withOverrides(overrides) : SHELF_LIFE_RULES;
+}
+
+export function activeRules(): readonly ShelfLifeRule[] {
+  return active;
+}
+
+/**
  * The closest rule: exact match; else the same category and state elsewhere (opened UHT milk
  * lives in the fridge; fruit kept somewhere unusual); else the same place in the other state.
  * Undefined: no rule.
@@ -95,7 +147,7 @@ export function findRule(
   category: string | null,
   location: Location,
   state: OpenState,
-  rules: readonly ShelfLifeRule[] = SHELF_LIFE_RULES,
+  rules: readonly ShelfLifeRule[] = active,
 ): ShelfLifeRule | undefined {
   if (!category) return undefined;
   const same = rules.filter((rule) => rule.category === category);

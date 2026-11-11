@@ -9,6 +9,7 @@ import { admin } from './admin';
 import { alerts } from './alerts';
 import { ingest } from './ingest';
 import { lookupProduct } from './products';
+import { rules } from './rules';
 import { withUser, type AppEnv } from './session';
 import { sync } from './sync';
 
@@ -69,6 +70,7 @@ app.get('/products/:ean', async (c) => {
 
 app.route('/', ingest);
 app.route('/', aiCosts);
+app.route('/', rules);
 app.route('/', account);
 app.route('/', sync);
 app.route('/', alerts);

@@ -5,12 +5,14 @@ import { AiSection } from '../components/AiSection';
 import { DataSection } from '../components/DataSection';
 import { InstallSection } from '../components/InstallSection';
 import { useAccount } from '../account';
+import { useOverrides } from '../rules';
 import { useHealth } from '../useHealth';
 
 export function Settings() {
   const health = useHealth();
   const account = useAccount();
   const admin = account.status === 'ready' && account.me?.admin === true;
+  const changedRules = useOverrides().length;
   return (
     <div className="settings">
       <h1 className="page-title">Definições</h1>
@@ -30,6 +32,19 @@ export function Settings() {
       <AccountSections />
 
       <InstallSection />
+
+      <section className="card">
+        <h2>Regras de validade</h2>
+        <p className="hint">
+          Quantos dias dura cada tipo de alimento quando não há data na embalagem. Se em tua casa
+          algo dura mais ou menos, muda aqui.
+          {changedRules > 0 &&
+            ` ${changedRules === 1 ? 'Há 1 regra mudada' : `Há ${changedRules} regras mudadas`}.`}
+        </p>
+        <Link className="button secondary" to="/definicoes/validades">
+          Ver e mudar as regras
+        </Link>
+      </section>
 
       <AiSection />
 

@@ -525,3 +525,36 @@ test('no computador, os cartões da mesma linha têm a mesma altura', async ({ p
   const note = await chicken.getByText('Ainda vais a tempo de congelar.').boundingBox();
   expect(note!.y).toBeGreaterThanOrEqual(freeze!.y + freeze!.height);
 });
+
+test('regras de validade: o leite fresco cá de casa dura 3 dias', async ({ page }) => {
+  await page.goto('/');
+  await page.getByRole('button', { name: 'Começar sem conta' }).first().click();
+  await addItem(page, 'Leite fresco');
+  const card = page.getByRole('listitem').filter({ hasText: 'Leite fresco' });
+  await expect(card.getByText('5 dias')).toBeVisible();
+
+  await page.goto('/definicoes');
+  await page.getByRole('link', { name: 'Ver e mudar as regras' }).click();
+  await expect(page.getByRole('heading', { name: 'Regras de validade' })).toBeVisible();
+  const closed = page.getByLabel('Leite fresco pasteurizado, fechado, em dias');
+  await expect(closed).toHaveValue('5');
+  await closed.fill('3');
+  await closed.press('Enter');
+  // The milk already at home was estimated with 5 days: offered to move it, not moved alone.
+  await page.getByRole('button', { name: 'Ajustar a data (−2 dias)' }).click();
+  await expect(page.getByText('1 alimento passou a contar com 3 dias.')).toBeVisible();
+  await expect(page.getByText('Habitual: fechado 5 dias, aberto 4 dias.')).toBeVisible();
+
+  await page.goto('/');
+  await expect(card.getByText('3 dias')).toBeVisible();
+  // New milk is estimated with the household's days, and survives a reload.
+  await page.reload();
+  await page.goto('/adicionar');
+  await page.getByLabel('Nome').fill('Leite fresco');
+  await expect(page.getByText(/dura 3 dias/)).toBeVisible();
+
+  // "Repor" goes back to the default.
+  await page.goto('/definicoes/validades');
+  await page.getByRole('button', { name: 'Repor' }).click();
+  await expect(closed).toHaveValue('5');
+});

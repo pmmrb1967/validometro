@@ -10,9 +10,11 @@
  * - Another household (joined or left): the copy starts again from the server.
  * - Sign-out: the copy is cleared, so the next person on this phone does not see it.
  */
+import type { RuleOverride } from '../domain/shelf-life';
 import type { ShoppingEntry } from '../domain/shopping';
 import type { Item } from '../domain/types';
 import { accountListeners, currentUser, type Me } from './account';
+import { forgetRules, getOverrides, handOverRules, receiveRules } from './rules';
 import { db, localChangeListeners, type InventoryDb } from './store/items';
 
 const MAX_CHANGES = 200;
@@ -24,6 +26,8 @@ interface SyncResponse {
   shopping: ShoppingEntry[];
   cursor: number;
   more: boolean;
+  /** The household's own shelf-life days (rules.ts). */
+  rules?: RuleOverride[];
 }
 
 async function meta<T extends string | number>(
@@ -62,6 +66,7 @@ export async function clearCopy(store: InventoryDb): Promise<void> {
     await store.shopping.clear();
     await store.outbox.clear();
     await store.meta.clear();
+    forgetRules();
   });
 }
 
@@ -86,6 +91,7 @@ async function round(store: InventoryDb, me: Me): Promise<void> {
   const householdId = me.household?.id;
   if (!householdId) return;
   const known = await meta<string>(store, 'household');
+  let firstTime = known === undefined;
   if (known === undefined) {
     await queueEverything(store);
   } else if (known !== householdId) {
@@ -141,6 +147,16 @@ async function round(store: InventoryDb, me: Me): Promise<void> {
       }
       await setMeta(store, 'cursor', answer.cursor);
     });
+    if (firstTime) {
+      // Days set here before the account: to the household, unless it has its own.
+      firstTime = false;
+      if (!answer.rules?.length && getOverrides().length > 0) {
+        await handOverRules();
+        // Sent: the next round brings them back as the household's.
+        continue;
+      }
+    }
+    await receiveRules(answer.rules ?? [], store);
     if (!answer.more && pending.length < MAX_CHANGES) break;
   }
 }

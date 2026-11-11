@@ -6,7 +6,7 @@
  * the rules. A date typed by the user always wins; quantity is optional.
  */
 import { useCallback, useId, useRef, useState, type FormEvent } from 'react';
-import { useNavigate } from 'react-router';
+import { Link, useNavigate } from 'react-router';
 import { categoryById, CATEGORIES, suggestCategory } from '../../domain/categories';
 import { defaultKind, EXPIRY_KIND_LABELS, kindFromReading } from '../../domain/date-kind';
 import { daysBetween, isIsoDate, lisbonDate } from '../../domain/dates';
@@ -152,6 +152,7 @@ export function AddItem() {
   const rule = findRule(category || null, location, state);
   const label = categoryById(category)?.label;
   let expiryHint: string;
+  let fromRules = false;
   if (printed) {
     expiryHint = 'Data lida da embalagem. Confirma se está certa.';
   } else if (expiresTouched) {
@@ -160,6 +161,7 @@ export function AddItem() {
     expiryHint = 'Longa duração: fica fora do semáforo. Podes escrever a data, se quiseres.';
   } else if (suggested && rule && label) {
     const days = daysBetween(today, suggested);
+    fromRules = true;
     expiryHint = `Estimativa: ${label.toLowerCase()} ${opened ? 'aberto ' : ''}${IN_LOCATION[location]} dura ${days} ${days === 1 ? 'dia' : 'dias'}. Se a embalagem tiver data, escreve-a.`;
   } else {
     expiryHint = 'Sem estimativa para isto: escreve a data da embalagem, se houver.';
@@ -287,7 +289,15 @@ export function AddItem() {
               </button>
             )}
           </div>
-          <p className="hint">{expiryHint}</p>
+          <p className="hint">
+            {expiryHint}
+            {fromRules && (
+              <>
+                {' '}
+                <Link to="/definicoes/validades">Mudar a regra</Link>.
+              </>
+            )}
+          </p>
           {!printed && (
             <p className="hint">
               {hasCamera()
