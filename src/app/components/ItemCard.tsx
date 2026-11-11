@@ -29,6 +29,7 @@ import {
   type ExpiryKind,
   type Location,
 } from '../../domain/types';
+import { CATEGORIES } from '../../domain/categories';
 
 export interface ItemActions {
   onEaten: () => void;
@@ -46,6 +47,8 @@ export interface ItemActions {
   /** Long life: "Está a acabar" (onto the list) and "Acabou" (out, and onto the list). */
   onRunningLow: () => void;
   onFinished: () => void;
+  /** "Que tipo é?", for an item without a date nor a known kind. */
+  onCategory: (category: string) => void;
 }
 
 function quantityText(quantity: number | null, unit: string | null): string | undefined {
@@ -269,7 +272,23 @@ export function ItemCard({
         </form>
       ) : (
         <>
-          {longLife ? (
+          {lit.undated && (
+            <label className="field undated-kind">
+              <span>Que tipo é? A data estimada vem daí.</span>
+              <select
+                value=""
+                onChange={(event) => event.target.value && actions.onCategory(event.target.value)}
+              >
+                <option value="">Escolher…</option>
+                {CATEGORIES.map((category) => (
+                  <option key={category.id} value={category.id}>
+                    {category.label}
+                  </option>
+                ))}
+              </select>
+            </label>
+          )}
+          {longLife && !lit.undated ? (
             // A pantry staple: no date to watch, but the shopping list to keep.
             <div className="item-actions">
               <button

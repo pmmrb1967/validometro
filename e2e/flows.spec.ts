@@ -667,3 +667,14 @@ test('talão: marcar todos, a longa duração fica no stock e entra nas receitas
   await expect(page.getByRole('heading', { name: 'Frango com grão' })).toBeVisible();
   expect(sent.pantry).toEqual(['Grão-de-bico']);
 });
+
+test('sem data: um alimento desconhecido não fica escondido', async ({ page }) => {
+  await page.goto('/');
+  await page.getByRole('button', { name: 'Começar sem conta' }).first().click();
+  await addItem(page, 'Kombucha artesanal');
+  const group = page.locator('.group-undated');
+  await expect(group.getByRole('heading', { name: /Sem data, confirma/ })).toBeVisible();
+  await group.getByLabel(/Que tipo é/).selectOption({ label: 'Sobras cozinhadas' });
+  await expect(page.locator('.group-undated')).toHaveCount(0);
+  await expect(page.getByRole('heading', { name: /Esta semana/ })).toBeVisible();
+});

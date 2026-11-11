@@ -6,9 +6,9 @@
  * 5). Shifting, rather than counting again from the purchase, keeps the right start for what
  * was frozen or opened later.
  */
-import { addDays } from './dates';
+import { addDays, lisbonDate } from './dates';
 import { FREEZABLE } from './freeze';
-import { findRule, ruleKey } from './shelf-life';
+import { findRule, ruleKey, suggestExpiry } from './shelf-life';
 import type { IsoDate, Item } from './types';
 
 /** The rule an item's estimate came from: frozen at home counts as "congelado em casa". */
@@ -36,4 +36,16 @@ export function estimatedUnder<T extends Item>(items: readonly T[], key: string)
 
 export function shifted(expires: IsoDate, fromDays: number, toDays: number): IsoDate {
   return addDays(expires, toDays - fromDays);
+}
+
+/**
+ * "Que tipo é?" for an item without a date: the kind, and the estimate it brings (counted from
+ * the day it was bought, opened or not). A date already there is kept.
+ */
+export function categorize(item: Item, category: string): Partial<Item> {
+  if (item.expires_at) return { category };
+  const state = item.opened_at ? 'aberto' : 'fechado';
+  const from = lisbonDate(new Date(item.opened_at ?? item.purchased_at ?? item.created_at));
+  const expires = suggestExpiry(category, item.location, state, from);
+  return expires ? { category, expires_at: expires, expiry_source: 'estimada' } : { category };
 }

@@ -3,8 +3,9 @@
 /**
  * The drawn kitchen (Alimentos → "Cozinha"): where each item sits in the fridge, freezer and
  * pantry. Not where it really is: where it is easiest to see. The shelves follow the traffic
- * light (what to use first at eye level, on the top shelf); the door, the drawer and the
- * bottom of the pantry take what usually lives there.
+ * light (what to use first at eye level, on the top shelf); the vegetable drawer and the
+ * bottom of the pantry take what usually lives there. The doors are only drawn (a handle):
+ * what sits in them at home goes on the shelves with the rest, by how soon it goes off.
  */
 import type { LitItem } from './traffic-light';
 
@@ -88,12 +89,11 @@ export function iconFor(category: string | null): FoodIcon {
   return (category && ICONS[category]) || 'food';
 }
 
-/** What lives in the fridge door, and in the bottom drawer. */
-const DOOR = new Set(['bebidas', 'leite_fresco', 'leite_uht', 'molhos_frascos', 'ovos', 'natas']);
+/** What lives in the bottom drawer. */
 const DRAWER = new Set(['legumes', 'fruta', 'saladas_embaladas']);
 
 export interface Kitchen {
-  fridge: { shelves: [LitItem[], LitItem[], LitItem[]]; door: LitItem[]; drawer: LitItem[] };
+  fridge: { shelves: [LitItem[], LitItem[], LitItem[]]; drawer: LitItem[] };
   freezer: { drawers: LitItem[][] };
   pantry: { shelves: LitItem[][] };
 }
@@ -114,7 +114,7 @@ function split<T>(list: readonly T[], count: number): T[][] {
 /** `entries` already sorted, soonest first (traffic-light.ts bySoonest). */
 export function arrangeKitchen(entries: readonly LitItem[]): Kitchen {
   const kitchen: Kitchen = {
-    fridge: { shelves: [[], [], []], door: [], drawer: [] },
+    fridge: { shelves: [[], [], []], drawer: [] },
     freezer: { drawers: [] },
     pantry: { shelves: [] },
   };
@@ -125,7 +125,6 @@ export function arrangeKitchen(entries: readonly LitItem[]): Kitchen {
     const { location, category } = entry.item;
     if (location === 'congelador') frozen.push(entry);
     else if (location === 'despensa') (entry.longLife ? pantryLong : pantryFresh).push(entry);
-    else if (category && DOOR.has(category)) kitchen.fridge.door.push(entry);
     else if (category && DRAWER.has(category) && entry.light !== 'red')
       kitchen.fridge.drawer.push(entry);
     else kitchen.fridge.shelves[shelfOf(entry)].push(entry);

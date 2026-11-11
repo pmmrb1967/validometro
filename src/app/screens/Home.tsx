@@ -32,11 +32,13 @@ import {
   restoreItem,
   eatPart,
   moveTo,
+  setCategory,
   setExpiry,
   takeOne,
 } from '../store/items';
 import { addToList, finished, runningLow, shoppingList, takeOffList } from '../store/shopping';
 import { recipesPerItem } from '../../domain/recipes';
+import { categoryById } from '../../domain/categories';
 import { savedRecipes } from '../store/recipes';
 import { KitchenView } from '../components/KitchenView';
 import { setFoodView, useFoodView, useKitchenLayout } from '../kitchen-layout';
@@ -107,7 +109,8 @@ export function Home() {
     [items, today],
   );
   const inPlace = lit.filter((entry) => filter === 'tudo' || entry.item.location === filter);
-  const longLife = inPlace.filter((entry) => entry.longLife);
+  const undated = inPlace.filter((entry) => entry.undated);
+  const longLife = inPlace.filter((entry) => entry.longLife && !entry.undated);
 
   // Also after the last item: "Anular" must stay at hand when the list empties.
   const snackbar = undo && (
@@ -186,6 +189,15 @@ export function Home() {
           });
         },
         onDate: (date, kind) => void setExpiry(entry.item.id, date, kind),
+        onCategory: (category) =>
+          void setCategory(entry.item.id, category).then((before) => {
+            if (!before) return;
+            setUndo({
+              id: before.id,
+              before,
+              text: `${before.name}: ${categoryById(category)?.label ?? category}.`,
+            });
+          }),
         onFreeze: () =>
           void freeze(entry.item.id).then((before) => {
             if (!before) return;
@@ -329,6 +341,19 @@ export function Home() {
         />
       )}
 
+      {view === 'lista' && undated.length > 0 && (
+        <section className="group group-undated">
+          <h2>
+            Sem data, confirma <span className="count">{undated.length}</span>
+          </h2>
+          <p className="hint">
+            Não se sabe quanto tempo duram. Escolhe o tipo ou escreve a data (✎) para entrarem no
+            semáforo.
+          </p>
+          <ul className="items">{undated.map(card)}</ul>
+        </section>
+      )}
+
       {view === 'lista' &&
         GROUPS.map((group) => {
           const entries = inPlace.filter((entry) => !entry.longLife && entry.light === group.light);
@@ -344,13 +369,16 @@ export function Home() {
           );
         })}
 
-      {view === 'lista' && inPlace.length === longLife.length && !showLongLife && (
-        <p className="nothing">
-          {filter === 'tudo'
-            ? 'Nada a expirar por agora.'
-            : `Nada a expirar ${IN_LOCATION[filter]}.`}
-        </p>
-      )}
+      {view === 'lista' &&
+        undated.length === 0 &&
+        inPlace.length === longLife.length &&
+        !showLongLife && (
+          <p className="nothing">
+            {filter === 'tudo'
+              ? 'Nada a expirar por agora.'
+              : `Nada a expirar ${IN_LOCATION[filter]}.`}
+          </p>
+        )}
 
       {view === 'lista' && longLife.length > 0 && (
         <section className="group group-long">

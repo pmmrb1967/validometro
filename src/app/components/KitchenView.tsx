@@ -21,7 +21,11 @@ function FoodButton({
   selected: boolean;
   onSelect: (id: string) => void;
 }) {
-  const days = entry.longLife ? 'longa duração' : daysLabel(entry.daysLeft).toLowerCase();
+  const days = entry.undated
+    ? 'sem data'
+    : entry.longLife
+      ? 'longa duração'
+      : daysLabel(entry.daysLeft).toLowerCase();
   return (
     <li>
       <button
@@ -48,7 +52,6 @@ function Rack({
   selected,
   onSelect,
   empty,
-  caption,
 }: {
   label: string;
   entries: LitItem[];
@@ -56,19 +59,12 @@ function Rack({
   selected?: string;
   onSelect: (id: string) => void;
   empty?: string;
-  /** Said on the drawing too ("Porta"): a row that is not a shelf. */
-  caption?: string;
 }) {
   const [all, setAll] = useState(false);
   const shown = all ? entries : entries.slice(0, SHELF_SHOWN);
   const more = entries.length - shown.length;
   return (
     <div className={`rack ${className}`} role="group" aria-label={`${label}: ${entries.length}`}>
-      {caption && (
-        <span className="rack-caption" aria-hidden="true">
-          {caption}
-        </span>
-      )}
       {entries.length === 0 && empty ? <span className="rack-empty">{empty}</span> : null}
       <ul>
         {shown.map((entry) => (
@@ -91,6 +87,11 @@ function Rack({
   );
 }
 
+/** A door's edge with its handle: only drawn, so the door needs no word. */
+function DoorEdge() {
+  return <span className="door-edge" aria-hidden="true" />;
+}
+
 interface Parts {
   kitchen: ReturnType<typeof arrangeKitchen>;
   selected?: string;
@@ -98,7 +99,7 @@ interface Parts {
 }
 
 function FridgeCompartment({ kitchen, selected, onSelect }: Parts) {
-  const { shelves, door, drawer } = kitchen.fridge;
+  const { shelves, drawer } = kitchen.fridge;
   const names = [
     'Prateleira de cima: usar já',
     'Prateleira do meio: esta semana',
@@ -106,6 +107,7 @@ function FridgeCompartment({ kitchen, selected, onSelect }: Parts) {
   ];
   return (
     <div className="compartment fridge-part" aria-label="Frigorífico" role="group">
+      <DoorEdge />
       <div className="cavity">
         {shelves.map((entries, index) => (
           <Rack
@@ -117,14 +119,6 @@ function FridgeCompartment({ kitchen, selected, onSelect }: Parts) {
             onSelect={onSelect}
           />
         ))}
-        <Rack
-          label="Porta"
-          caption="Porta"
-          entries={door}
-          className="door"
-          selected={selected}
-          onSelect={onSelect}
-        />
         <Rack
           label="Gaveta dos legumes"
           entries={drawer}
@@ -147,6 +141,7 @@ function FreezerCompartment({
   const racks = drawers ? kitchen.freezer.drawers : [all];
   return (
     <div className="compartment freezer-part" aria-label="Congelador" role="group">
+      <DoorEdge />
       {racks.map((entries, index) => (
         <Rack
           key={index}

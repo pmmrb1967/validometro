@@ -13,6 +13,7 @@ import { estimatedUnder, shifted } from '../../domain/reestimate';
 import { openItem } from '../../domain/shelf-life';
 import { restockSuggestion, type ShoppingEntry } from '../../domain/shopping';
 import type { ExpiryKind, ExpirySource, IsoDate, Item, Location } from '../../domain/types';
+import { categorize } from '../../domain/reestimate';
 
 /** Household id of the account-less inventory. */
 export const LOCAL_HOUSEHOLD = 'local';
@@ -235,6 +236,19 @@ export async function setExpiry(
     },
     now,
   );
+}
+
+/** "Que tipo é?" (Sem data): the kind, and the estimate it brings (domain/reestimate.ts). */
+export async function setCategory(
+  id: string,
+  category: string,
+  now = new Date(),
+  store = db,
+): Promise<Item | undefined> {
+  const item = await store.items.get(id);
+  if (!item) return undefined;
+  await update(store, id, categorize(item, category), now);
+  return item;
 }
 
 /** "Congelei": into the freezer, with the home-frozen shelf life. Returns the item before. */

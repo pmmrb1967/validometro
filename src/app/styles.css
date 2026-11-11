@@ -2271,10 +2271,83 @@ button.topbar-link {
   overflow: hidden;
 }
 
-/* The fridge: shelves, the door's racks as one more row, the vegetable drawer. */
+/* The fridge: shelves and the vegetable drawer; its door's edge, with the handle, on the side. */
 .fridge-part {
   display: flex;
   flex-direction: column;
+}
+
+.compartment {
+  position: relative;
+  padding-right: 18px;
+}
+
+.door-edge {
+  position: absolute;
+  top: 0;
+  right: 0;
+  bottom: 0;
+  width: 12px;
+  border-left: 2px solid var(--appliance-edge);
+  opacity: 0.9;
+}
+
+/* The handle: a short bar halfway down, the thing everyone reaches for. */
+.door-edge::after {
+  content: '';
+  position: absolute;
+  top: 50%;
+  left: 3px;
+  width: 5px;
+  height: min(72px, 40%);
+  border-radius: 3px;
+  background: var(--appliance-edge);
+  transform: translateY(-50%);
+}
+
+/* Side by side: the two doors meet in the middle, the handles side by side there. */
+.kitchen-americano .freezer-part {
+  padding-right: 18px;
+}
+
+.kitchen-americano .fridge-part {
+  padding-right: 0;
+  padding-left: 18px;
+}
+
+.kitchen-americano .fridge-part .door-edge {
+  right: auto;
+  left: 0;
+  border-left: 0;
+  border-right: 2px solid var(--appliance-edge);
+}
+
+.kitchen-americano .fridge-part .door-edge::after {
+  left: auto;
+  right: 3px;
+}
+
+/* A chest freezer opens at the top: the handle on the lid. */
+.chest .compartment {
+  padding-right: 0;
+  padding-top: 16px;
+}
+
+.chest .door-edge {
+  left: 0;
+  bottom: auto;
+  width: auto;
+  height: 10px;
+  border-left: 0;
+  border-bottom: 2px solid var(--appliance-edge);
+}
+
+.chest .door-edge::after {
+  top: 2px;
+  left: 50%;
+  width: min(96px, 30%);
+  height: 5px;
+  transform: translateX(-50%);
 }
 
 .fridge-part .cavity {
@@ -2318,31 +2391,6 @@ button.topbar-link {
   );
 }
 
-.cavity .door {
-  position: relative;
-  margin: 6px 0 0;
-  border-bottom: 0;
-}
-
-/* A door bin: a tray with its front lip, not a glass shelf. */
-.door ul {
-  min-height: 64px;
-  padding-top: 18px;
-  border: 2px solid var(--glass);
-  border-top: 0;
-  border-radius: 0 0 10px 10px;
-  background: color-mix(in srgb, var(--glass) 18%, transparent);
-  padding-left: 4px;
-}
-
-.rack-caption {
-  position: absolute;
-  top: 0;
-  left: 8px;
-  color: var(--muted);
-  font-size: 0.72rem;
-}
-
 /* Freezer drawers, each with its handle; one big door for the small top freezer and the chest. */
 .freezer-part {
   display: grid;
@@ -2353,22 +2401,9 @@ button.topbar-link {
 .drawer,
 .freezer-shelf {
   position: relative;
-  padding: 10px 6px 0;
+  padding: 4px 6px 0;
   border-radius: 10px;
   background: var(--freezer);
-}
-
-.drawer::before {
-  content: '';
-  position: absolute;
-  top: 4px;
-  left: 50%;
-  width: 34%;
-  height: 4px;
-  border-radius: 2px;
-  background: var(--appliance-edge);
-  transform: translateX(-50%);
-  opacity: 0.55;
 }
 
 .chest {
@@ -2561,4 +2596,13 @@ button.topbar-link {
 
 .review-all .hint {
   margin: 0;
+}
+
+/* "Sem data, confirma": not the traffic light's colours (no state yet), the brand's. */
+.group-undated h2 {
+  color: var(--link);
+}
+
+.undated-kind {
+  margin: 4px 0 10px;
 }

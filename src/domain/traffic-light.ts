@@ -21,6 +21,11 @@ export interface LitItem {
   daysLeft: number | null;
   light: Light | null;
   longLife: boolean;
+  /**
+   * No date and not a long-life kind (an unknown product, no rule): it may well spoil, so it
+   * is shown apart ("Sem data, confirma") until it gets a kind or a date. Also longLife.
+   */
+  undated: boolean;
 }
 
 export function light(item: Item, today: IsoDate): LitItem {
@@ -30,6 +35,7 @@ export function light(item: Item, today: IsoDate): LitItem {
     daysLeft,
     light: daysLeft === null ? null : lightFor(daysLeft),
     longLife: daysLeft === null || isLongLife(item.category),
+    undated: daysLeft === null && !isLongLife(item.category),
   };
 }
 

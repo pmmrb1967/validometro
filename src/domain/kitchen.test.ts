@@ -16,11 +16,12 @@ function lit(
     daysLeft: light === 'red' ? 1 : light === 'amber' ? 5 : 20,
     light,
     longLife,
+    undated: false,
   };
 }
 
 describe('the drawn kitchen', () => {
-  it('puts what to use first on the top shelf, milk in the door, greens in the drawer', () => {
+  it('puts what to use first on the top shelf, greens in the drawer, milk with the rest', () => {
     const kitchen = arrangeKitchen([
       lit('Frango', 'frigorifico', 'carne_fresca', 'red'),
       lit('Alface podre', 'frigorifico', 'legumes', 'red'),
@@ -32,10 +33,9 @@ describe('the drawn kitchen', () => {
     const names = (list: LitItem[]) => list.map((entry) => entry.item.name);
     expect(kitchen.fridge.shelves.map(names)).toEqual([
       ['Frango', 'Alface podre'],
-      ['Queijo'],
+      ['Leite', 'Queijo'],
       ['Iogurte'],
     ]);
-    expect(names(kitchen.fridge.door)).toEqual(['Leite']);
     expect(names(kitchen.fridge.drawer)).toEqual(['Cenouras']);
   });
 

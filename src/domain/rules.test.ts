@@ -2,7 +2,8 @@
 // A household's own shelf-life days (shelf-life.ts) and moving the dates estimated with
 // them (reestimate.ts).
 import { afterEach, describe, expect, it } from 'vitest';
-import { estimatedUnder, governingRuleKey, shifted } from './reestimate';
+import { categorize, estimatedUnder, governingRuleKey, shifted } from './reestimate';
+import { light } from './traffic-light';
 import {
   findRule,
   isEditableRule,
@@ -92,5 +93,37 @@ describe('moving the estimated dates', () => {
     expect(governingRuleKey(item({ category: 'congelados', location: 'congelador' }))).toBe(
       ruleKey({ category: 'congelados', location: 'congelador', state: 'fechado' }),
     );
+  });
+});
+
+describe('an item without a date nor a known kind', () => {
+  const unknown = {
+    id: 'k',
+    name: 'Kombucha artesanal',
+    category: null,
+    location: 'frigorifico',
+    opened_at: null,
+    purchased_at: '2026-11-10T10:00:00.000Z',
+    created_at: '2026-11-10T10:00:00.000Z',
+    expires_at: null,
+  } as unknown as Item;
+
+  it('is shown apart, not hidden with the long-life stock', () => {
+    expect(light(unknown, '2026-11-11')).toMatchObject({ undated: true, light: null });
+    expect(light({ ...unknown, category: 'longa_duracao' }, '2026-11-11').undated).toBe(false);
+  });
+
+  it('gets the estimate of the kind chosen, from the day it was bought', () => {
+    expect(categorize(unknown, 'sobras')).toEqual({
+      category: 'sobras',
+      expires_at: '2026-11-13',
+      expiry_source: 'estimada',
+    });
+    // A long-life kind has no days: only the kind.
+    expect(categorize(unknown, 'longa_duracao')).toEqual({ category: 'longa_duracao' });
+    // A date already there stays.
+    expect(categorize({ ...unknown, expires_at: '2026-12-01' } as Item, 'sobras')).toEqual({
+      category: 'sobras',
+    });
   });
 });
