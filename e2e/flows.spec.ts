@@ -511,6 +511,7 @@ test('receitas: só pede à IA quando se carrega no botão', async ({ page }) =>
   await recipe.getByRole('button', { name: '☆ Guardar' }).click();
   await recipe.getByRole('button', { name: 'Fiz esta' }).click();
   await recipe.getByRole('button', { name: 'Feito: 1 comido' }).click();
+  await expect(page.getByText('✓ Já a fizeste.')).toBeVisible();
   await page.goto('/receitas');
   await expect(page.getByRole('heading', { name: 'Guardadas' })).toBeVisible();
   await page.goto('/');
@@ -572,4 +573,30 @@ test('regras de validade: o leite fresco cá de casa dura 3 dias', async ({ page
   await page.goto('/definicoes/validades');
   await page.getByRole('button', { name: 'Repor' }).click();
   await expect(closed).toHaveValue('5');
+});
+
+test('cozinha: o frigorífico desenhado, como o lá de casa', async ({ page }) => {
+  await page.goto('/');
+  await page.getByRole('button', { name: 'Começar sem conta' }).first().click();
+  await addItem(page, 'Peito de frango');
+
+  // The drawing: the chicken on the top shelf, in red; a tap shows its card.
+  await page
+    .getByRole('group', { name: 'Ver como' })
+    .getByRole('button', { name: 'Cozinha' })
+    .click();
+  const top = page.getByRole('group', { name: /^Prateleira de cima: usar já: 1/ });
+  await top.getByRole('button', { name: /Peito de frango, faltam 2 dias/ }).click();
+  await page.getByRole('button', { name: 'Comido' }).click();
+  await expect(page.getByRole('button', { name: /Peito de frango/ })).toHaveCount(0);
+
+  // Chosen in Definições, and kept after a reload.
+  await page.goto('/definicoes');
+  await page.getByLabel(/Americano/).check();
+  await addItem(page, 'Iogurte natural');
+  await expect(page.getByRole('button', { name: 'Cozinha' })).toHaveAttribute(
+    'aria-pressed',
+    'true',
+  );
+  await expect(page.locator('.kitchen-americano')).toBeVisible();
 });

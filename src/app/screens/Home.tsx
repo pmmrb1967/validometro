@@ -1,7 +1,7 @@
 // SPDX-License-Identifier: AGPL-3.0-or-later
 // Copyright (C) 2026 Paulo Barbosa
 import { useLiveQuery } from 'dexie-react-hooks';
-import { useEffect, useMemo, useState } from 'react';
+import { useEffect, useMemo, useRef, useState } from 'react';
 import { Link } from 'react-router';
 import { usedWord } from '../../domain/consume';
 import { formatShortDate, lisbonDate } from '../../domain/dates';
@@ -38,6 +38,8 @@ import {
 import { addToList, finished, runningLow, shoppingList, takeOffList } from '../store/shopping';
 import { recipesPerItem } from '../../domain/recipes';
 import { savedRecipes } from '../store/recipes';
+import { KitchenView } from '../components/KitchenView';
+import { setFoodView, useFoodView, useKitchenLayout } from '../kitchen-layout';
 
 type Filter = Location | 'tudo';
 
@@ -87,6 +89,9 @@ export function Home() {
   );
   const [filter, setFilter] = useState<Filter>('tudo');
   const [showLongLife, setShowLongLife] = useState(false);
+  const view = useFoodView();
+  const layout = useKitchenLayout();
+  const [picked, setPicked] = useState<string>();
   const [undo, setUndo] = useState<Undo>();
   const today = lisbonDate(new Date());
   const showLanding = useShowLanding();
@@ -300,21 +305,46 @@ export function Home() {
         ))}
       </div>
 
-      {GROUPS.map((group) => {
-        const entries = inPlace.filter((entry) => !entry.longLife && entry.light === group.light);
-        if (entries.length === 0) return null;
-        return (
-          <section key={group.light} className={`group group-${group.light}`}>
-            <h2>
-              {group.title} <span className="count">{entries.length}</span>
-            </h2>
-            <p className="hint">{group.hint}</p>
-            <ul className="items">{entries.map(card)}</ul>
-          </section>
-        );
-      })}
+      <div className="view-switch" role="group" aria-label="Ver como">
+        {(['lista', 'cozinha'] as const).map((option) => (
+          <button
+            key={option}
+            type="button"
+            aria-pressed={view === option}
+            onClick={() => setFoodView(option)}
+          >
+            {option === 'lista' ? 'Lista' : 'Cozinha'}
+          </button>
+        ))}
+      </div>
 
-      {inPlace.length === longLife.length && !showLongLife && (
+      {view === 'cozinha' && (
+        <KitchenSide
+          entries={inPlace}
+          layout={layout}
+          place={filter}
+          picked={picked}
+          onPick={(id) => setPicked((current) => (current === id ? undefined : id))}
+          card={card}
+        />
+      )}
+
+      {view === 'lista' &&
+        GROUPS.map((group) => {
+          const entries = inPlace.filter((entry) => !entry.longLife && entry.light === group.light);
+          if (entries.length === 0) return null;
+          return (
+            <section key={group.light} className={`group group-${group.light}`}>
+              <h2>
+                {group.title} <span className="count">{entries.length}</span>
+              </h2>
+              <p className="hint">{group.hint}</p>
+              <ul className="items">{entries.map(card)}</ul>
+            </section>
+          );
+        })}
+
+      {view === 'lista' && inPlace.length === longLife.length && !showLongLife && (
         <p className="nothing">
           {filter === 'tudo'
             ? 'Nada a expirar por agora.'
@@ -322,7 +352,7 @@ export function Home() {
         </p>
       )}
 
-      {longLife.length > 0 && (
+      {view === 'lista' && longLife.length > 0 && (
         <section className="group group-long">
           <button
             type="button"
@@ -344,6 +374,53 @@ export function Home() {
 
       {snackbar}
     </div>
+  );
+}
+
+/** The drawn kitchen, and under it the card of the item tapped (the same one-tap answers). */
+function KitchenSide({
+  entries,
+  layout,
+  place,
+  picked,
+  onPick,
+  card,
+}: {
+  entries: LitItem[];
+  layout: ReturnType<typeof useKitchenLayout>;
+  place: Filter;
+  picked?: string;
+  onPick: (id: string) => void;
+  card: (entry: LitItem) => React.ReactNode;
+}) {
+  const chosen = entries.find((entry) => entry.item.id === picked);
+  const cardRef = useRef<HTMLUListElement>(null);
+  // The card is under the drawing: bring it into sight when an item is tapped.
+  useEffect(() => {
+    if (!picked) return;
+    const still = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+    cardRef.current?.scrollIntoView?.({ block: 'nearest', behavior: still ? 'auto' : 'smooth' });
+  }, [picked]);
+  return (
+    <>
+      <KitchenView
+        entries={entries}
+        layout={layout}
+        place={place}
+        selected={chosen?.item.id}
+        onSelect={onPick}
+      />
+      {chosen ? (
+        <ul className="items kitchen-card" aria-live="polite" ref={cardRef}>
+          {card(chosen)}
+        </ul>
+      ) : (
+        <p className="hint kitchen-hint">
+          Toca num alimento para o marcar como comido, deitado fora ou aberto. O que acaba primeiro
+          está na prateleira de cima. <Link to="/definicoes#cozinha">Mudar o frigorífico</Link>.
+        </p>
+      )}
+    </>
   );
 }
 
