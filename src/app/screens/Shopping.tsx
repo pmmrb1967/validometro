@@ -16,6 +16,7 @@ import {
   type KnownPrice,
   type PricePoint,
 } from '../../domain/prices';
+import { monthlySpending } from '../../domain/spending';
 import { formatEuros } from '../../domain/stats';
 import {
   atHome,
@@ -25,6 +26,7 @@ import {
   wasteHabits,
   type ShoppingEntry,
 } from '../../domain/shopping';
+import { Link } from 'react-router';
 import { db } from '../store/items';
 import { addToList, clearBought, setShoppingState, shoppingList } from '../store/shopping';
 
@@ -71,14 +73,16 @@ export function Shopping() {
   );
   const active = useLiveQuery(() => db.items.where('status').equals('ativo').toArray(), []);
   // What things cost the last time: the receipts' lines and the prices typed (prices.ts).
-  const book = useLiveQuery(
-    async () =>
-      priceBook(
-        pricePoints(await db.receipts.toArray(), await db.items.toArray()),
-        lisbonDate(new Date()),
-      ),
-    [],
-  );
+  const prices = useLiveQuery(async () => {
+    const [receipts, items] = await Promise.all([db.receipts.toArray(), db.items.toArray()]);
+    const today = lisbonDate(new Date());
+    return {
+      book: priceBook(pricePoints(receipts, items), today),
+      // This month's purchases (spending.ts); the detail is on /desperdicio.
+      month: monthlySpending(receipts, items, today, 1).months[0],
+    };
+  }, []);
+  const book = prices?.book;
   const [name, setName] = useState('');
 
   const sorted = useMemo(() => [...(list ?? [])].sort(shoppingOrder), [list]);
@@ -214,6 +218,13 @@ export function Shopping() {
             ? ` (${estimate.known} de ${estimate.of} com preço conhecido)`
             : ''}
           , pelos últimos preços dos talões e dos que escreveste. Os preços mudam; é só uma ideia.
+        </p>
+      )}
+
+      {prices?.month && prices.month.euros > 0 && (
+        <p className="hint shopping-spent">
+          Este mês: {formatEuros(prices.month.euros)} em compras.{' '}
+          <Link to="/desperdicio#gastos">Ver por mês</Link>
         </p>
       )}
 

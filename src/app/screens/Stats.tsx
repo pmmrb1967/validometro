@@ -3,10 +3,11 @@
 /**
  * Waste, simply: the last six months' items thrown away (one bar per month, with the
  * number written), out of everything that ended; and the categories thrown away most.
- * Above it, what was spent (the receipts read and the prices typed): the waste's yardstick.
+ * Below, what was spent (the receipts read and the prices typed): the waste's yardstick.
  */
 import { useLiveQuery } from 'dexie-react-hooks';
-import { useMemo } from 'react';
+import { useEffect, useMemo } from 'react';
+import { useLocation } from 'react-router';
 import { lisbonDate } from '../../domain/dates';
 import { monthlySpending } from '../../domain/spending';
 import { formatEuros, wasteStats } from '../../domain/stats';
@@ -45,6 +46,12 @@ export function Stats() {
     () => (items && receipts ? monthlySpending(receipts, items, today) : undefined),
     [items, receipts, today],
   );
+  const { hash } = useLocation();
+  const ready = Boolean(stats && spending);
+  // "Ver por mês" (Compras) lands on the spending card.
+  useEffect(() => {
+    if (ready && hash) document.getElementById(hash.slice(1))?.scrollIntoView();
+  }, [hash, ready]);
   if (!stats || !spending) return null;
   const thisMonth = spending.months.at(-1)!;
   const maxSpent = Math.max(1, ...spending.months.map((month) => month.euros));
@@ -60,43 +67,7 @@ export function Stats() {
 
   return (
     <div className="stats">
-      <h1 className="page-title">Desperdício</h1>
-
-      {spending.euros > 0 && (
-        <section className="card stat-spending">
-          <h2>Gasto em compras</h2>
-          <p className="stat-number">{formatEuros(thisMonth.euros)}</p>
-          <p className="hint">
-            em {LONG_MONTH.format(new Date(`${thisMonth.month}-01T00:00:00Z`))}
-            {thisMonth.euros > 0 && `, de ${counted(thisMonth.receipts, thisMonth.loose)}`}.
-            {wastedShare !== null &&
-              ` Nos últimos 6 meses, ${formatEuros(stats.wastedEuros)} foram para o lixo: ${wastedShare}% do que se gastou.`}
-          </p>
-          <ul className="bars" aria-label="Gasto em compras por mês">
-            {spending.months.map((month) => (
-              <li
-                key={month.month}
-                className="bar-row"
-                title={`${monthLabel(month.month)}: ${formatEuros(month.euros)}`}
-              >
-                <span className="bar-label">{monthLabel(month.month)}</span>
-                <span className="bar-track">
-                  {month.euros > 0 && (
-                    <span className="bar" style={{ width: `${(month.euros / maxSpent) * 100}%` }} />
-                  )}
-                </span>
-                <span className="bar-value">
-                  {month.euros > 0 ? formatEuros(month.euros) : '–'}
-                </span>
-              </li>
-            ))}
-          </ul>
-          <p className="hint">
-            Conta os talões lidos na app (o total, com o que não é comida) e os preços escritos à
-            mão nas compras sem talão. As outras compras não aparecem aqui.
-          </p>
-        </section>
-      )}
+      <h1 className="page-title">Desperdício e gastos</h1>
 
       {total === 0 ? (
         <p className="nothing">
@@ -178,6 +149,42 @@ export function Stats() {
             </section>
           )}
         </>
+      )}
+
+      {spending.euros > 0 && (
+        <section className="card stat-spending" id="gastos">
+          <h2>Gasto em compras</h2>
+          <p className="stat-number">{formatEuros(thisMonth.euros)}</p>
+          <p className="hint">
+            em {LONG_MONTH.format(new Date(`${thisMonth.month}-01T00:00:00Z`))}
+            {thisMonth.euros > 0 && `, de ${counted(thisMonth.receipts, thisMonth.loose)}`}.
+            {wastedShare !== null &&
+              ` Nos últimos 6 meses, ${formatEuros(stats.wastedEuros)} foram para o lixo: ${wastedShare}% do que se gastou.`}
+          </p>
+          <ul className="bars" aria-label="Gasto em compras por mês">
+            {spending.months.map((month) => (
+              <li
+                key={month.month}
+                className="bar-row"
+                title={`${monthLabel(month.month)}: ${formatEuros(month.euros)}`}
+              >
+                <span className="bar-label">{monthLabel(month.month)}</span>
+                <span className="bar-track">
+                  {month.euros > 0 && (
+                    <span className="bar" style={{ width: `${(month.euros / maxSpent) * 100}%` }} />
+                  )}
+                </span>
+                <span className="bar-value">
+                  {month.euros > 0 ? formatEuros(month.euros) : '–'}
+                </span>
+              </li>
+            ))}
+          </ul>
+          <p className="hint">
+            Conta os talões lidos na app (o total, com o que não é comida) e os preços escritos à
+            mão nas compras sem talão. As outras compras não aparecem aqui.
+          </p>
+        </section>
       )}
     </div>
   );

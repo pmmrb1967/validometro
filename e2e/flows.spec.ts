@@ -846,6 +846,12 @@ test('compras do mês: os tomates do lavrador, sem talão, com o preço escrito'
   const spending = page.locator('.stat-spending');
   await expect(spending).toContainText('2,50 €');
   await expect(spending).toContainText('de 1 alimento sem talão');
+  // From the shopping list: this month, and the detail.
+  await page.goto('/compras');
+  await expect(page.locator('.shopping-spent')).toContainText('Este mês: 2,50 € em compras');
+  await page.getByRole('link', { name: 'Ver por mês' }).click();
+  await expect(page).toHaveURL('/desperdicio#gastos');
+  await expect(page.getByRole('heading', { name: 'Desperdício e gastos' })).toBeVisible();
 });
 
 test('lista de compras: estimativa pelos preços do último talão, também do que não se guardou', async ({
