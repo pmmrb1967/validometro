@@ -1,7 +1,7 @@
 {
   "name": "validometro",
   "private": true,
-  "version": "0.19.2",
+  "version": "0.19.3",
   "type": "module",
   "description": "PWA gratuita para controlar as validades dos alimentos lá de casa e reduzir o desperdício",
   "scripts": {

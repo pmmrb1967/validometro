@@ -10,6 +10,9 @@ import type { ReceiptQr } from '../domain/receipts';
 import { shrinkPhoto } from './image';
 
 /** Enough for a long receipt; more pages would be a statement, not a receipt. */
+/** The last page, drawn for its QR code: this wide, never taller than that. */
+const QR_WIDTH = 1400;
+const QR_MAX_HEIGHT = 8000;
 const MAX_PAGES = 6;
 /** Less text than this is a scanned PDF (or an empty one). */
 const MIN_TEXT = 40;
@@ -90,10 +93,15 @@ export async function readPdfReceipt(file: Blob): Promise<PdfReceipt> {
 
     // The QR code is at the end: the last page, drawn large enough to read it.
     const { receiptQrIn } = await import('./receipt-qr');
-    const drawn = async (number: number, side: number) => {
+    // `side`: the longest side; or, for the QR code, the width (a long receipt drawn by its
+    // height leaves the code a few hundred pixels wide), within a size phones can draw.
+    const drawn = async (number: number, side: number, byWidth = false) => {
       const page = await pdf.getPage(number);
       const base = page.getViewport({ scale: 1 });
-      const viewport = page.getViewport({ scale: side / Math.max(base.width, base.height) });
+      const scale = byWidth
+        ? Math.min(side / base.width, QR_MAX_HEIGHT / base.height)
+        : side / Math.max(base.width, base.height);
+      const viewport = page.getViewport({ scale });
       const canvas = document.createElement('canvas');
       canvas.width = Math.round(viewport.width);
       canvas.height = Math.round(viewport.height);
@@ -103,7 +111,7 @@ export async function readPdfReceipt(file: Blob): Promise<PdfReceipt> {
     const last = Math.min(pdf.numPages, MAX_PAGES);
     let qr: ReceiptQr | null = null;
     try {
-      qr = await receiptQrIn(await drawn(last, 2400));
+      qr = await receiptQrIn(await drawn(last, QR_WIDTH, true));
     } catch {
       qr = null;
     }

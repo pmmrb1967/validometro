@@ -2648,3 +2648,30 @@ button.topbar-link {
   color: var(--muted);
   font-size: 0.8rem;
 }
+
+/* Review: what each field is (Validade, Preço, Quantidade), aligned in one column. */
+.review-label {
+  flex: none;
+  min-width: 5.6rem;
+  color: var(--muted);
+  font-size: 0.85rem;
+}
+
+.review-date {
+  flex-wrap: wrap;
+}
+
+.review-date input[type='date'] {
+  flex: 1 1 9rem;
+  width: auto;
+}
+
+.review-quantity .review-price {
+  flex: none;
+  width: 6rem;
+}
+
+/* The photo button, when it wraps, under the date (past the label). */
+.review-date > :last-child {
+  margin-left: calc(5.6rem + 8px);
+}

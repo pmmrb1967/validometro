@@ -11,6 +11,7 @@ import { parseReceiptQr, type ReceiptQr } from '../domain/receipts';
 
 /** Big enough for a dense code on a long receipt, small enough for zxing on a phone. */
 const MAX_SIDE = 3200;
+const BAND_SIDE = 1000;
 
 interface QrDetector {
   detect(source: HTMLCanvasElement): Promise<{ rawValue: string }[]>;
@@ -40,14 +41,21 @@ export async function qrTexts(canvas: HTMLCanvasElement): Promise<string[]> {
   const native = await nativeQr();
   if (native) {
     try {
-      return (await native.detect(canvas)).map((code) => code.rawValue);
+      const found = (await native.detect(canvas)).map((code) => code.rawValue);
+      if (found.length) return found;
     } catch {
-      return [];
+      // Then zxing.
     }
   }
+  // No BarcodeDetector (iPhone), or it found nothing: zxing reads some codes it misses.
   try {
-    const { BrowserQRCodeReader } = await import('@zxing/browser');
-    return [new BrowserQRCodeReader().decodeFromCanvas(canvas).getText()];
+    const [{ BrowserQRCodeReader }, { DecodeHintType }] = await Promise.all([
+      import('@zxing/browser'),
+      import('@zxing/library'),
+    ]);
+    // Harder: slower, but finds a code in a photo (glare, a slight tilt).
+    const hints = new Map([[DecodeHintType.TRY_HARDER, true]]);
+    return [new BrowserQRCodeReader(hints).decodeFromCanvas(canvas).getText()];
   } catch {
     // zxing throws when there is no code.
     return [];
@@ -69,10 +77,48 @@ async function toCanvas(image: Blob): Promise<HTMLCanvasElement | null> {
   }
 }
 
-/** The receipt's QR code in a canvas, if it has the AT's one. */
-export async function receiptQrIn(canvas: HTMLCanvasElement): Promise<ReceiptQr | null> {
+async function atQr(canvas: HTMLCanvasElement): Promise<ReceiptQr | null> {
   for (const text of await qrTexts(canvas)) {
     const qr = parseReceiptQr(text);
+    if (qr) return qr;
+  }
+  return null;
+}
+
+/**
+ * A long receipt in overlapping square bands, from the bottom (where the code usually is):
+ * in the whole of it the code is too small a part for the readers to find.
+ */
+function bands(canvas: HTMLCanvasElement): HTMLCanvasElement[] {
+  const side = canvas.width;
+  if (canvas.height < side * 1.2) return [];
+  // Drawn no bigger than this: zxing finds a code better in a moderate picture.
+  const scale = Math.min(1, BAND_SIDE / side);
+  const list: HTMLCanvasElement[] = [];
+  for (let top = canvas.height - side; top > -side / 2; top -= side / 2) {
+    const y = Math.max(0, Math.round(top));
+    const height = Math.min(side, canvas.height - y);
+    const band = document.createElement('canvas');
+    band.width = Math.round(side * scale);
+    band.height = Math.round(height * scale);
+    const context = band.getContext('2d');
+    if (context) {
+      // A photo's grey paper and faint print behind the code: more contrast helps the reader.
+      context.filter = 'grayscale(1) contrast(1.8)';
+      context.drawImage(canvas, 0, y, side, height, 0, 0, band.width, band.height);
+    }
+    list.push(band);
+    if (y === 0) break;
+  }
+  return list;
+}
+
+/** The receipt's QR code in a canvas, if it has the AT's one. */
+export async function receiptQrIn(canvas: HTMLCanvasElement): Promise<ReceiptQr | null> {
+  const whole = await atQr(canvas);
+  if (whole) return whole;
+  for (const band of bands(canvas)) {
+    const qr = await atQr(band);
     if (qr) return qr;
   }
   return null;

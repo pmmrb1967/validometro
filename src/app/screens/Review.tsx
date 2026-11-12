@@ -301,6 +301,9 @@ export function Review() {
                 </select>
               </div>
               <div className="row review-date">
+                <span className="review-label" aria-hidden="true">
+                  Validade
+                </span>
                 <input
                   type="date"
                   aria-label="Validade"
@@ -333,17 +336,25 @@ export function Review() {
                 >
                   {hasCamera() ? 'Fotografar a validade' : 'Foto da validade'}
                 </PhotoButton>
+              </div>
+              <div className="row review-quantity">
+                <span className="review-label" aria-hidden="true">
+                  Preço
+                </span>
                 <input
                   className="review-price"
                   inputMode="decimal"
                   aria-label={`Preço de ${row.name}, em euros`}
-                  placeholder="€"
+                  placeholder="—"
                   value={row.priceText}
                   onChange={(event) => update(row.key, { priceText: event.target.value })}
                 />
+                <span aria-hidden="true">€</span>
               </div>
               <div className="row review-quantity">
-                <span className="review-raw">Quantidade</span>
+                <span className="review-label" aria-hidden="true">
+                  Quantidade
+                </span>
                 <input
                   className="review-amount"
                   inputMode="decimal"
