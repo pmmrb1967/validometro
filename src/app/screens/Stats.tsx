@@ -64,7 +64,7 @@ export function Stats() {
 
       {spending.euros > 0 && (
         <section className="card stat-spending">
-          <h2>Compras</h2>
+          <h2>Gasto em compras</h2>
           <p className="stat-number">{formatEuros(thisMonth.euros)}</p>
           <p className="hint">
             em {LONG_MONTH.format(new Date(`${thisMonth.month}-01T00:00:00Z`))}

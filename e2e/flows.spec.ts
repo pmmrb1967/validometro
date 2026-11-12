@@ -847,3 +847,52 @@ test('compras do mês: os tomates do lavrador, sem talão, com o preço escrito'
   await expect(spending).toContainText('2,50 €');
   await expect(spending).toContainText('de 1 alimento sem talão');
 });
+
+test('lista de compras: estimativa pelos preços do último talão, também do que não se guardou', async ({
+  page,
+}) => {
+  await page.goto('/');
+  await page.getByRole('button', { name: 'Começar sem conta' }).first().click();
+  const line = (raw: string, name: string, price: number, perishable: boolean) => ({
+    key: raw,
+    raw,
+    name,
+    category: perishable ? 'leite_fresco' : null,
+    location: perishable ? 'frigorifico' : 'despensa',
+    quantity: null,
+    unit: null,
+    perishable,
+    expires_at: null,
+    expiry_source: null,
+    known: false,
+    price,
+  });
+  await page.evaluate(
+    (drafts) => {
+      sessionStorage.setItem(
+        'validometro.review',
+        JSON.stringify({ source: 'receipt', store: 'Auchan', date: '2026-11-11', drafts }),
+      );
+    },
+    [
+      line('LEITE PASTVIGOR', 'Leite pasteurizado', 1.08, true),
+      line('MAIZENA 400 G', 'Maizena', 2.6, false),
+    ],
+  );
+  await page.goto('/rever');
+  await expect(page.locator('.receipt-paid')).toContainText('3,68 € (soma dos preços lidos)');
+  await page.getByRole('button', { name: 'Guardar 1 alimento' }).click();
+  await expect(page).toHaveURL('/');
+
+  await page.goto('/compras');
+  for (const name of ['Leite', 'Maizena', 'Ovos']) {
+    await page.getByLabel('O que falta comprar').fill(name);
+    await page.getByRole('button', { name: 'Juntar' }).click();
+  }
+  await expect(page.locator('.shopping-row').filter({ hasText: 'Maizena' })).toContainText(
+    '≈ 2,60 € (Auchan, 11 nov)',
+  );
+  await expect(page.locator('.shopping-estimate')).toContainText(
+    'Estimativa: ≈ 3,68 € (2 de 3 com preço conhecido)',
+  );
+});

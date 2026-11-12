@@ -9,6 +9,14 @@ import { useLiveQuery } from 'dexie-react-hooks';
 import { useMemo, useState, type FormEvent } from 'react';
 import { formatShortDate, lisbonDate } from '../../domain/dates';
 import {
+  listEstimate,
+  priceBook,
+  priceFor,
+  pricePoints,
+  type KnownPrice,
+} from '../../domain/prices';
+import { formatEuros } from '../../domain/stats';
+import {
   atHome,
   recentlyWasted,
   sameName,
@@ -22,6 +30,19 @@ import { addToList, clearBought, setShoppingState, shoppingList } from '../store
 /** "Ainda tens Leite meio-gordo em casa, até 14/11." */
 function homeText(name: string, expires: string | null): string {
   return `Ainda tens ${name} em casa${expires ? `, até ${formatShortDate(expires).replace(/\.$/, '')}` : ''}.`;
+}
+
+/** "≈ 1,08 € (Auchan, 11 nov.)", and where it was cheaper lately. */
+function PriceNote({ known }: { known: KnownPrice }) {
+  const where = (store: string | null, day: string) =>
+    `${store ?? 'sem talão'}, ${formatShortDate(day).replace(/\.$/, '')}`;
+  return (
+    <small className="price-note">
+      ≈ {formatEuros(known.price)} ({where(known.store, known.day)})
+      {known.cheaper &&
+        `. Mais barato: ${formatEuros(known.cheaper.price)} (${where(known.cheaper.store, known.cheaper.day)})`}
+    </small>
+  );
 }
 
 export function Shopping() {
@@ -43,6 +64,15 @@ export function Shopping() {
     [],
   );
   const active = useLiveQuery(() => db.items.where('status').equals('ativo').toArray(), []);
+  // What things cost the last time: the receipts' lines and the prices typed (prices.ts).
+  const book = useLiveQuery(
+    async () =>
+      priceBook(
+        pricePoints(await db.receipts.toArray(), await db.items.toArray()),
+        lisbonDate(new Date()),
+      ),
+    [],
+  );
   const [name, setName] = useState('');
 
   const sorted = useMemo(() => [...(list ?? [])].sort(shoppingOrder), [list]);
@@ -50,6 +80,13 @@ export function Shopping() {
   const suggested = sorted.filter((entry) => entry.state === 'sugerido');
   const toBuy = sorted.filter((entry) => entry.state === 'pendente');
   const bought = sorted.filter((entry) => entry.state === 'comprado');
+
+  const trip = [...toBuy, ...bought].map((entry) => entry.name);
+  const estimate = book ? listEstimate(trip, book) : undefined;
+  const priced = (entry: ShoppingEntry) => {
+    const known = book ? priceFor(entry.name, book) : undefined;
+    return known ? <PriceNote known={known} /> : null;
+  };
 
   const add = (event: FormEvent) => {
     event.preventDefault();
@@ -104,6 +141,7 @@ export function Shopping() {
               <li key={entry.id} className="shopping-row suggested">
                 <span className="shopping-name">
                   {entry.name}
+                  {priced(entry)}
                   {warn(entry)}
                 </span>
                 <button
@@ -145,6 +183,7 @@ export function Shopping() {
                   />
                   <span className="shopping-name">
                     {entry.name}
+                    {priced(entry)}
                     {warn(entry)}
                   </span>
                 </label>
@@ -161,6 +200,16 @@ export function Shopping() {
           </ul>
         )}
       </section>
+
+      {estimate && estimate.known > 0 && (
+        <p className="hint shopping-estimate">
+          Estimativa: ≈ {formatEuros(estimate.euros)}
+          {estimate.known < estimate.of
+            ? ` (${estimate.known} de ${estimate.of} com preço conhecido)`
+            : ''}
+          , pelos últimos preços dos talões e dos que escreveste. Os preços mudam; é só uma ideia.
+        </p>
+      )}
 
       {bought.length > 0 && (
         <section className="shopping-group">

@@ -27,6 +27,7 @@ import { PhotoButton } from '../components/PhotoButton';
 import { StatusNote } from '../components/BusyNote';
 import { hasCamera } from '../image';
 import { receiptLines, resembling } from '../../domain/receipts';
+import { pricedLines } from '../../domain/prices';
 import { receiptTotal } from '../../domain/spending';
 import { addItem } from '../store/items';
 import { rememberReceipt, seenReceipts } from '../store/receipts';
@@ -168,6 +169,8 @@ export function Review() {
         id: receiptId ?? undefined,
         qrHash: pending.qr?.hash ?? null,
         total: paid,
+        // For the shopping list's estimate: every line, chosen or not.
+        prices: pricedLines(rows.map((row) => ({ name: row.name, price: rowPrice(row) }))),
         store: pending.store,
         date: day && isIsoDate(day) ? day : null,
         raws: pending.drafts.map((draft) => draft.raw),

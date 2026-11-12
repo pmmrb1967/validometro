@@ -92,7 +92,7 @@ Esquema de referência; as migrações ficam em `migrations/`.
 - `push_subscriptions`: (id, user_id, endpoint, keys_json, created_at)
 - `shopping_list`: (id, household_id, name, source `auto`|`manual`, done, created_at)
 - `ai_usage`: (date, user_id nullable, provider, operation, units, ok)
-- `receipts`: nota de cada talão guardado, para reconhecer o mesmo talão lido duas vezes (`src/domain/receipts.ts`): hash do NIF da loja + n.º do documento do código QR da AT, loja, dia, hashes curtos das linhas, total pago (do QR ou soma dos preços lidos; `src/domain/spending.ts`). Nunca o talão nem o NIF do comprador
+- `receipts`: nota de cada talão guardado, para reconhecer o mesmo talão lido duas vezes (`src/domain/receipts.ts`): hash do NIF da loja + n.º do documento do código QR da AT, loja, dia, hashes curtos das linhas, total pago (do QR ou soma dos preços lidos; `src/domain/spending.ts`), nome e preço de cada linha para a estimativa da lista de compras (`src/domain/prices.ts`). Nunca o talão nem o NIF do comprador
 
 ## Pipeline de IA
 

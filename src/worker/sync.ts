@@ -94,6 +94,12 @@ export const receiptSchema = z.object({
   lines: z.array(z.string().regex(/^[0-9a-f]{8}$/)).max(300),
   items: z.number().int().min(0).max(1000),
   total: z.number().min(0).max(100_000).nullable().default(null),
+  prices: z
+    .array(
+      z.object({ name: z.string().trim().min(1).max(120), price: z.number().min(0).max(10_000) }),
+    )
+    .max(300)
+    .default([]),
   created_at: instant,
   updated_at: instant,
 });
@@ -173,6 +179,7 @@ const RECEIPT_COLUMNS = [
   'lines',
   'items',
   'total',
+  'prices',
   'created_at',
   'updated_at',
 ] as const;
@@ -244,8 +251,9 @@ function recipeOut(row: RecipeRow) {
   };
 }
 
-type ReceiptRow = Omit<SyncedReceipt, 'lines'> & {
+type ReceiptRow = Omit<SyncedReceipt, 'lines' | 'prices'> & {
   lines: string;
+  prices: string | null;
   household_id: string;
   created_by: string | null;
   server_seq: number;
@@ -259,6 +267,18 @@ function receiptOut(row: ReceiptRow) {
   } catch {
     // Unreadable: compared as if it had no lines.
   }
+  let prices: { name: string; price: number }[] = [];
+  try {
+    const value: unknown = JSON.parse(row.prices ?? '[]');
+    if (Array.isArray(value)) {
+      prices = value.filter(
+        (entry): entry is { name: string; price: number } =>
+          typeof entry?.name === 'string' && typeof entry?.price === 'number',
+      );
+    }
+  } catch {
+    // Unreadable: no prices.
+  }
   return {
     id: row.id,
     household_id: row.household_id,
@@ -268,6 +288,7 @@ function receiptOut(row: ReceiptRow) {
     lines,
     items: row.items,
     total: row.total ?? null,
+    prices,
     created_at: row.created_at,
     updated_at: row.updated_at,
   };
@@ -324,6 +345,7 @@ sync.post('/sync', requireUser, async (c) => {
           household_id: user.householdId,
           created_by: user.id,
           lines: JSON.stringify(receipt.lines),
+          prices: JSON.stringify(receipt.prices),
         }),
       ),
     ]);

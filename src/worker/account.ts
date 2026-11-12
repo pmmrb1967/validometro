@@ -344,11 +344,11 @@ account.get('/account/export', requireUser, async (c) => {
         >(),
       db
         .prepare(
-          `SELECT id, qr_hash, store, date, lines, items, total, created_at FROM receipts
+          `SELECT id, qr_hash, store, date, lines, items, total, prices, created_at FROM receipts
          WHERE household_id = ? ORDER BY created_at`,
         )
         .bind(user.householdId)
-        .all<Record<string, unknown> & { lines: string }>(),
+        .all<Record<string, unknown> & { lines: string; prices: string | null }>(),
     ]);
   const exported = {
     exported_at: new Date().toISOString(),
@@ -381,6 +381,7 @@ account.get('/account/export', requireUser, async (c) => {
     receipts: receipts.results.map((row) => ({
       ...row,
       lines: JSON.parse(row.lines) as string[],
+      prices: row.prices ? (JSON.parse(row.prices) as unknown[]) : [],
     })),
     // The push service only: the address itself works as a credential for that phone.
     alert_devices: devices.results.map((row) => ({

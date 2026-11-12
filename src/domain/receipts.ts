@@ -12,6 +12,7 @@
  *   receipts that share most of their lines on the same day are probably one: said as a
  *   doubt, after the reading.
  */
+import type { PricedLine } from './prices';
 import { aliasKey, storeKey } from './drafts';
 import { isIsoDate } from './dates';
 
@@ -84,6 +85,8 @@ export interface SeenReceipt {
   items: number;
   /** What was paid, in euros (the QR code's total, or the prices read); absent before 0.18. */
   total?: number | null;
+  /** Each line's name (as corrected) and price, for the shopping list; absent before 0.19. */
+  prices?: PricedLine[];
   created_at: string;
   updated_at: string;
 }

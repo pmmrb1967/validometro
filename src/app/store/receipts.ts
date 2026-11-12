@@ -4,6 +4,7 @@
  * Notes of the receipts this household saved (domain/receipts.ts), on this phone and, with an
  * account, shared at home (sync.ts): the same receipt read twice is told apart.
  */
+import type { PricedLine } from '../../domain/prices';
 import { receiptLines, type SeenReceipt } from '../../domain/receipts';
 import { db, LOCAL_HOUSEHOLD, writeReceipt } from './items';
 
@@ -25,6 +26,8 @@ export async function rememberReceipt(
     qrHash: string | null;
     /** What was paid (spending.ts receiptTotal). */
     total?: number | null;
+    /** Each line's name and price (prices.ts pricedLines). */
+    prices?: PricedLine[];
     store: string | null;
     date: string | null;
     raws: readonly (string | null)[];
@@ -43,6 +46,7 @@ export async function rememberReceipt(
     date: reading.date,
     lines: receiptLines(reading.raws).slice(0, 300),
     items: Math.min(reading.items, 1000),
+    prices: reading.prices ?? [],
     total: reading.total != null && reading.total > 0 ? Math.min(reading.total, 100_000) : null,
     created_at: at,
     updated_at: at,
