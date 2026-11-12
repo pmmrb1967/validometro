@@ -367,7 +367,8 @@ export function AddItem() {
 
         <label className="field">
           <span>
-            Preço <span className="optional">(opcional, para contar o desperdício em euros)</span>
+            Preço{' '}
+            <span className="optional">(opcional: conta nas compras do mês e no desperdício)</span>
           </span>
           <input
             className="quantity"

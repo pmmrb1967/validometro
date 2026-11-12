@@ -82,6 +82,8 @@ export interface SeenReceipt {
   lines: string[];
   /** How many items were saved from it. */
   items: number;
+  /** What was paid, in euros (the QR code's total, or the prices read); absent before 0.18. */
+  total?: number | null;
   created_at: string;
   updated_at: string;
 }

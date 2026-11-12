@@ -131,6 +131,7 @@ describe('sync', () => {
       date: '2026-11-11',
       lines: ['0a1b2c3d', '11223344'],
       items: 2,
+      total: 12.92,
       created_at: at,
       updated_at: at,
     };

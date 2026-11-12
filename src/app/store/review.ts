@@ -25,7 +25,7 @@ export async function markTracked(drafts: DraftItem[], store = db): Promise<Draf
 export interface PendingReview extends ReadingResult {
   source: ReadingSource;
   /** The receipt's QR code, when it had one: kept as its hash after saving. */
-  qr?: { hash: string; date: string | null };
+  qr?: { hash: string; date: string | null; total?: number | null };
 }
 
 const KEY = 'validometro.review';

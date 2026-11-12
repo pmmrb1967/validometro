@@ -20,7 +20,11 @@ export async function receiptWithQr(hash: string, store = db): Promise<SeenRecei
 /** After "Guardar" on a receipt's review: what is kept to know it again. */
 export async function rememberReceipt(
   reading: {
+    /** Chosen before, so the items saved from it can point to it. */
+    id?: string;
     qrHash: string | null;
+    /** What was paid (spending.ts receiptTotal). */
+    total?: number | null;
     store: string | null;
     date: string | null;
     raws: readonly (string | null)[];
@@ -32,13 +36,14 @@ export async function rememberReceipt(
   const at = now.toISOString();
   const household = (await store.meta.get('household'))?.value;
   await writeReceipt(store, {
-    id: crypto.randomUUID(),
+    id: reading.id ?? crypto.randomUUID(),
     household_id: typeof household === 'string' ? household : LOCAL_HOUSEHOLD,
     qr_hash: reading.qrHash,
     store: reading.store?.trim().slice(0, 120) || null,
     date: reading.date,
     lines: receiptLines(reading.raws).slice(0, 300),
     items: Math.min(reading.items, 1000),
+    total: reading.total != null && reading.total > 0 ? Math.min(reading.total, 100_000) : null,
     created_at: at,
     updated_at: at,
   });

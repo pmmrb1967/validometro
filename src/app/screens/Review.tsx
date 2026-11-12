@@ -27,6 +27,7 @@ import { PhotoButton } from '../components/PhotoButton';
 import { StatusNote } from '../components/BusyNote';
 import { hasCamera } from '../image';
 import { receiptLines, resembling } from '../../domain/receipts';
+import { receiptTotal } from '../../domain/spending';
 import { addItem } from '../store/items';
 import { rememberReceipt, seenReceipts } from '../store/receipts';
 import { clearPendingReview, getPendingReview } from '../store/review';
@@ -121,8 +122,16 @@ export function Review() {
     0,
   );
 
+  const rowPrice = (row: Row) => plausiblePrice(Number(row.priceText.replace(',', '.')));
+  // What was paid: the QR code's total, else every line read, food or not (spending.ts).
+  const paid =
+    pending.source === 'receipt'
+      ? receiptTotal(pending.qr?.total, rows.filter((row) => row.name.trim()).map(rowPrice))
+      : null;
+
   const save = async () => {
     setSaving(true);
+    const receiptId = pending.source === 'receipt' ? crypto.randomUUID() : null;
     for (const row of chosen) {
       await addItem({
         name: row.name,
@@ -133,7 +142,8 @@ export function Review() {
         quantity: parseQuantity(row.quantityText),
         unit: parseQuantity(row.quantityText) === null ? null : row.unit?.trim() || null,
         expiry_kind: row.expiry_kind ?? null,
-        price: plausiblePrice(Number(row.priceText.replace(',', '.'))),
+        price: rowPrice(row),
+        receipt_id: receiptId,
       });
     }
     await teachAliases(
@@ -155,7 +165,9 @@ export function Review() {
       // Known next time, by its QR code or by its lines (never the receipt itself).
       const day = pending.qr?.date ?? pending.date;
       await rememberReceipt({
+        id: receiptId ?? undefined,
         qrHash: pending.qr?.hash ?? null,
+        total: paid,
         store: pending.store,
         date: day && isIsoDate(day) ? day : null,
         raws: pending.drafts.map((draft) => draft.raw),
@@ -362,6 +374,14 @@ export function Review() {
       </datalist>
 
       <StatusNote text={note} />
+
+      {paid !== null && (
+        <p className="hint receipt-paid">
+          Total do talão: {formatEuros(paid)}
+          {pending.qr?.total ? ' (do código QR)' : ' (soma dos preços lidos)'}. Conta nas compras do
+          mês, com o que não é para guardar aqui.
+        </p>
+      )}
 
       {total > 0 && (
         <p className="hint">

@@ -2636,3 +2636,8 @@ button.topbar-link {
   cursor: pointer;
   min-height: 0;
 }
+
+/* Spending: euros need a wider value column than counts. */
+.stat-spending .bar-row {
+  grid-template-columns: 3.2rem 1fr 5.2rem;
+}

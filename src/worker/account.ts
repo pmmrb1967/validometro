@@ -311,7 +311,8 @@ account.get('/account/export', requireUser, async (c) => {
       db
         .prepare(
           `SELECT id, name, category, location, ean, quantity, unit, purchased_at, opened_at,
-                expires_at, expiry_source, status, resolved_at, created_at, updated_at
+                expires_at, expiry_source, expiry_kind, price, receipt_id, status, resolved_at,
+                created_at, updated_at
          FROM items WHERE household_id = ? ORDER BY created_at`,
         )
         .bind(user.householdId)
@@ -343,7 +344,7 @@ account.get('/account/export', requireUser, async (c) => {
         >(),
       db
         .prepare(
-          `SELECT qr_hash, store, date, lines, items, created_at FROM receipts
+          `SELECT id, qr_hash, store, date, lines, items, total, created_at FROM receipts
          WHERE household_id = ? ORDER BY created_at`,
         )
         .bind(user.householdId)

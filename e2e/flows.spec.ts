@@ -747,9 +747,16 @@ test('talão repetido: o código QR diz que já foi registado, antes de gastar a
   };
 
   await photograph();
+  await expect(page.locator('.receipt-paid')).toContainText(
+    'Total do talão: 12,92 € (do código QR)',
+  );
   await page.getByRole('button', { name: 'Guardar 1 alimento' }).click();
   await expect(page).toHaveURL('/');
   expect(reads).toBe(1);
+  // The month's purchases: the QR code's total.
+  await page.goto('/desperdicio');
+  await expect(page.locator('.stat-spending')).toContainText('12,92 €');
+  await expect(page.locator('.stat-spending')).toContainText('de 1 talão');
 
   // Someone reads it again: known by its code, the AI is not asked.
   await photograph();
@@ -825,4 +832,18 @@ test('registado por engano: apagar o leite repetido, e "Anular"', async ({ page 
   await expect(card).toHaveCount(0);
   await page.getByRole('button', { name: 'Anular' }).click();
   await expect(card).toHaveCount(1);
+});
+
+test('compras do mês: os tomates do lavrador, sem talão, com o preço escrito', async ({ page }) => {
+  await page.goto('/');
+  await page.getByRole('button', { name: 'Começar sem conta' }).first().click();
+  await page.goto('/adicionar');
+  await page.getByLabel('Nome').fill('Tomate');
+  await page.getByLabel(/Preço/).fill('2,50');
+  await page.getByRole('button', { name: 'Guardar', exact: true }).click();
+  await expect(page).toHaveURL('/');
+  await page.goto('/desperdicio');
+  const spending = page.locator('.stat-spending');
+  await expect(spending).toContainText('2,50 €');
+  await expect(spending).toContainText('de 1 alimento sem talão');
 });

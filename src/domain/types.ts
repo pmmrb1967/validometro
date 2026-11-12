@@ -41,6 +41,8 @@ export interface Item {
   expiry_kind?: ExpiryKind | null;
   /** What it cost, in euros (the receipt's line, or typed). Optional, like quantity. */
   price?: number | null;
+  /** The receipt it came from (receipts.id): its price is in that receipt's total. */
+  receipt_id?: string | null;
   status: ItemStatus;
   resolved_at: IsoInstant | null;
   created_at: IsoInstant;

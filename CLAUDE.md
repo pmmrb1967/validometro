@@ -81,7 +81,8 @@ Esquema de referência; as migrações ficam em `migrations/`.
   - purchased_at, opened_at nullable
   - expires_at, expiry_source (`impressa` | `estimada` | `manual`)
   - expiry_kind nullable (`consumir_ate` | `consumir_de_preferencia`; nulo = o habitual da categoria, `src/domain/date-kind.ts`)
-  - price **nullable** (euros, do talão ou escrito; só para contar o desperdício em euros)
+  - price **nullable** (euros, do talão ou escrito; conta o desperdício em euros e as compras do mês)
+  - receipt_id nullable (o talão de onde veio: o preço já está no total desse talão; sem talão, o preço conta sozinho nas compras)
   - status (`ativo` | `consumido` | `deitado_fora`), resolved_at nullable
   - índices: (household_id, status, expires_at)
 - `product_aliases`: dicionário partilhado de abreviaturas dos talões
@@ -91,7 +92,7 @@ Esquema de referência; as migrações ficam em `migrations/`.
 - `push_subscriptions`: (id, user_id, endpoint, keys_json, created_at)
 - `shopping_list`: (id, household_id, name, source `auto`|`manual`, done, created_at)
 - `ai_usage`: (date, user_id nullable, provider, operation, units, ok)
-- `receipts`: nota de cada talão guardado, para reconhecer o mesmo talão lido duas vezes (`src/domain/receipts.ts`): hash do NIF da loja + n.º do documento do código QR da AT, loja, dia, hashes curtos das linhas. Nunca o talão nem o NIF do comprador
+- `receipts`: nota de cada talão guardado, para reconhecer o mesmo talão lido duas vezes (`src/domain/receipts.ts`): hash do NIF da loja + n.º do documento do código QR da AT, loja, dia, hashes curtos das linhas, total pago (do QR ou soma dos preços lidos; `src/domain/spending.ts`). Nunca o talão nem o NIF do comprador
 
 ## Pipeline de IA
 

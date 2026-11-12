@@ -83,7 +83,7 @@ export function QuickEntry() {
     label: string,
     source: ReadingSource,
     read: () => Promise<ReadingResult>,
-    qr?: { hash: string; date: string | null },
+    qr?: { hash: string; date: string | null; total?: number | null },
   ) => {
     setBusy(label);
     setError(undefined);
@@ -124,7 +124,12 @@ export function QuickEntry() {
     const hash = qr ? await receiptQrHash(qr) : null;
     const known = hash ? await receiptWithQr(hash) : undefined;
     const go = () =>
-      void run(label, 'receipt', read, hash ? { hash, date: qr?.date ?? null } : undefined);
+      void run(
+        label,
+        'receipt',
+        read,
+        hash ? { hash, date: qr?.date ?? null, total: qr?.total ?? null } : undefined,
+      );
     if (known) setSeen({ receipt: known, again: go });
     else go();
   };

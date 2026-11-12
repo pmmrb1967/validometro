@@ -157,6 +157,8 @@ export interface NewItem {
   ean?: string | null;
   /** Already open when registered (e.g. leftovers, a jar from the cupboard). */
   opened?: boolean;
+  /** Saved from this receipt (its note's id): the price is already in its total. */
+  receipt_id?: string | null;
 }
 
 export async function addItem(input: NewItem, now = new Date(), store = db): Promise<Item> {
@@ -177,6 +179,7 @@ export async function addItem(input: NewItem, now = new Date(), store = db): Pro
     expiry_source: input.expires_at ? input.expiry_source : null,
     expiry_kind: input.expires_at ? (input.expiry_kind ?? null) : null,
     price: input.price ?? null,
+    receipt_id: input.receipt_id ?? null,
     status: 'ativo',
     resolved_at: null,
     created_at: at,

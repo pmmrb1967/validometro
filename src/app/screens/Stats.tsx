@@ -3,26 +3,55 @@
 /**
  * Waste, simply: the last six months' items thrown away (one bar per month, with the
  * number written), out of everything that ended; and the categories thrown away most.
+ * Above it, what was spent (the receipts read and the prices typed): the waste's yardstick.
  */
 import { useLiveQuery } from 'dexie-react-hooks';
 import { useMemo } from 'react';
 import { lisbonDate } from '../../domain/dates';
+import { monthlySpending } from '../../domain/spending';
 import { formatEuros, wasteStats } from '../../domain/stats';
 import { db } from '../store/items';
 
 const MONTH = new Intl.DateTimeFormat('pt-PT', { month: 'short', timeZone: 'UTC' });
+const LONG_MONTH = new Intl.DateTimeFormat('pt-PT', { month: 'long', timeZone: 'UTC' });
 
 function monthLabel(month: string): string {
   return MONTH.format(new Date(`${month}-01T00:00:00Z`)).replace('.', '');
 }
 
+function counted(receipts: number, loose: number): string {
+  const parts = [
+    receipts ? (receipts === 1 ? '1 talão' : `${receipts} talões`) : null,
+    loose ? (loose === 1 ? '1 alimento sem talão' : `${loose} alimentos sem talão`) : null,
+  ].filter(Boolean);
+  return parts.join(' e ');
+}
+
 export function Stats() {
-  const resolved = useLiveQuery(() => db.items.where('status').notEqual('ativo').toArray(), []);
+  const items = useLiveQuery(() => db.items.toArray(), []);
+  const receipts = useLiveQuery(() => db.receipts.toArray(), []);
+  const today = lisbonDate(new Date());
   const stats = useMemo(
-    () => (resolved ? wasteStats(resolved, lisbonDate(new Date())) : undefined),
-    [resolved],
+    () =>
+      items
+        ? wasteStats(
+            items.filter((item) => item.status !== 'ativo'),
+            today,
+          )
+        : undefined,
+    [items, today],
   );
-  if (!stats) return null;
+  const spending = useMemo(
+    () => (items && receipts ? monthlySpending(receipts, items, today) : undefined),
+    [items, receipts, today],
+  );
+  if (!stats || !spending) return null;
+  const thisMonth = spending.months.at(-1)!;
+  const maxSpent = Math.max(1, ...spending.months.map((month) => month.euros));
+  const wastedShare =
+    spending.euros > 0 && stats.wastedEuros > 0
+      ? Math.max(1, Math.round((stats.wastedEuros / spending.euros) * 100))
+      : null;
 
   const total = stats.eaten + stats.wasted;
   const share = total ? Math.round((stats.wasted / total) * 100) : 0;
@@ -32,6 +61,42 @@ export function Stats() {
   return (
     <div className="stats">
       <h1 className="page-title">Desperdício</h1>
+
+      {spending.euros > 0 && (
+        <section className="card stat-spending">
+          <h2>Compras</h2>
+          <p className="stat-number">{formatEuros(thisMonth.euros)}</p>
+          <p className="hint">
+            em {LONG_MONTH.format(new Date(`${thisMonth.month}-01T00:00:00Z`))}
+            {thisMonth.euros > 0 && `, de ${counted(thisMonth.receipts, thisMonth.loose)}`}.
+            {wastedShare !== null &&
+              ` Nos últimos 6 meses, ${formatEuros(stats.wastedEuros)} foram para o lixo: ${wastedShare}% do que se gastou.`}
+          </p>
+          <ul className="bars" aria-label="Gasto em compras por mês">
+            {spending.months.map((month) => (
+              <li
+                key={month.month}
+                className="bar-row"
+                title={`${monthLabel(month.month)}: ${formatEuros(month.euros)}`}
+              >
+                <span className="bar-label">{monthLabel(month.month)}</span>
+                <span className="bar-track">
+                  {month.euros > 0 && (
+                    <span className="bar" style={{ width: `${(month.euros / maxSpent) * 100}%` }} />
+                  )}
+                </span>
+                <span className="bar-value">
+                  {month.euros > 0 ? formatEuros(month.euros) : '–'}
+                </span>
+              </li>
+            ))}
+          </ul>
+          <p className="hint">
+            Conta os talões lidos na app (o total, com o que não é comida) e os preços escritos à
+            mão nas compras sem talão. As outras compras não aparecem aqui.
+          </p>
+        </section>
+      )}
 
       {total === 0 ? (
         <p className="nothing">

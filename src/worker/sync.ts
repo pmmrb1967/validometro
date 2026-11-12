@@ -43,6 +43,7 @@ export const itemSchema = z.object({
   // Absent from phones still on an older version.
   expiry_kind: z.enum(EXPIRY_KINDS).nullable().default(null),
   price: z.number().min(0).max(10_000).nullable().default(null),
+  receipt_id: z.string().uuid().nullable().default(null),
   status: z.enum(['ativo', 'consumido', 'deitado_fora', 'apagado']),
   resolved_at: instant.nullable(),
   created_at: instant,
@@ -92,6 +93,7 @@ export const receiptSchema = z.object({
     .nullable(),
   lines: z.array(z.string().regex(/^[0-9a-f]{8}$/)).max(300),
   items: z.number().int().min(0).max(1000),
+  total: z.number().min(0).max(100_000).nullable().default(null),
   created_at: instant,
   updated_at: instant,
 });
@@ -125,6 +127,7 @@ const ITEM_COLUMNS = [
   'expiry_source',
   'expiry_kind',
   'price',
+  'receipt_id',
   'status',
   'resolved_at',
   'created_at',
@@ -169,6 +172,7 @@ const RECEIPT_COLUMNS = [
   'date',
   'lines',
   'items',
+  'total',
   'created_at',
   'updated_at',
 ] as const;
@@ -263,6 +267,7 @@ function receiptOut(row: ReceiptRow) {
     date: row.date,
     lines,
     items: row.items,
+    total: row.total ?? null,
     created_at: row.created_at,
     updated_at: row.updated_at,
   };
