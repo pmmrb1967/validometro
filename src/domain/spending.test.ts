@@ -31,7 +31,7 @@ function item(overrides: Partial<Item>): Item {
     ean: null,
     quantity: null,
     unit: null,
-    purchased_at: '2026-11-08T10:00:00.000Z',
+    purchased_at: '2026-11-14T10:00:00.000Z',
     opened_at: null,
     expires_at: '2026-11-15',
     expiry_source: 'estimada',
@@ -39,8 +39,8 @@ function item(overrides: Partial<Item>): Item {
     receipt_id: null,
     status: 'ativo',
     resolved_at: null,
-    created_at: '2026-11-08T10:00:00.000Z',
-    updated_at: '2026-11-08T10:00:00.000Z',
+    created_at: '2026-11-14T10:00:00.000Z',
+    updated_at: '2026-11-14T10:00:00.000Z',
     ...overrides,
   };
 }
@@ -59,7 +59,7 @@ describe('what was spent each month', () => {
         item({ price: 3, status: 'apagado' }),
         item({ price: null }),
       ],
-      '2026-11-12',
+      '2026-11-20',
     );
     expect(spending.months.at(-1)).toEqual({
       month: '2026-11',
@@ -69,6 +69,14 @@ describe('what was spent each month', () => {
     });
     expect(spending.months.at(-2)).toMatchObject({ month: '2026-10', euros: 30, receipts: 1 });
     expect(spending.euros).toBe(37.43);
+  });
+
+  it('does not count as bought without a receipt what was saved before 0.18 (source unknown)', () => {
+    const older = item({
+      created_at: '2026-11-11T17:34:43.227Z',
+      purchased_at: '2026-11-11T17:34:43.227Z',
+    });
+    expect(monthlySpending([], [older], '2026-11-20').euros).toBe(0);
   });
 
   it("takes the QR code's total, else the sum of every line read", () => {

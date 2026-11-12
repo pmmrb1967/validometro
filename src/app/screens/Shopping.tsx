@@ -14,6 +14,7 @@ import {
   priceFor,
   pricePoints,
   type KnownPrice,
+  type PricePoint,
 } from '../../domain/prices';
 import { formatEuros } from '../../domain/stats';
 import {
@@ -34,13 +35,18 @@ function homeText(name: string, expires: string | null): string {
 
 /** "≈ 1,08 € (Auchan, 11 nov.)", and where it was cheaper lately. */
 function PriceNote({ known }: { known: KnownPrice }) {
-  const where = (store: string | null, day: string) =>
-    `${store ?? 'sem talão'}, ${formatShortDate(day).replace(/\.$/, '')}`;
+  const where = (point: PricePoint) =>
+    [
+      point.store ?? (point.loose ? 'sem talão' : null),
+      formatShortDate(point.day).replace(/\.$/, ''),
+    ]
+      .filter(Boolean)
+      .join(', ');
   return (
     <small className="price-note">
-      ≈ {formatEuros(known.price)} ({where(known.store, known.day)})
+      ≈ {formatEuros(known.price)} ({where(known)})
       {known.cheaper &&
-        `. Mais barato: ${formatEuros(known.cheaper.price)} (${where(known.cheaper.store, known.cheaper.day)})`}
+        `. Mais barato: ${formatEuros(known.cheaper.price)} (${where(known.cheaper)})`}
     </small>
   );
 }

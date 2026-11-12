@@ -29,6 +29,24 @@ export interface Spending {
 
 const cents = (value: number) => Math.round(value * 100) / 100;
 
+/**
+ * Since 0.18.0, an item from a receipt points to it (receipt_id). Before, nothing said where
+ * a price came from: those items are not counted as bought without a receipt (most came from
+ * one, whose total was not kept either).
+ */
+export const RECEIPT_LINK_SINCE = '2026-11-12T15:50:00.000Z';
+
+/** Bought without a receipt, with a price typed: counted on its own. */
+export function boughtLoose(item: Item): boolean {
+  return (
+    !item.receipt_id &&
+    item.created_at >= RECEIPT_LINK_SINCE &&
+    item.status !== 'apagado' &&
+    item.price != null &&
+    item.price > 0
+  );
+}
+
 export function monthlySpending(
   receipts: readonly SeenReceipt[],
   items: readonly Item[],
@@ -51,12 +69,12 @@ export function monthlySpending(
   }
   for (const item of items) {
     // From a receipt: already in its total. Deleted (saved by mistake): never bought.
-    if (item.receipt_id || item.status === 'apagado' || !item.price || item.price <= 0) continue;
+    if (!boughtLoose(item)) continue;
     const entry = months.get(
       lisbonDate(new Date(item.purchased_at ?? item.created_at)).slice(0, 7),
     );
     if (!entry) continue;
-    entry.euros += item.price;
+    entry.euros += item.price ?? 0;
     entry.loose++;
   }
   const list = [...months.values()].map((month) => ({ ...month, euros: cents(month.euros) }));

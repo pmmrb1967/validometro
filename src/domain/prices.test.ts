@@ -30,7 +30,7 @@ const tomatoes: Item = {
   ean: null,
   quantity: null,
   unit: null,
-  purchased_at: '2026-11-08T10:00:00.000Z',
+  purchased_at: '2026-11-14T10:00:00.000Z',
   opened_at: null,
   expires_at: '2026-11-15',
   expiry_source: 'estimada',
@@ -38,8 +38,8 @@ const tomatoes: Item = {
   receipt_id: null,
   status: 'ativo',
   resolved_at: null,
-  created_at: '2026-11-08T10:00:00.000Z',
-  updated_at: '2026-11-08T10:00:00.000Z',
+  created_at: '2026-11-14T10:00:00.000Z',
+  updated_at: '2026-11-14T10:00:00.000Z',
 };
 
 describe('what things cost the last time', () => {
@@ -51,7 +51,7 @@ describe('what things cost the last time', () => {
       { name: 'Maizena', price: 2.6 },
     ]),
   ];
-  const book = priceBook(pricePoints(receipts, [tomatoes]), '2026-11-12');
+  const book = priceBook(pricePoints(receipts, [tomatoes]), '2026-11-20');
 
   it('keeps the last price, and says where it was cheaper lately', () => {
     expect(priceFor('leite pasteurizado', book)).toMatchObject({
@@ -60,7 +60,7 @@ describe('what things cost the last time', () => {
       cheaper: { price: 0.99, store: 'Pingo Doce' },
     });
     // Without a receipt (the farmer): its typed price.
-    expect(priceFor('Tomate', book)).toMatchObject({ price: 2.5, store: null });
+    expect(priceFor('Tomate', book)).toMatchObject({ price: 2.5, store: null, loose: true });
     // A shorter name on the list finds the longer one.
     expect(priceFor('Leite', book)?.price).toBe(1.08);
     expect(priceFor('Ovos', book)).toBeUndefined();

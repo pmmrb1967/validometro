@@ -7,6 +7,7 @@
  */
 import { addDays, lisbonDate } from './dates';
 import type { SeenReceipt } from './receipts';
+import { boughtLoose } from './spending';
 import { sameName } from './shopping';
 import type { Item } from './types';
 
@@ -19,8 +20,10 @@ export interface PricedLine {
 export interface PricePoint {
   name: string;
   price: number;
-  /** The shop; null when bought without a receipt (the farmer). */
+  /** The shop; null when bought without a receipt (the farmer), or not known. */
   store: string | null;
+  /** Typed for something bought without a receipt (not an older item's unknown source). */
+  loose?: boolean;
   /** YYYY-MM-DD. */
   day: string;
 }
@@ -51,6 +54,8 @@ export function pricePoints(
       name: item.name,
       price: item.price,
       store: null,
+      // Before 0.18 the source is unknown (most came from a receipt): no "sem talão".
+      ...(boughtLoose(item) ? { loose: true } : {}),
       day: lisbonDate(new Date(item.purchased_at ?? item.created_at)),
     });
   }
