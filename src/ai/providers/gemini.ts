@@ -1,8 +1,10 @@
 // SPDX-License-Identifier: AGPL-3.0-or-later
 // Copyright (C) 2026 Paulo Barbosa
 /**
- * Gemini Flash-Lite with the user's own key (Google AI Studio has a free tier). Plain REST:
- * the Worker only forwards bytes. The key travels in a header, never in the URL or the logs.
+ * Gemini Flash-Lite with the user's own key. In the EEA the Gemini API terms (in force since
+ * 2026-03-23) allow only Paid Services in apps offered to users, so the key must belong to a Google
+ * Cloud project with active billing: the free AI Studio tier does not qualify (the settings screen
+ * says so). Plain REST: the Worker only forwards bytes. The key travels in a header, never in the URL or the logs.
  */
 import { jsonSchema } from '../schemas';
 import {

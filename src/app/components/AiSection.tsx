@@ -24,7 +24,7 @@ const OPTIONS: { id: AiProviderChoice; label: string; hint: string }[] = [
   {
     id: 'gemini',
     label: 'Gemini, com a tua chave',
-    hint: 'Cria uma chave em aistudio.google.com (tem um plano gratuito).',
+    hint: 'Cria uma chave em aistudio.google.com, num projeto do Google Cloud com faturação ativa. Cada leitura é paga pela tua conta.',
   },
   {
     id: 'anthropic',
@@ -183,6 +183,14 @@ export function AiSection() {
             setStatus(undefined);
           }}
         />
+      )}
+
+      {provider === 'gemini' && (
+        <p className="notice">
+          Atenção: na União Europeia, os termos da Google só permitem usar o Gemini numa app como
+          esta com a faturação ativa (paga) num projeto do Google Cloud. A chave gratuita do Google
+          AI Studio não serve. Se não tiveres faturação ativa, usa a leitura gratuita.
+        </p>
       )}
 
       {provider === 'anthropic' && (
