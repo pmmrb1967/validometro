@@ -19,6 +19,14 @@ export const FREE_NEURONS_PER_DAY = 10_000;
 export const FREE_NEURONS_PER_DEVICE = 1_500;
 export const FREE_CALLS_PER_DEVICE = 60;
 
+/**
+ * Each address's (IP's) share of the free day: a script that makes a new device id for every
+ * request still spends at most 30 % of the day from one address. Generous, since phones on
+ * the same mobile network often share one address (CGNAT).
+ */
+export const FREE_NEURONS_PER_ADDRESS = 3_000;
+export const FREE_CALLS_PER_ADDRESS = 120;
+
 /** The random id each device makes for itself (src/app/device.ts), sent as `x-device`. */
 export const DEVICE_ID = /^[A-Za-z0-9_-]{16,64}$/;
 

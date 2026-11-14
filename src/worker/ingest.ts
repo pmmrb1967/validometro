@@ -48,7 +48,7 @@ import { AiError, PROVIDERS, type AiErrorCode, type AiProvider, type Operation }
 import { lookupAliases, saveAliases } from './aliases';
 import { storedAi } from './account';
 import type { AppEnv } from './session';
-import { addFreeNeurons, claimFreeReading, type FreeShare } from './free-ai';
+import { addFreeNeurons, claimFreeReading, type FreeClaim } from './free-ai';
 import { freeQuotaLeft, recordUsage } from './usage';
 
 export const ingest = new Hono<AppEnv>();
@@ -66,6 +66,10 @@ const MESSAGES: Record<AiErrorCode, [number, string]> = {
     429,
     'Já usaste a tua parte da leitura gratuita de hoje. Amanhã há mais; até lá, usa a tua própria chave (Definições) ou escreve à mão.',
   ],
+  address_quota: [
+    429,
+    'Hoje já se fizeram muitas leituras gratuitas a partir desta rede. Usa a tua própria chave (Definições) ou escreve à mão; amanhã há mais.',
+  ],
   no_device: [400, 'Atualiza a app (fecha-a e volta a abri-la) para usar a leitura gratuita.'],
   unavailable: [503, 'O serviço de IA não respondeu. Tenta de novo ou escreve à mão.'],
   invalid_output: [502, 'Não consegui ler isto. Tenta outra foto, com mais luz, ou escreve à mão.'],
@@ -82,6 +86,10 @@ const RECIPE_MESSAGES: Partial<Record<AiErrorCode, [number, string]>> = {
   device_quota: [
     429,
     'Já usaste a tua parte da IA gratuita de hoje. Usa a tua própria chave (Definições) ou volta amanhã.',
+  ],
+  address_quota: [
+    429,
+    'Hoje já se fizeram muitas leituras gratuitas a partir desta rede. Usa a tua própria chave (Definições) ou volta amanhã.',
   ],
   unavailable: [503, 'O serviço de IA não respondeu. Tenta outra vez daqui a pouco.'],
   invalid_output: [502, 'Não consegui pensar em receitas desta vez. Tenta outra vez.'],
@@ -127,10 +135,10 @@ async function readerFor(c: Context<AppEnv>, operation: Operation): Promise<Read
   id ??= 'workers-ai';
   if (!(PROVIDERS as readonly string[]).includes(id)) throw new AiError('no_key', 'provider');
   let provider: AiProvider;
-  let share: FreeShare | null = null;
+  let claim: FreeClaim | null = null;
   if (id === 'workers-ai') {
     if (!(await freeQuotaLeft(c.env.DB))) throw new AiError('quota', 'local count');
-    share = await claimFreeReading(c);
+    claim = await claimFreeReading(c);
     provider = workersAi(c.env.AI);
   } else {
     if (!key || key.length > 300) throw new AiError('no_key', id);
@@ -145,7 +153,7 @@ async function readerFor(c: Context<AppEnv>, operation: Operation): Promise<Read
   const record: UsageRecorder = (usage, ok) =>
     Promise.all([
       recordUsage(db, provider.id, operation, usage, ok, user?.id),
-      share ? addFreeNeurons(db, share, usage.units ?? 0) : undefined,
+      claim ? addFreeNeurons(db, claim, usage.units ?? 0) : undefined,
     ]).then(
       () => undefined,
       () => undefined,

@@ -63,6 +63,8 @@ export type AiErrorCode =
   | 'quota'
   /** This device's (or account's) share of the free day is spent (src/worker/free-ai.ts). */
   | 'device_quota'
+  /** This address's (IP's) share of the free day is spent: a script, or a crowded network. */
+  | 'address_quota'
   /** The free AI needs the device's id, and an old copy of the app does not send it. */
   | 'no_device'
   | 'unavailable'

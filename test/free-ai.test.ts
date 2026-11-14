@@ -3,7 +3,11 @@
 // the day, a few readings a minute per address, and nothing that identifies anyone kept.
 import { env } from 'cloudflare:workers';
 import { beforeEach, describe, expect, it } from 'vitest';
-import { FREE_CALLS_PER_DEVICE, FREE_NEURONS_PER_DEVICE } from '../src/domain/ai-cost';
+import {
+  FREE_CALLS_PER_DEVICE,
+  FREE_NEURONS_PER_ADDRESS,
+  FREE_NEURONS_PER_DEVICE,
+} from '../src/domain/ai-cost';
 import { app } from '../src/worker/app';
 import { purgeFreeShares } from '../src/worker/free-ai';
 import { utcDay } from '../src/worker/usage';
@@ -134,6 +138,31 @@ describe('the free AI per device', () => {
     // Another address is not slowed down.
     const other = { ...B, 'cf-connecting-ip': '203.0.113.8' };
     expect((await speak(fakeAi().ai, other)).status).toBe(200);
+  });
+
+  it('counts the reading in the address share too, by a daily hash, not the IP', async () => {
+    await speak(fakeAi().ai, { ...A, 'cf-connecting-ip': '203.0.113.20' });
+    const rows = await shares();
+    expect(rows).toHaveLength(2);
+    expect(rows[0]!.neurons).toBeGreaterThan(0);
+    expect(rows[1]!.neurons).toBe(rows[0]!.neurons);
+    for (const row of rows) expect(row.subject).not.toContain('203.0.113');
+  });
+
+  it('stops a script that makes a new device id each time, by its address', async () => {
+    const ip = { 'cf-connecting-ip': '203.0.113.21' };
+    expect((await speak(fakeAi().ai, { ...A, ...ip })).status).toBe(200);
+    await env.DB.prepare('UPDATE ai_free_daily SET neurons = ?')
+      .bind(FREE_NEURONS_PER_ADDRESS)
+      .run();
+    const { ai, calls } = fakeAi();
+    const fresh = await speak(ai, { 'x-device': 'brand-new-device-0001', ...ip });
+    expect(fresh.status).toBe(429);
+    expect(await fresh.json()).toMatchObject({ code: 'address_quota' });
+    expect(calls).toHaveLength(0);
+    // Another network is not stopped.
+    const other = { 'x-device': 'brand-new-device-0002', 'cf-connecting-ip': '203.0.113.22' };
+    expect((await speak(ai, other)).status).toBe(200);
   });
 
   it("tells the cost note what is left of this device's share", async () => {
