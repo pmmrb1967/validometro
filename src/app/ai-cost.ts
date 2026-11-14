@@ -2,7 +2,8 @@
 // Copyright (C) 2026 Paulo Barbosa
 /**
  * The note beside each AI button: about how much this reading spends, before it is asked.
- * The free AI counts the account's daily Neurons; the user's own key, US dollars. Averages of
+ * The free AI counts the daily Neurons (everyone's, and this device's share of them); the
+ * user's own key, US dollars. Averages of
  * the last 30 days come from the server (GET /api/ai/estimate); until there are some, the
  * typical values in src/domain/ai-cost.ts.
  */
@@ -18,10 +19,13 @@ import {
   type CostOperation,
 } from '../domain/ai-cost';
 import { useAiSettings, type AiSettings } from './ai-settings';
+import { deviceId } from './device';
 
 export interface Estimate {
   neuronsToday: number;
   neuronsLimit: number;
+  /** This device's (or account's) share of the free day (src/worker/free-ai.ts). */
+  mine?: { neurons: number; limit: number } | null;
   neurons: { operation: string; neurons: number }[];
   tokens: { model: string; operation: string; input: number; output: number }[];
 }
@@ -33,7 +37,7 @@ const listeners = new Set<(value: Estimate) => void>();
 
 async function load(): Promise<Estimate | undefined> {
   try {
-    const res = await fetch('/api/ai/estimate');
+    const res = await fetch('/api/ai/estimate', { headers: { 'x-device': deviceId() } });
     if (!res.ok) return undefined;
     const value = (await res.json()) as Estimate;
     cached = { at: Date.now(), value };
@@ -93,6 +97,11 @@ export function costNote(
     const head = `IA gratuita: ≈ ${formatCount(neurons)} neurons ${per}`;
     if (!estimate) return `${head}.`;
     const left = Math.max(0, estimate.neuronsLimit - estimate.neuronsToday);
+    // Whichever ends first: this device's share, or everyone's day.
+    const mine = estimate.mine;
+    if (mine && mine.neurons <= left) {
+      return `${head}; da tua parte de hoje restam ${formatCount(mine.neurons)} de ${formatCount(mine.limit)}.`;
+    }
     return `${head}; hoje restam ${formatCount(left)} de ${formatCount(estimate.neuronsLimit)}.`;
   }
   const model =

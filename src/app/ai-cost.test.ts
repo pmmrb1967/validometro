@@ -22,6 +22,16 @@ describe('the AI cost note', () => {
     );
   });
 
+  it("free AI: this device's share when it ends before everyone's day", () => {
+    const mine = { ...estimate, mine: { neurons: 1_460, limit: 1_500 } };
+    expect(costNote(DEFAULT_SETTINGS, mine, 'receipt')).toMatch(
+      /; da tua parte de hoje restam 1460 de 1500\.$/,
+    );
+    // Everyone's day nearly over: that is what counts.
+    const late = { ...mine, neuronsToday: 9_000 };
+    expect(costNote(DEFAULT_SETTINGS, late, 'receipt')).toMatch(/; hoje restam 1000 de 10\s000\.$/);
+  });
+
   it('own key: US dollars, by the chosen model, from the averages when there are some', () => {
     const sonnet = {
       ...DEFAULT_SETTINGS,

@@ -6,9 +6,13 @@
  *
  * Without accounts yet, the user's own key comes with each request (header `x-ai-key`), is
  * used for that call only and never stored on the server.
+ *
+ * Texts (a digital receipt, a spoken list) come anonymized from the phone and are anonymized
+ * again here (src/domain/anonymize.ts): an old copy of the app or a script may not have.
  */
 import { Hono, type Context } from 'hono';
 import { z } from 'zod';
+import { anonymize } from '../domain/anonymize';
 import { lisbonDate } from '../domain/dates';
 import {
   aliasKey,
@@ -39,18 +43,12 @@ import {
   voiceSchema,
 } from '../ai/schemas';
 import { placeDraft } from '../domain/shelf';
-import { structured } from '../ai/structured';
-import {
-  AiError,
-  PROVIDERS,
-  type AiErrorCode,
-  type AiProvider,
-  type AiUsage,
-  type Operation,
-} from '../ai/types';
+import { structured, type UsageRecorder } from '../ai/structured';
+import { AiError, PROVIDERS, type AiErrorCode, type AiProvider, type Operation } from '../ai/types';
 import { lookupAliases, saveAliases } from './aliases';
 import { storedAi } from './account';
 import type { AppEnv } from './session';
+import { addFreeNeurons, claimFreeReading, type FreeShare } from './free-ai';
 import { freeQuotaLeft, recordUsage } from './usage';
 
 export const ingest = new Hono<AppEnv>();
@@ -64,6 +62,11 @@ const MESSAGES: Record<AiErrorCode, [number, string]> = {
     429,
     'A leitura gratuita de hoje esgotou. Usa a tua própria chave (Definições) ou escreve à mão.',
   ],
+  device_quota: [
+    429,
+    'Já usaste a tua parte da leitura gratuita de hoje. Amanhã há mais; até lá, usa a tua própria chave (Definições) ou escreve à mão.',
+  ],
+  no_device: [400, 'Atualiza a app (fecha-a e volta a abri-la) para usar a leitura gratuita.'],
   unavailable: [503, 'O serviço de IA não respondeu. Tenta de novo ou escreve à mão.'],
   invalid_output: [502, 'Não consegui ler isto. Tenta outra foto, com mais luz, ou escreve à mão.'],
   refused: [422, 'O serviço de IA não quis ler isto. Tenta outra foto ou escreve à mão.'],
@@ -75,6 +78,10 @@ const RECIPE_MESSAGES: Partial<Record<AiErrorCode, [number, string]>> = {
   quota: [
     429,
     'A IA gratuita de hoje esgotou. Usa a tua própria chave (Definições) ou volta amanhã.',
+  ],
+  device_quota: [
+    429,
+    'Já usaste a tua parte da IA gratuita de hoje. Usa a tua própria chave (Definições) ou volta amanhã.',
   ],
   unavailable: [503, 'O serviço de IA não respondeu. Tenta outra vez daqui a pouco.'],
   invalid_output: [502, 'Não consegui pensar em receitas desta vez. Tenta outra vez.'],
@@ -92,13 +99,22 @@ function aiFailure(c: Context<AppEnv>, operation: Operation, err: unknown) {
   return c.json({ error, code: err.code }, status as 400);
 }
 
-/** Which provider this request uses: the user's own key when sent, Workers AI otherwise. */
-async function providerFor(c: Context<AppEnv>): Promise<AiProvider> {
+interface Reader {
+  provider: AiProvider;
+  /** Counts each call in `ai_usage` and, on the free AI, in this device's share. */
+  record: UsageRecorder;
+}
+
+/**
+ * Who reads this request: the user's own key when sent, Workers AI otherwise. The free AI
+ * takes one reading from the device's (or account's) share first (free-ai.ts).
+ */
+async function readerFor(c: Context<AppEnv>, operation: Operation): Promise<Reader> {
   let id = c.req.header('x-ai-provider');
   let key = c.req.header('x-ai-key')?.trim();
   let model = c.req.header('x-ai-model');
-  // Signed in: the choice and the key saved with the account (sealed in D1).
-  // Signed in and no key sent: the one saved with the account, if it is for this provider.
+  // Signed in and no key sent: the one saved with the account (sealed in D1), if it is for
+  // this provider.
   const user = c.get('user');
   if (user && !key) {
     const saved = await storedAi(c.env, user);
@@ -110,21 +126,31 @@ async function providerFor(c: Context<AppEnv>): Promise<AiProvider> {
   }
   id ??= 'workers-ai';
   if (!(PROVIDERS as readonly string[]).includes(id)) throw new AiError('no_key', 'provider');
+  let provider: AiProvider;
+  let share: FreeShare | null = null;
   if (id === 'workers-ai') {
     if (!(await freeQuotaLeft(c.env.DB))) throw new AiError('quota', 'local count');
-    return workersAi(c.env.AI);
+    share = await claimFreeReading(c);
+    provider = workersAi(c.env.AI);
+  } else {
+    if (!key || key.length > 300) throw new AiError('no_key', id);
+    if (id === 'gemini') {
+      provider = gemini(key);
+    } else {
+      const known = (CLAUDE_MODELS as readonly string[]).includes(model ?? '');
+      provider = anthropic(key, known ? (model as ClaudeModel) : undefined);
+    }
   }
-  if (!key || key.length > 300) throw new AiError('no_key', id);
-  if (id === 'gemini') return gemini(key);
-  const known = (CLAUDE_MODELS as readonly string[]).includes(model ?? '');
-  return anthropic(key, known ? (model as ClaudeModel) : undefined);
-}
-
-function recorder(c: Context<AppEnv>, provider: AiProvider, operation: Operation) {
-  return (usage: AiUsage, ok: boolean) =>
-    recordUsage(c.env.DB, provider.id, operation, usage, ok, c.get('user')?.id).catch(
+  const db = c.env.DB;
+  const record: UsageRecorder = (usage, ok) =>
+    Promise.all([
+      recordUsage(db, provider.id, operation, usage, ok, user?.id),
+      share ? addFreeNeurons(db, share, usage.units ?? 0) : undefined,
+    ]).then(
+      () => undefined,
       () => undefined,
     );
+  return { provider, record };
 }
 
 /** About 1600 px JPEG at 0.7 is ~300 KB; 4 MB of base64 leaves room and stops abuse. */
@@ -169,20 +195,20 @@ ingest.post('/ingest/receipt', async (c) => {
   if (!body.success) return c.json({ error: 'Talão inválido.' }, 400);
   const input = body.data;
   try {
-    const provider = await providerFor(c);
+    const { provider, record } = await readerFor(c, 'receipt');
     const reading = await structured(
       provider,
       {
         operation: 'receipt',
         system: RECEIPT_PROMPT.system,
         ...('text' in input
-          ? { prompt: RECEIPT_TEXT_PROMPT.prompt(input.text) }
+          ? { prompt: RECEIPT_TEXT_PROMPT.prompt(anonymize(input.text).text) }
           : receiptPhotos('image' in input ? [input.image] : input.images)),
         schema: receiptSchema,
         schemaName: 'receipt',
         maxTokens: 4000,
       },
-      recorder(c, provider, 'receipt'),
+      record,
     );
     const today = lisbonDate(new Date());
     const from = purchaseDay(reading.date, today);
@@ -206,19 +232,19 @@ ingest.post('/ingest/voice', async (c) => {
   const body = voiceBody.safeParse(await c.req.json().catch(() => null));
   if (!body.success) return c.json({ error: 'Não percebi nada. Tenta outra vez.' }, 400);
   try {
-    const provider = await providerFor(c);
+    const { provider, record } = await readerFor(c, 'voice');
     const today = lisbonDate(new Date());
     const reading = await structured(
       provider,
       {
         operation: 'voice',
         system: VOICE_PROMPT.system,
-        prompt: VOICE_PROMPT.prompt(body.data.text, today),
+        prompt: VOICE_PROMPT.prompt(anonymize(body.data.text).text, today),
         schema: voiceSchema,
         schemaName: 'voice',
         maxTokens: 2000,
       },
-      recorder(c, provider, 'voice'),
+      record,
     );
     const drafts = reading.lines.map((line) => toDraft({ ...line, raw: null }, undefined, today));
     return c.json({ store: null, date: null, drafts } satisfies ReceiptDrafts);
@@ -238,7 +264,7 @@ ingest.post('/ingest/shelf', async (c) => {
   if (!body.success) return c.json({ error: 'Fotos inválidas.' }, 400);
   const { images, location } = body.data;
   try {
-    const provider = await providerFor(c);
+    const { provider, record } = await readerFor(c, 'shelf');
     const today = lisbonDate(new Date());
     const reading = await structured(
       provider,
@@ -251,7 +277,7 @@ ingest.post('/ingest/shelf', async (c) => {
         schemaName: 'shelf',
         maxTokens: 4000,
       },
-      recorder(c, provider, 'shelf'),
+      record,
     );
     const drafts = reading.lines.map((line) =>
       placeDraft(
@@ -271,7 +297,7 @@ ingest.post('/ingest/date', async (c) => {
   const image = await imageFrom(c);
   if (!image) return c.json({ error: 'Foto inválida.' }, 400);
   try {
-    const provider = await providerFor(c);
+    const { provider, record } = await readerFor(c, 'date');
     const today = lisbonDate(new Date());
     const reading = await structured(
       provider,
@@ -284,7 +310,7 @@ ingest.post('/ingest/date', async (c) => {
         schemaName: 'printed_date',
         maxTokens: 200,
       },
-      recorder(c, provider, 'date'),
+      record,
     );
     const date = plausiblePrintedDate(reading.date, today);
     if (!date) return c.json({ error: 'Não encontrei uma data legível. Escreve-a à mão.' }, 422);
@@ -313,7 +339,7 @@ ingest.post('/ai/recipes', async (c) => {
   const body = recipesBody.safeParse(await c.req.json().catch(() => null));
   if (!body.success) return c.json({ error: 'Não há alimentos a aproveitar.' }, 400);
   try {
-    const provider = await providerFor(c);
+    const { provider, record } = await readerFor(c, 'recipes');
     const reading = await structured(
       provider,
       {
@@ -324,7 +350,7 @@ ingest.post('/ai/recipes', async (c) => {
         schemaName: 'recipes',
         maxTokens: 2500,
       },
-      recorder(c, provider, 'recipes'),
+      record,
     );
     return c.json(reading);
   } catch (err) {
@@ -335,7 +361,7 @@ ingest.post('/ai/recipes', async (c) => {
 /** "Testar ligação" in the settings: a tiny call that proves the key works. */
 ingest.post('/ai/test', async (c) => {
   try {
-    const provider = await providerFor(c);
+    const { provider, record } = await readerFor(c, 'test');
     await structured(
       provider,
       {
@@ -346,7 +372,7 @@ ingest.post('/ai/test', async (c) => {
         schemaName: 'test',
         maxTokens: 50,
       },
-      recorder(c, provider, 'test'),
+      record,
     );
     return c.json({ ok: true, provider: provider.id });
   } catch (err) {

@@ -1052,6 +1052,80 @@ select {
   border: 1px solid var(--border);
 }
 
+/* The last photo, whole, with its end shaded: what stays on the phone. */
+.receipt-cut {
+  display: grid;
+  grid-template-columns: auto 1fr;
+  gap: 12px;
+  align-items: start;
+  margin: 0;
+}
+
+.receipt-cut-photo {
+  position: relative;
+  display: inline-block;
+  line-height: 0;
+  border-radius: 8px;
+  overflow: hidden;
+  border: 1px solid var(--border);
+}
+
+.receipt-cut-photo img {
+  display: block;
+  width: auto;
+  height: auto;
+  max-width: 120px;
+  max-height: 260px;
+}
+
+.receipt-cut-off {
+  position: absolute;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  display: flex;
+  align-items: flex-end;
+  justify-content: center;
+  border-top: 2px dashed var(--on-brand);
+  background: repeating-linear-gradient(
+    -45deg,
+    rgb(22 58 95 / 0.82),
+    rgb(22 58 95 / 0.82) 6px,
+    rgb(22 58 95 / 0.68) 6px,
+    rgb(22 58 95 / 0.68) 12px
+  );
+  color: var(--on-brand);
+  font-size: 0.72rem;
+  font-weight: 650;
+  line-height: 1.2;
+  text-align: center;
+}
+
+.receipt-cut-off span {
+  padding: 4px;
+}
+
+.receipt-cut figcaption {
+  display: grid;
+  gap: 6px;
+  min-width: 0;
+}
+
+.receipt-cut input[type='range'] {
+  width: 100%;
+  accent-color: var(--brand-strong);
+}
+
+.receipt-cut .hint {
+  margin: 0;
+}
+
+@media (max-width: 360px) {
+  .receipt-cut {
+    grid-template-columns: 1fr;
+  }
+}
+
 .receipt-parts-actions {
   display: flex;
   flex-wrap: wrap;

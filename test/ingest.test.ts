@@ -24,13 +24,15 @@ function fakeAi(...answers: string[]) {
 }
 
 const IMAGE = 'A'.repeat(400);
+/** The app's random id for this device (src/app/device.ts): the free AI counts by it. */
+const DEVICE = 'test-device-0000000001';
 
 function post(path: string, body: unknown, ai: Ai, headers: Record<string, string> = {}) {
   return app.request(
     path,
     {
       method: 'POST',
-      headers: { 'content-type': 'application/json', ...headers },
+      headers: { 'content-type': 'application/json', 'x-device': DEVICE, ...headers },
       body: JSON.stringify(body),
     },
     { ...env, AI: ai },
@@ -64,6 +66,7 @@ beforeEach(async () => {
   await env.DB.batch([
     env.DB.prepare('DELETE FROM ai_usage'),
     env.DB.prepare('DELETE FROM product_aliases'),
+    env.DB.prepare('DELETE FROM ai_free_daily'),
   ]);
 });
 
@@ -101,6 +104,16 @@ describe('POST /api/ingest/receipt', () => {
     const sent = JSON.stringify(calls[0]!.input);
     expect(sent).toContain('IOG NAT 4X125');
     expect(sent).not.toContain('data:image');
+  });
+
+  it('anonymizes the text again, whatever the phone did', async () => {
+    const { ai, calls } = fakeAi(receipt);
+    const text = ['CONTINENTE', 'Contribuinte 123456789', 'IOG NAT 4X125 1,29'].join('\n');
+    await post('/api/ingest/receipt', { text }, ai);
+    const sent = JSON.stringify(calls[0]!.input);
+    expect(sent).not.toContain('123456789');
+    expect(sent).toContain('[NIF]');
+    expect(sent).toContain('IOG NAT 4X125 1,29');
   });
 
   it('reads a long receipt in parts as one, in order, with a note on how they join', async () => {

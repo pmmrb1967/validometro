@@ -39,7 +39,7 @@ Este ficheiro dá contexto ao Claude Code sobre o projeto. Lê-o sempre antes de
 
 ### Limites do plano gratuito a respeitar
 - O CPU por invocação do Worker é muito curto: **não descodificar nem redimensionar imagens no Worker.** O redimensionamento (máx. ~1600 px no lado maior, JPEG ~0.7) é feito no cliente antes do upload. O Worker só reencaminha bytes para a API de IA (o tempo de espera de `fetch` não conta como CPU).
-- Workers AI: quota diária partilhada de Neurons. Registar o consumo em `ai_usage` e degradar com elegância quando a quota estiver perto do fim (sugerir chave própria ou entrada manual).
+- Workers AI: quota diária partilhada de Neurons. Registar o consumo em `ai_usage` e degradar com elegância quando a quota estiver perto do fim (sugerir chave própria ou entrada manual). Cada dispositivo (ou conta) tem a sua parte do dia e cada endereço umas poucas leituras por minuto (`src/worker/free-ai.ts`), para uma pessoa ou um script não gastar a de todos.
 - D1: manter as consultas indexadas; o painel de admin mostra tamanho da BD e consultas diárias.
 
 ## Identidade visual
@@ -92,6 +92,7 @@ Esquema de referência; as migrações ficam em `migrations/`.
 - `push_subscriptions`: (id, user_id, endpoint, keys_json, created_at)
 - `shopping_list`: (id, household_id, name, source `auto`|`manual`, done, created_at)
 - `ai_usage`: (date, user_id nullable, provider, operation, units, ok)
+- `ai_free_daily`: a parte de cada dispositivo (ou conta) na IA gratuita do dia (date, subject = sha256(segredo + dia + id), calls, neurons); só hoje e ontem (`src/worker/free-ai.ts`)
 - `receipts`: nota de cada talão guardado, para reconhecer o mesmo talão lido duas vezes (`src/domain/receipts.ts`): hash do NIF da loja + n.º do documento do código QR da AT, loja, dia, hashes curtos das linhas, total pago (do QR ou soma dos preços lidos; `src/domain/spending.ts`), nome e preço de cada linha para a estimativa da lista de compras (`src/domain/prices.ts`). Nunca o talão nem o NIF do comprador
 
 ## Pipeline de IA
@@ -105,7 +106,7 @@ Esquema de referência; as migrações ficam em `migrations/`.
 6. Devolver `DraftItem[]` ao cliente para revisão.
 7. Quando o utilizador confirma (e eventualmente corrige um nome), fazer upsert em `product_aliases` e incrementar `hits`.
 
-Prompts versionados em `src/ai/prompts/`. Fornecedores atrás de uma interface comum (`src/ai/providers/`), para trocar de modelo sem mexer no resto. Nunca registar em log o conteúdo das imagens nem as chaves.
+Os textos (talão em PDF, voz) passam por `src/domain/anonymize.ts` no telemóvel e outra vez no Worker antes de chegarem à IA. Prompts versionados em `src/ai/prompts/`. Fornecedores atrás de uma interface comum (`src/ai/providers/`), para trocar de modelo sem mexer no resto. Nunca registar em log o conteúdo das imagens nem as chaves.
 
 ## Convenções
 

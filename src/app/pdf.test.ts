@@ -29,7 +29,8 @@ describe('what a PDF receipt sends', () => {
       'Multibanco 49,36',
       'Cartão Poupa Mais nº: ***209',
       'Expiram a 30-11-2026: 4 EUR',
-      '474469 2026-11-10 14:36 0002 0001 0374',
+      // The terminal's numbers go too (anonymize): only the date is needed.
+      '474469 2026-11-10 14:36 [NÚMERO]',
       'N. Contribuinte: 123456789',
       'ATCUD:ABCD-1',
       'Atendido por: Alguém',
@@ -39,7 +40,8 @@ describe('what a PDF receipt sends', () => {
       'TALHO',
       'C FRANGO INT C MIÚDOS 1,632 X 2,49 4,06',
       'Poupança Imediata (0,23)',
-      '474469 2026-11-10 14:36 0002 0001 0374',
+      // The terminal's numbers go too (anonymize): only the date is needed.
+      '474469 2026-11-10 14:36 [NÚMERO]',
     ]);
   });
 });

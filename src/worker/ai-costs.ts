@@ -4,13 +4,15 @@
  * How much an AI reading usually spends, for the note beside each AI button, and what each
  * person spent with their own key. Counts only: never the text, the photo or the key.
  *
- *   GET /ai/estimate → today's Workers AI Neurons (the account's free day) and the average
- *                      call of the last 30 days, by provider, model and operation
+ *   GET /ai/estimate → today's Workers AI Neurons (the account's free day), what is left of
+ *                      this device's share (free-ai.ts), and the average call of the last
+ *                      30 days, by provider, model and operation
  *   GET /ai/my-usage → signed in: their own calls of the last 30 days, by provider and model
  */
 import { Hono } from 'hono';
 import { addDays } from '../domain/dates';
 import { FREE_NEURONS_PER_DAY } from '../domain/ai-cost';
+import { freeShareLeft, freeShareOf } from './free-ai';
 import { requireUser, type AppEnv } from './session';
 import { neuronsToday, utcDay } from './usage';
 
@@ -21,6 +23,8 @@ export const ESTIMATE_DAYS = 30;
 export interface Estimate {
   neuronsToday: number;
   neuronsLimit: number;
+  /** This device's (or account's) share of the free day; null without the device's id. */
+  mine: { neurons: number; limit: number } | null;
   /** Workers AI: average Neurons per call, by operation. */
   neurons: { operation: string; neurons: number }[];
   /** Own keys: average tokens per call, by model and operation. */
@@ -31,8 +35,10 @@ aiCosts.get('/ai/estimate', async (c) => {
   const db = c.env.DB;
   const now = new Date();
   const since = addDays(utcDay(now), -(ESTIMATE_DAYS - 1));
-  const [today, neurons, tokens] = await Promise.all([
+  const share = await freeShareOf(c, now);
+  const [today, mine, neurons, tokens] = await Promise.all([
     neuronsToday(db, now),
+    share ? freeShareLeft(db, share) : null,
     db
       .prepare(
         `SELECT operation, ROUND(AVG(units)) AS neurons FROM ai_usage
@@ -56,6 +62,7 @@ aiCosts.get('/ai/estimate', async (c) => {
   return c.json({
     neuronsToday: today,
     neuronsLimit: FREE_NEURONS_PER_DAY,
+    mine,
     neurons: neurons.results,
     tokens: tokens.results,
   } satisfies Estimate);

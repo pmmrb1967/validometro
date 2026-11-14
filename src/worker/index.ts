@@ -2,6 +2,7 @@
 // Copyright (C) 2026 Paulo Barbosa
 import { sendDailyAlerts } from './alerts';
 import { app } from './app';
+import { purgeFreeShares } from './free-ai';
 import { runMonitor } from './monitor';
 
 export default {
@@ -13,11 +14,18 @@ export default {
     }
     return app.fetch(request, env, ctx);
   },
-  /** Every hour: the free-plan watch, and at 09:00 in Lisbon the daily alert (alerts.ts). */
+  /**
+   * Every hour: the free-plan watch, the free AI's old shares deleted (free-ai.ts), and at
+   * 09:00 in Lisbon the daily alert (alerts.ts).
+   */
   scheduled(controller, env, ctx) {
     const now = new Date(controller.scheduledTime);
     ctx.waitUntil(
-      Promise.allSettled([sendDailyAlerts(env, now), runMonitor(env, now)]).then((results) => {
+      Promise.allSettled([
+        sendDailyAlerts(env, now),
+        runMonitor(env, now),
+        purgeFreeShares(env.DB, now),
+      ]).then((results) => {
         for (const result of results) {
           if (result.status === 'rejected') {
             console.error('Scheduled task failed', String(result.reason));

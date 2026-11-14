@@ -61,6 +61,10 @@ export type AiErrorCode =
   | 'no_credit'
   | 'rate_limited'
   | 'quota'
+  /** This device's (or account's) share of the free day is spent (src/worker/free-ai.ts). */
+  | 'device_quota'
+  /** The free AI needs the device's id, and an old copy of the app does not send it. */
+  | 'no_device'
   | 'unavailable'
   | 'invalid_output'
   | 'refused'

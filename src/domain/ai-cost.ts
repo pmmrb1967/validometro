@@ -11,6 +11,17 @@
 
 export const FREE_NEURONS_PER_DAY = 10_000;
 
+/**
+ * Each device's (or account's) share of the free day, so one person or one script cannot
+ * spend everyone's: about 15 % of the Neurons, some 30 receipts. The calls cap holds when
+ * several readings start at once, before their Neurons are known (src/worker/free-ai.ts).
+ */
+export const FREE_NEURONS_PER_DEVICE = 1_500;
+export const FREE_CALLS_PER_DEVICE = 60;
+
+/** The random id each device makes for itself (src/app/device.ts), sent as `x-device`. */
+export const DEVICE_ID = /^[A-Za-z0-9_-]{16,64}$/;
+
 /** [input, output] US$ per million tokens. */
 export const MODEL_PRICES: Record<string, readonly [number, number]> = {
   'gemini-3.5-flash-lite': [0.3, 2.5],

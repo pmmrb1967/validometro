@@ -6,6 +6,7 @@
  * that call and never keeps it. With accounts it moves to D1, encrypted (AES-GCM).
  */
 import { useSyncExternalStore } from 'react';
+import { deviceId } from './device';
 
 export type AiProviderChoice = 'workers-ai' | 'gemini' | 'anthropic';
 
@@ -69,7 +70,10 @@ export function useAiSettings(): AiSettings {
 /** Headers for a reading request: the chosen provider and, if it needs one, its key. */
 export function aiHeaders(settings = read()): Record<string, string> {
   // Always says which: signed in, the server may hold the key for it (sealed, in the account).
-  if (settings.provider === 'workers-ai') return { 'x-ai-provider': 'workers-ai' };
+  // The free AI counts each device's share of the day (src/worker/free-ai.ts).
+  if (settings.provider === 'workers-ai') {
+    return { 'x-ai-provider': 'workers-ai', 'x-device': deviceId() };
+  }
   const key = settings.keys[settings.provider];
   const headers: Record<string, string> = { 'x-ai-provider': settings.provider };
   if (key) headers['x-ai-key'] = key;

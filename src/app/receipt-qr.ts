@@ -14,7 +14,27 @@ const MAX_SIDE = 3200;
 const BAND_SIDE = 1000;
 
 interface QrDetector {
-  detect(source: HTMLCanvasElement): Promise<{ rawValue: string }[]>;
+  detect(
+    source: HTMLCanvasElement,
+  ): Promise<{ rawValue: string; boundingBox?: { y: number } | null }[]>;
+}
+
+/** A code found on a canvas: its text, and where it begins (pixels from the top), if known. */
+interface FoundCode {
+  text: string;
+  top: number | null;
+}
+
+/**
+ * Where a code begins, from zxing's points (the centres of its finder patterns, at about
+ * 3.5 modules from the edge): a little above the highest, by a share of the code's size.
+ */
+export function topFromPoints(points: readonly { x: number; y: number }[]): number | null {
+  if (points.length < 2) return null;
+  const ys = points.map((point) => point.y);
+  const xs = points.map((point) => point.x);
+  const size = Math.max(Math.max(...ys) - Math.min(...ys), Math.max(...xs) - Math.min(...xs));
+  return Math.max(0, Math.min(...ys) - size * 0.25);
 }
 
 async function nativeQr(): Promise<QrDetector | undefined> {
@@ -36,12 +56,15 @@ async function nativeQr(): Promise<QrDetector | undefined> {
   }
 }
 
-/** The texts of the QR codes on a canvas (none: an empty list). */
-export async function qrTexts(canvas: HTMLCanvasElement): Promise<string[]> {
+/** The QR codes on a canvas (none: an empty list). */
+async function qrCodes(canvas: HTMLCanvasElement): Promise<FoundCode[]> {
   const native = await nativeQr();
   if (native) {
     try {
-      const found = (await native.detect(canvas)).map((code) => code.rawValue);
+      const found = (await native.detect(canvas)).map((code) => ({
+        text: code.rawValue,
+        top: typeof code.boundingBox?.y === 'number' ? code.boundingBox.y : null,
+      }));
       if (found.length) return found;
     } catch {
       // Then zxing.
@@ -55,7 +78,12 @@ export async function qrTexts(canvas: HTMLCanvasElement): Promise<string[]> {
     ]);
     // Harder: slower, but finds a code in a photo (glare, a slight tilt).
     const hints = new Map([[DecodeHintType.TRY_HARDER, true]]);
-    return [new BrowserQRCodeReader(hints).decodeFromCanvas(canvas).getText()];
+    const result = new BrowserQRCodeReader(hints).decodeFromCanvas(canvas);
+    const points = (result.getResultPoints() ?? []).map((point) => ({
+      x: point.getX(),
+      y: point.getY(),
+    }));
+    return [{ text: result.getText(), top: topFromPoints(points) }];
   } catch {
     // zxing throws when there is no code.
     return [];
@@ -64,7 +92,8 @@ export async function qrTexts(canvas: HTMLCanvasElement): Promise<string[]> {
 
 async function toCanvas(image: Blob): Promise<HTMLCanvasElement | null> {
   try {
-    const bitmap = await createImageBitmap(image);
+    // Turned as shrinkPhoto turns it, so a place found here is the same place there.
+    const bitmap = await createImageBitmap(image, { imageOrientation: 'from-image' });
     const scale = Math.min(1, MAX_SIDE / Math.max(bitmap.width, bitmap.height));
     const canvas = document.createElement('canvas');
     canvas.width = Math.round(bitmap.width * scale);
@@ -77,10 +106,13 @@ async function toCanvas(image: Blob): Promise<HTMLCanvasElement | null> {
   }
 }
 
-async function atQr(canvas: HTMLCanvasElement): Promise<ReceiptQr | null> {
-  for (const text of await qrTexts(canvas)) {
-    const qr = parseReceiptQr(text);
-    if (qr) return qr;
+/** The AT's code on a canvas, and where it begins (pixels of that canvas). */
+async function atQr(
+  canvas: HTMLCanvasElement,
+): Promise<{ qr: ReceiptQr; top: number | null } | null> {
+  for (const code of await qrCodes(canvas)) {
+    const qr = parseReceiptQr(code.text);
+    if (qr) return { qr, top: code.top };
   }
   return null;
 }
@@ -89,12 +121,19 @@ async function atQr(canvas: HTMLCanvasElement): Promise<ReceiptQr | null> {
  * A long receipt in overlapping square bands, from the bottom (where the code usually is):
  * in the whole of it the code is too small a part for the readers to find.
  */
-function bands(canvas: HTMLCanvasElement): HTMLCanvasElement[] {
+interface Band {
+  canvas: HTMLCanvasElement;
+  /** Where it was cut from, to place what is found in it on the whole. */
+  y: number;
+  scale: number;
+}
+
+function bands(canvas: HTMLCanvasElement): Band[] {
   const side = canvas.width;
   if (canvas.height < side * 1.2) return [];
   // Drawn no bigger than this: zxing finds a code better in a moderate picture.
   const scale = Math.min(1, BAND_SIDE / side);
-  const list: HTMLCanvasElement[] = [];
+  const list: Band[] = [];
   for (let top = canvas.height - side; top > -side / 2; top -= side / 2) {
     const y = Math.max(0, Math.round(top));
     const height = Math.min(side, canvas.height - y);
@@ -107,29 +146,46 @@ function bands(canvas: HTMLCanvasElement): HTMLCanvasElement[] {
       context.filter = 'grayscale(1) contrast(1.8)';
       context.drawImage(canvas, 0, y, side, height, 0, 0, band.width, band.height);
     }
-    list.push(band);
+    list.push({ canvas: band, y, scale });
     if (y === 0) break;
   }
   return list;
 }
 
-/** The receipt's QR code in a canvas, if it has the AT's one. */
-export async function receiptQrIn(canvas: HTMLCanvasElement): Promise<ReceiptQr | null> {
+/** The AT's code in a canvas, with where it begins (pixels of the whole canvas). */
+async function receiptQrAt(
+  canvas: HTMLCanvasElement,
+): Promise<{ qr: ReceiptQr; top: number | null } | null> {
   const whole = await atQr(canvas);
   if (whole) return whole;
   for (const band of bands(canvas)) {
-    const qr = await atQr(band);
-    if (qr) return qr;
+    const found = await atQr(band.canvas);
+    if (found) {
+      return {
+        qr: found.qr,
+        top: found.top === null ? null : band.y + found.top / band.scale,
+      };
+    }
   }
   return null;
 }
 
-/** The receipt's QR code in any of these photos (the last part first: it is at the end). */
-export async function receiptQrInPhotos(photos: readonly Blob[]): Promise<ReceiptQr | null> {
-  for (const photo of [...photos].reverse()) {
-    const canvas = await toCanvas(photo);
-    const qr = canvas && (await receiptQrIn(canvas));
-    if (qr) return qr;
-  }
-  return null;
+/** The receipt's QR code in a canvas, if it has the AT's one. */
+export async function receiptQrIn(canvas: HTMLCanvasElement): Promise<ReceiptQr | null> {
+  return (await receiptQrAt(canvas))?.qr ?? null;
+}
+
+export interface QrInPhoto {
+  qr: ReceiptQr;
+  /** Where the code begins, as a share of the photo's height (0 top, 1 bottom), if known. */
+  top: number | null;
+}
+
+/** The receipt's QR code in a photo as taken, and where it is (to cut the photo there). */
+export async function receiptQrInPhoto(photo: Blob): Promise<QrInPhoto | null> {
+  const canvas = await toCanvas(photo);
+  if (!canvas) return null;
+  const found = await receiptQrAt(canvas);
+  if (!found) return null;
+  return { qr: found.qr, top: found.top === null ? null : found.top / canvas.height };
 }

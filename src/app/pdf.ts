@@ -6,6 +6,7 @@
  * is sent as lines (cheaper and more exact than a photo); a scanned one has none, and its
  * first page goes as an image instead. The file itself never leaves the phone.
  */
+import { anonymize } from '../domain/anonymize';
 import type { ReceiptQr } from '../domain/receipts';
 import { shrinkPhoto } from './image';
 
@@ -60,13 +61,16 @@ const PERSONAL =
 /**
  * Only what the reading needs: the products (up to the totals) and the lines with the date.
  * The rest of a digital receipt is about the person (tax number, loyalty card, who served)
- * and stays on the phone (principle 7); it is also most of the text.
+ * and stays on the phone (principle 7); it is also most of the text. What is left goes
+ * through anonymize() too: an address, a phone or a name in the lines that stay.
  */
 export function receiptTextForAi(lines: string[]): string[] {
   const end = lines.findIndex((line) => TOTALS.test(line.trim()));
   const products = end === -1 ? lines : lines.slice(0, end);
   const after = end === -1 ? [] : lines.slice(end).filter((line) => DATE.test(line));
-  return [...products, ...after].filter((line) => !PERSONAL.test(line));
+  return [...products, ...after]
+    .filter((line) => !PERSONAL.test(line))
+    .map((line) => anonymize(line).text);
 }
 
 export async function readPdfReceipt(file: Blob): Promise<PdfReceipt> {

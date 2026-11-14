@@ -359,6 +359,68 @@ test('talão comprido: várias fotos, lidas como um só talão', async ({ page }
   await expect(page.getByRole('group', { name: 'Fotos do talão' })).toHaveCount(0);
 });
 
+test('talão fotografado: o fim, a partir do código QR, fica no telemóvel', async ({ page }) => {
+  // The phone's BarcodeDetector finds the AT's code at 60 % of the photo's height.
+  await page.addInitScript(() => {
+    class FakeDetector {
+      static async getSupportedFormats() {
+        return ['qr_code'];
+      }
+      async detect(source: { height: number }) {
+        return [
+          {
+            rawValue:
+              'A:500123456*B:999999990*C:PT*D:FS*E:N*F:20261111*G:FS 0123/99999*O:3.10*Q:ab1C*R:1234',
+            boundingBox: { y: source.height * 0.6 },
+          },
+        ];
+      }
+    }
+    (globalThis as unknown as { BarcodeDetector: unknown }).BarcodeDetector = FakeDetector;
+  });
+  const sent: string[] = [];
+  await page.route('**/api/ingest/receipt', async (route) => {
+    // One photo goes as `image`.
+    sent.push((route.request().postDataJSON() as { image: string }).image);
+    await route.fulfill({ json: { store: null, date: null, drafts: [] } });
+  });
+  /** The height of the photo that went to the reading. */
+  const heightOf = (base64: string) =>
+    page.evaluate(async (data) => {
+      // The e2e types have no DOM: the browser's Image, as much of it as is used.
+      const { Image } = globalThis as unknown as {
+        Image: new () => { src: string; naturalHeight: number; decode(): Promise<void> };
+      };
+      const image = new Image();
+      image.src = `data:image/jpeg;base64,${data}`;
+      await image.decode();
+      return image.naturalHeight;
+    }, base64);
+  await page.goto('/');
+  await page.getByRole('button', { name: 'Começar sem conta' }).first().click();
+  await page.goto('/adicionar');
+  await page
+    .locator('.quick-entry input[type=file][capture]')
+    .first()
+    .setInputFiles({ name: 'talao.png', mimeType: 'image/png', buffer: PHOTO });
+  const parts = page.getByRole('group', { name: 'Fotos do talão' });
+  await expect(parts).toContainText('Cortei a partir do código QR');
+  await expect(parts.getByText('Fica no telemóvel', { exact: true })).toBeVisible();
+  const slider = page.getByLabel('Cortar o fim do talão');
+  await expect(slider).toHaveValue('42');
+  await page.getByRole('button', { name: 'Ler talão' }).click();
+  await expect(page.getByRole('alert')).toContainText('Não encontrei alimentos');
+  // 60 px tall as taken; sent only down to just above the code.
+  expect(await heightOf(sent[0]!)).toBe(35);
+
+  // Moved back to the bottom: the whole photo goes.
+  await slider.fill('0');
+  await expect(parts.getByText('Fica no telemóvel', { exact: true })).toHaveCount(0);
+  await page.getByRole('button', { name: 'Ler talão' }).click();
+  await expect.poll(() => sent.length).toBe(2);
+  expect(await heightOf(sent[1]!)).toBe(60);
+});
+
 test('despensa: bebi 1 da água, e "está a acabar" põe-na na lista', async ({ page }) => {
   await page.goto('/');
   await page.getByRole('button', { name: 'Começar sem conta' }).first().click();

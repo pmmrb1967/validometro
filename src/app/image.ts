@@ -24,20 +24,41 @@ function dataUrl(blob: Blob): Promise<string> {
   });
 }
 
-/** Base64 JPEG of a photo the browser can open, made small; null when it cannot open it. */
-export async function shrinkPhoto(file: Blob): Promise<string | null> {
+/**
+ * Where to cut a receipt photo so that its QR code and what follows it stay on the phone:
+ * the buyer's tax number (in the code itself, field B), the cards, the loyalty points all
+ * come after the total. `top`: where the code begins, as a share of the photo's height.
+ * Returns the share kept from the top, or 1 (all of it) when there is too little above the
+ * code to be worth sending alone (a photo of the end only).
+ */
+export function keepAboveQr(top: number | null): number {
+  if (top === null) return 1;
+  const keep = top - 0.02;
+  return keep >= MIN_KEEP ? Math.min(1, keep) : 1;
+}
+
+/** Never less of a photo than this: the rest would be a strip with nothing to read. */
+export const MIN_KEEP = 0.3;
+
+/**
+ * Base64 JPEG of a photo the browser can open, made small; null when it cannot open it.
+ * `keep`: the share of it sent, from the top (a receipt without its end); the rest is never
+ * drawn, so it is not in what is sent.
+ */
+export async function shrinkPhoto(file: Blob, keep = 1): Promise<string | null> {
   let bitmap: ImageBitmap;
   try {
     bitmap = await createImageBitmap(file, { imageOrientation: 'from-image' });
   } catch {
     return null;
   }
-  const { width, height } = fitSize(bitmap.width, bitmap.height);
+  const kept = Math.max(1, Math.round(bitmap.height * Math.min(1, Math.max(MIN_KEEP, keep))));
+  const { width, height } = fitSize(bitmap.width, kept);
   const canvas = document.createElement('canvas');
   canvas.width = width;
   canvas.height = height;
   const context = canvas.getContext('2d');
-  if (context) context.drawImage(bitmap, 0, 0, width, height);
+  if (context) context.drawImage(bitmap, 0, 0, bitmap.width, kept, 0, 0, width, height);
   bitmap.close();
   if (!context) return null;
   const blob = await new Promise<Blob | null>((resolve) => {

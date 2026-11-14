@@ -3,6 +3,7 @@
 // Runtime types generated with workerd@1.20261104.1 2026-10-01 nodejs_compat
 interface __BaseEnv_Env {
 	DB: D1Database;
+	AI_RATE_LIMIT: RateLimit;
 	AI: Ai;
 	ASSETS: Fetcher;
 }

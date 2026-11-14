@@ -34,6 +34,13 @@ migrations_dir = "migrations"
 binding = "AI"
 remote = true
 
+# The free AI: a few readings a minute per address (src/worker/free-ai.ts). Counted in
+# memory by Cloudflare, on the free plan too; the address is never stored.
+[[ratelimits]]
+name = "AI_RATE_LIMIT"
+namespace_id = "1001"
+simple = { limit = 10, period = 60 }
+
 # Every hour: the free-plan watch (monitor.ts); the run that is 09:00 in Lisbon also sends
 # the daily alert (alerts.ts), whether it is summer or winter time.
 [triggers]

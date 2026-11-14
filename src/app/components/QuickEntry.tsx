@@ -17,8 +17,8 @@ import {
 } from '../api';
 import { formatShortDate } from '../../domain/dates';
 import { receiptQrHash, type ReceiptQr, type SeenReceipt } from '../../domain/receipts';
-import { hasCamera, shrinkPhoto } from '../image';
-import { receiptQrInPhotos } from '../receipt-qr';
+import { hasCamera, keepAboveQr, MIN_KEEP, shrinkPhoto } from '../image';
+import { receiptQrInPhoto, type QrInPhoto } from '../receipt-qr';
 import { receiptWithQr } from '../store/receipts';
 import { speechSupported, useDictation } from '../speech';
 import { markTracked, setPendingReview, type ReadingSource } from '../store/review';
@@ -66,15 +66,45 @@ export function QuickEntry() {
    * the pages of an invoice in Faturómetro). Read in one request, as one receipt.
    */
   const [parts, setParts] = useState<string[]>([]);
-  /** The same photos as taken, only to look for the QR code; gone with the page. */
+  /**
+   * The same photos as taken: to look for the QR code, and to draw the last one again
+   * without its end. Gone with the page.
+   */
   const originals = useRef<Blob[]>([]);
-  const addParts = (images: string[], taken: Blob[]) => {
-    setParts((current) => [...current, ...images].slice(0, MAX_RECEIPT_PARTS));
-    originals.current = [...originals.current, ...taken].slice(0, MAX_RECEIPT_PARTS);
+  /** The AT's QR code, found in the photos as they were added. */
+  const found = useRef<ReceiptQr | null>(null);
+  /**
+   * How much of the last photo is sent, from the top. The end of a receipt (after the total)
+   * has the buyer's tax number (also inside the QR code), the cards and the loyalty points:
+   * the reading does not need it, so it can stay on the phone.
+   */
+  const [keep, setKeep] = useState(1);
+  /** Whether `keep` was put at the QR code by the app (the hint says so). */
+  const [cutAtQr, setCutAtQr] = useState(false);
+  const addParts = async (images: string[], taken: Blob[]) => {
+    const room = MAX_RECEIPT_PARTS - originals.current.length;
+    const added = taken.slice(0, room);
+    if (!added.length) return;
+    setParts((current) => [...current, ...images.slice(0, room)]);
+    originals.current = [...originals.current, ...added];
+    setKeep(1);
+    setCutAtQr(false);
+    const hit = await qrOf(added);
+    if (!hit) return;
+    found.current = hit.qr;
+    // In the newest photo, the end of the receipt: cut there.
+    if (hit.index === added.length - 1) {
+      const kept = keepAboveQr(hit.top);
+      setKeep(kept);
+      setCutAtQr(kept < 1);
+    }
   };
   const clearParts = () => {
     setParts([]);
     originals.current = [];
+    found.current = null;
+    setKeep(1);
+    setCutAtQr(false);
   };
   /** This receipt was saved before (its QR code): read again only if asked. */
   const [seen, setSeen] = useState<{ receipt: SeenReceipt; again: () => void }>();
@@ -134,11 +164,18 @@ export function QuickEntry() {
     else go();
   };
 
-  /** The QR code in the photos as taken (none, or unreadable: null). */
-  const qrOf = async (photos: Blob[]) => {
+  /**
+   * The QR code in the photos as taken (none, or unreadable: null), the last photo first (the
+   * code is at the end), with which photo it was in and where.
+   */
+  const qrOf = async (photos: Blob[]): Promise<(QrInPhoto & { index: number }) | null> => {
     setBusy('A procurar o código QR do talão…');
     try {
-      return await receiptQrInPhotos(photos);
+      for (let index = photos.length - 1; index >= 0; index--) {
+        const hit = await receiptQrInPhoto(photos[index]!);
+        if (hit) return { ...hit, index };
+      }
+      return null;
     } catch {
       return null;
     } finally {
@@ -168,11 +205,18 @@ export function QuickEntry() {
       return;
     }
     if (now && small.length === 1 && !parts.length) {
-      const qr = await qrOf(images);
-      await readReceiptOnce('A ler o talão…', qr, () => readReceipt(small));
+      // Shared from another app, read at once: cut at the QR code with no one to ask.
+      const hit = await qrOf(images);
+      const kept = keepAboveQr(hit?.top ?? null);
+      const image = kept < 1 ? await shrinkPhoto(images[0]!, kept) : small[0]!;
+      if (!image) {
+        setError('Não consegui abrir essa imagem. Tenta outra.');
+        return;
+      }
+      await readReceiptOnce('A ler o talão…', hit?.qr ?? null, () => readReceipt(image));
       return;
     }
-    addParts(small, images);
+    await addParts(small, images);
   };
 
   /** A PDF receipt: as text when it has one; else its first page as a picture. */
@@ -200,12 +244,23 @@ export function QuickEntry() {
     }
   };
 
+  /** The photos as sent: the last one drawn again without its end, when it is cut. */
   const readParts = async () => {
-    const qr = await qrOf(originals.current);
+    let images = parts;
+    if (keep < 1) {
+      const last = parts.length - 1;
+      const cut = await shrinkPhoto(originals.current[last]!, keep);
+      // Never the whole photo instead: what was cut off was meant to stay here.
+      if (!cut) {
+        setError('Não consegui cortar a foto. Tira-a outra vez.');
+        return;
+      }
+      images = [...parts.slice(0, last), cut];
+    }
     await readReceiptOnce(
       parts.length > 1 ? `A ler as ${parts.length} partes do talão…` : 'A ler o talão…',
-      qr,
-      () => readReceipt(parts),
+      found.current,
+      () => readReceipt(images),
     );
   };
 
@@ -238,7 +293,7 @@ export function QuickEntry() {
         <PhotoButton
           className="primary"
           disabled={busy !== undefined || parts.length > 0}
-          onPhoto={(image, original) => addParts([image], [original])}
+          onPhoto={(image, original) => void addParts([image], [original])}
           onError={setError}
         >
           {camera ? 'Fotografar talão' : 'Foto do talão'}
@@ -324,13 +379,25 @@ export function QuickEntry() {
               ? 'Talão: 1 foto.'
               : `Talão: ${parts.length} fotos, lidas como um só talão.`}
           </p>
-          <ol className="receipt-thumbs">
-            {parts.map((part, index) => (
-              <li key={index}>
-                <img src={`data:image/jpeg;base64,${part}`} alt={`Parte ${index + 1}`} />
-              </li>
-            ))}
-          </ol>
+          {/* One photo is shown below, whole, with its cut. */}
+          {parts.length > 1 && (
+            <ol className="receipt-thumbs">
+              {parts.map((part, index) => (
+                <li key={index}>
+                  <img src={`data:image/jpeg;base64,${part}`} alt={`Parte ${index + 1}`} />
+                </li>
+              ))}
+            </ol>
+          )}
+          <ReceiptCut
+            image={parts[parts.length - 1]!}
+            keep={keep}
+            atQr={cutAtQr}
+            onChange={(kept) => {
+              setKeep(kept);
+              setCutAtQr(false);
+            }}
+          />
           <p className="hint">
             {parts.length < MAX_RECEIPT_PARTS
               ? 'Talão comprido? Fotografa a parte seguinte, de cima para baixo, repetindo uma ou duas linhas da anterior.'
@@ -350,7 +417,7 @@ export function QuickEntry() {
               <PhotoButton
                 className="secondary"
                 disabled={busy !== undefined}
-                onPhoto={(image, original) => addParts([image], [original])}
+                onPhoto={(image, original) => void addParts([image], [original])}
                 onError={setError}
               >
                 {camera ? 'Fotografar a parte seguinte' : 'Juntar a parte seguinte'}
@@ -417,5 +484,57 @@ export function QuickEntry() {
         </p>
       )}
     </section>
+  );
+}
+
+/** Up to this much of the last photo can be cut off (MIN_KEEP of it is always sent). */
+const MAX_CUT = Math.round((1 - MIN_KEEP) * 100);
+
+/**
+ * The last photo of the receipt, with its end shaded: what stays on the phone. The slider
+ * moves the cut; the app puts it at the QR code when it finds one.
+ */
+function ReceiptCut({
+  image,
+  keep,
+  atQr,
+  onChange,
+}: {
+  image: string;
+  keep: number;
+  atQr: boolean;
+  onChange: (keep: number) => void;
+}) {
+  const cut = Math.round((1 - keep) * 100);
+  return (
+    <figure className="receipt-cut">
+      <div className="receipt-cut-photo">
+        <img src={`data:image/jpeg;base64,${image}`} alt="A última foto do talão" />
+        {cut > 0 && (
+          <div className="receipt-cut-off" style={{ top: `${100 - cut}%` }}>
+            <span>Fica no telemóvel</span>
+          </div>
+        )}
+      </div>
+      <figcaption>
+        <label className="field">
+          <span>Cortar o fim do talão</span>
+          <input
+            type="range"
+            min={0}
+            max={MAX_CUT}
+            step={1}
+            value={cut}
+            aria-valuetext={cut ? `${cut} % de baixo fica no telemóvel` : 'Sem corte'}
+            onChange={(event) => onChange(1 - Number(event.target.value) / 100)}
+          />
+        </label>
+        <p className="hint">
+          {atQr
+            ? 'Cortei a partir do código QR, que leva o teu NIF: isso não sai do telemóvel. Sobe o corte até logo abaixo do total para deixar também os cartões e os pontos.'
+            : 'Depois do total vêm o teu NIF, os cartões e o código QR, que a leitura não precisa. Sobe o corte até logo abaixo do total e isso fica no telemóvel.'}
+        </p>
+      </figcaption>
+    </figure>
   );
 }

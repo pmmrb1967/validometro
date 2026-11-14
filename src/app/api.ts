@@ -1,4 +1,5 @@
 // SPDX-License-Identifier: AGPL-3.0-or-later
+import { anonymize } from '../domain/anonymize';
 import type { DraftItem } from '../domain/drafts';
 import type { Location } from '../domain/types';
 import { aiHeaders } from './ai-settings';
@@ -72,7 +73,8 @@ export function readReceipt(images: string | string[]): Promise<ReadingResult> {
 
 /** A digital receipt (PDF) read as text on the phone: no image to send. */
 export function readReceiptText(text: string): Promise<ReadingResult> {
-  return postJson('/api/ingest/receipt', { text }, 'Não foi possível ler o talão.');
+  const clean = anonymize(text).text;
+  return postJson('/api/ingest/receipt', { text: clean }, 'Não foi possível ler o talão.');
 }
 
 /** The first inventory: photos of one place, read as what is in it. */
@@ -80,8 +82,10 @@ export function readShelf(images: string[], location: Location): Promise<Reading
   return postJson('/api/ingest/shelf', { images, location }, 'Não foi possível ler as fotos.');
 }
 
+/** Anonymized here first: a name or a phone said by chance never leaves the phone. */
 export function readSpoken(text: string): Promise<ReadingResult> {
-  return postJson('/api/ingest/voice', { text }, 'Não foi possível perceber a lista.');
+  const clean = anonymize(text).text;
+  return postJson('/api/ingest/voice', { text: clean }, 'Não foi possível perceber a lista.');
 }
 
 export function readPrintedDate(image: string): Promise<{ date: string; kind: string }> {

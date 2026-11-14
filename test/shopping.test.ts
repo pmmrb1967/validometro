@@ -116,7 +116,7 @@ describe('recipes', () => {
       '/api/ai/recipes',
       {
         method: 'POST',
-        headers: { 'content-type': 'application/json' },
+        headers: { 'content-type': 'application/json', 'x-device': 'test-device-shopping-0001' },
         body: JSON.stringify({
           items: [
             { name: 'Ovos', days: 1 },
